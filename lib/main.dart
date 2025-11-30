@@ -5,13 +5,15 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'screens/login_page.dart';
 import 'screens/main_page.dart';
+import 'screens/news_page.dart'; // ✅ 새로 추가
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  if (Firebase.apps.isEmpty) {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  }
 
   runApp(const StockApp());
 }
@@ -28,6 +30,7 @@ class StockApp extends StatelessWidget {
       routes: {
         '/login': (_) => const GoogleLoginPage(),
         '/home': (_) => const StockHomeScreen(),
+        '/news': (_) => const NewsScreen(), // ✅ 뉴스 라우트
       },
     );
   }
