@@ -1,6 +1,5 @@
 // lib/screens/news_page.dart
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:csv/csv.dart';
@@ -39,14 +38,9 @@ class _NewsScreenState extends State<NewsScreen> {
   }
 
   Future<List<NewsItem>> _loadNewsFromCsv() async {
-    // pubspec.yaml 에서 assets 에 등록한 경로와 동일해야 함
     final csvString = await rootBundle.loadString('lib/dummy_data.csv');
 
-    // CSV 파싱 (따옴표, 콤마 등 안전하게 처리)
-    final rows = const CsvToListConverter(
-      eol: '\n',
-    ).convert(csvString);
-
+    final rows = const CsvToListConverter(eol: '\n').convert(csvString);
     if (rows.isEmpty) return [];
 
     final headers = rows.first.map((e) => e.toString()).toList();
@@ -56,7 +50,7 @@ class _NewsScreenState extends State<NewsScreen> {
     int idxPress = headers.indexOf('신문사');
     int idxPn = headers.indexOf('pn');
 
-    // 혹시 헤더 이름이 조금 다를 경우를 대비한 기본값
+    // 헤더 이름이 다를 경우 대비
     if (idxTitle == -1) idxTitle = 1;
     if (idxSummary == -1) idxSummary = headers.length - 2;
     if (idxPress == -1) idxPress = headers.length - 2;
@@ -66,14 +60,12 @@ class _NewsScreenState extends State<NewsScreen> {
 
     for (int i = 1; i < rows.length; i++) {
       final row = rows[i];
-
-      // 비어 있는 줄은 스킵
       if (row.isEmpty) continue;
 
       String getValue(int index) {
         if (index < 0 || index >= row.length) return '';
         final v = row[index];
-        return v == null ? '' : v.toString();
+        return v?.toString() ?? '';
       }
 
       items.add(
@@ -99,67 +91,29 @@ class _NewsScreenState extends State<NewsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 상단 타이틀 & 아이콘
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    '실시간 뉴스',
-                    style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      IconButton(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('알림 화면은 아직 준비 중입니다.'),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.notifications_none_outlined),
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('설정 화면은 아직 준비 중입니다.'),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.settings_outlined),
-                      ),
-                    ],
-                  ),
-                ],
+              const Text(
+                '실시간 뉴스',
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
 
               const SizedBox(height: 16),
 
-              // 검색창 (지금은 동작만 안내)
+              // 검색창
               Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(18),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: TextField(
-                  readOnly: true,
-                  decoration: const InputDecoration(
+                child: const TextField(
+                  decoration: InputDecoration(
                     hintText: '원하는 종목을 검색해 보세요',
                     border: InputBorder.none,
                     icon: Icon(Icons.search),
                   ),
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('뉴스 검색 기능은 곧 추가될 예정입니다.'),
-                      ),
-                    );
-                  },
                 ),
               ),
 
@@ -176,12 +130,14 @@ class _NewsScreenState extends State<NewsScreen> {
 
                     if (snapshot.hasError) {
                       return Center(
-                        child: Text('뉴스를 불러오는 중 오류가 발생했어요.\n${snapshot.error}'),
+                        child: Text(
+                          '뉴스를 불러오는 중 오류가 발생했어요.\n${snapshot.error}',
+                          textAlign: TextAlign.center,
+                        ),
                       );
                     }
 
                     final items = snapshot.data ?? [];
-
                     if (items.isEmpty) {
                       return const Center(
                         child: Text('표시할 뉴스가 없습니다.'),
@@ -201,7 +157,7 @@ class _NewsScreenState extends State<NewsScreen> {
                 ),
               ),
 
-              // 하단 네비게이션 (뉴스 탭 선택됨)
+              // 하단 네비게이션
               const BottomNavBar(initialIndex: 2),
             ],
           ),
@@ -211,7 +167,7 @@ class _NewsScreenState extends State<NewsScreen> {
   }
 }
 
-// ================== 뉴스 카드 위젯 ==================
+// ================== 뉴스 카드 위젯 =================
 class _NewsCard extends StatelessWidget {
   final NewsItem item;
 
@@ -244,7 +200,8 @@ class _NewsCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          // 한 줄 요약
+
+          // 요약
           Text(
             item.summary,
             maxLines: 2,
@@ -256,7 +213,8 @@ class _NewsCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          // 태그들 (신문사, 긍정/부정)
+
+          // 태그(신문사 + 감성)
           Row(
             children: [
               _TagChip(
@@ -306,13 +264,12 @@ class _TagChip extends StatelessWidget {
 }
 
 class _SentimentChip extends StatelessWidget {
-  final String sentiment; // '긍정', '부정', '중립' 등
+  final String sentiment;
 
   const _SentimentChip({required this.sentiment});
 
   @override
   Widget build(BuildContext context) {
-    // 색깔은 간단하게 감성별로 나눔
     Color bg;
     Color text;
 
