@@ -19,7 +19,7 @@ class PushNotificationService {
   }) async {
     try {
       String? appId = dotenv.env['ONESIGNAL_APP_ID'];
-      String? apiKey = dotenv.env['ONESIGNAL_API_KEY'];
+      String? apiKey = dotenv.env['ONESIGNAL_REST_API_KEY'];
 
       if (appId == null || apiKey == null ||
           appId.isEmpty || apiKey.isEmpty) {
