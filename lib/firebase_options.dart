@@ -41,9 +41,9 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyDFN_v9u7I7i1_IgPyGYk4e-yvfnhRfwkk',
-    appId: '1:1958939954:web:dc46dbe1141b39ce495b2b',
-    messagingSenderId: '1958939954',
+    apiKey: 'AIzaSyB7eYij11J8OMa_0IX4X6KaEBCqntQQFDM',
+    appId: '1:39483935865:web:a49f94c4677cc487c298a8',
+    messagingSenderId: '39483935865',
     projectId: 'stockapp-3cebb',
     authDomain: 'stockapp-3cebb.firebaseapp.com',
     storageBucket: 'stockapp-3cebb.firebasestorage.app',
@@ -51,7 +51,7 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyD6F0Nt8MgTwTbsVZUFQvlAce8eFZ8DPNw',
+    apiKey: 'AIzaSyB7eYij11J8OMa_0IX4X6KaEBCqntQQFDM',
     appId: '1:39483935865:android:a49f94c4677cc487c298a8',
     messagingSenderId: '39483935865',
     projectId: 'stockapp-3cebb',
@@ -59,27 +59,27 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyCThzUW09HkkH6ruAI789azzK6BMHgjFgA',
-    appId: '1:1958939954:ios:af314eff333866e0495b2b',
-    messagingSenderId: '1958939954',
+    apiKey: 'AIzaSyB7eYij11J8OMa_0IX4X6KaEBCqntQQFDM',
+    appId: '1:39483935865:ios:af314eff333866e0495b2b',
+    messagingSenderId: '39483935865',
     projectId: 'stockapp-3cebb',
     storageBucket: 'stockapp-3cebb.firebasestorage.app',
-    iosBundleId: 'com.example.stock',
+    iosBundleId: 'com.example.stock.gnnproject',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyCThzUW09HkkH6ruAI789azzK6BMHgjFgA',
-    appId: '1:1958939954:ios:af314eff333866e0495b2b',
-    messagingSenderId: '1958939954',
+    apiKey: 'AIzaSyB7eYij11J8OMa_0IX4X6KaEBCqntQQFDM',
+    appId: '1:39483935865:ios:af314eff333866e0495b2b',
+    messagingSenderId: '39483935865',
     projectId: 'stockapp-3cebb',
     storageBucket: 'stockapp-3cebb.firebasestorage.app',
-    iosBundleId: 'com.example.stock',
+    iosBundleId: 'com.example.stock.gnnproject',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyDFN_v9u7I7i1_IgPyGYk4e-yvfnhRfwkk',
-    appId: '1:1958939954:web:2c287f98c8c47d7a495b2b',
-    messagingSenderId: '1958939954',
+    apiKey: 'AIzaSyB7eYij11J8OMa_0IX4X6KaEBCqntQQFDM',
+    appId: '1:39483935865:web:a49f94c4677cc487c298a8',
+    messagingSenderId: '39483935865',
     projectId: 'stockapp-3cebb',
     authDomain: 'stockapp-3cebb.firebaseapp.com',
     storageBucket: 'stockapp-3cebb.firebasestorage.app',
