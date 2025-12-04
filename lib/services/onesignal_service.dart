@@ -163,8 +163,8 @@ class OneSignalService {
   Future<bool> isNotificationSubscribed() async {
     try {
       var subscription = OneSignal.User.pushSubscription;
-      var optedIn = await subscription.optedIn;
-      var token = await subscription.token;
+      var optedIn = subscription.optedIn;
+      var token = subscription.token;
 
       if (kDebugMode) {
         print('🔔 Notification status:');
