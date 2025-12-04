@@ -15,23 +15,25 @@ class OneSignalService {
 
     try {
       // .env 파일에서 App ID 가져오기
-      String? app_id = dotenv.env['ONESIGNAL_APP_ID'];
+      String? app_id = dotenv.env['ONESIGNAL_APP_ID']?.trim();
 
-      if (app_id == null || app_id.isEmpty || app_id == 'YOUR_ONESIGNAL_APP_ID_HERE') {
+      // 플레이스홀더 값 확인 (.env.example과 일치)
+      const placeholderAppId = 'your_onesignal_app_id_here';
+
+      if (app_id == null || app_id.isEmpty || app_id == placeholderAppId) {
         if (kDebugMode) {
-          print('OneSignal App ID 설정됨: $app_id');
+          print('OneSignal App ID가 설정되지 않음: ${app_id ?? "null"}');
+          print('.env 파일에 실제 OneSignal App ID를 설정해주세요.');
         }
+        return; // 플레이스홀더인 경우 초기화하지 않음
+      }
+
+      if (kDebugMode) {
+        print('OneSignal App ID 설정됨: $app_id');
       }
 
       // OneSignal 초기화
-      if (app_id != null && app_id.isNotEmpty) {
-        OneSignal.initialize(app_id);
-      } else {
-        if (kDebugMode) {
-          print('OneSignal App ID가 없습니다. .env 파일을 확인해주세요.');
-        }
-        return;
-      }
+      OneSignal.initialize(app_id);
 
       // 푸시 알림 권한 요청
       await OneSignal.Notifications.requestPermission(true);
