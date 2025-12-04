@@ -51,10 +51,11 @@ class _NewsScreenState extends State<NewsScreen> {
     int idxPn = headers.indexOf('pn');
 
     // 헤더 이름이 다를 경우 대비
-    if (idxTitle == -1) idxTitle = 1;
-    if (idxSummary == -1) idxSummary = headers.length - 2;
-    if (idxPress == -1) idxPress = headers.length - 2;
-    if (idxPn == -1) idxPn = headers.length - 1;
+    // 헤더 유효성 검사
+    if (idxTitle == -1 || idxSummary == -1 || idxPress == -1 || idxPn == -1) {
+      debugPrint('CSV 헤더 형식이 올바르지 않습니다: $headers');
+      return []; // 또는 throw 에러
+    }
 
     final List<NewsItem> items = [];
 
