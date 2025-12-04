@@ -26,8 +26,9 @@ class StockApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       // 처음 열리는 화면
-      initialRoute: '/login',
+      initialRoute: '/home',
       routes: {
+        // 처음 열리는 화면 (로그인 건너뛰고 바로 홈 화면)
         '/login': (_) => const GoogleLoginPage(),
         '/home': (_) => const StockHomeScreen(),
         '/news': (_) => const NewsScreen(), // ✅ 뉴스 라우트
