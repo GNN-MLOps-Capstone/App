@@ -23,6 +23,8 @@ class _PushTestScreenState extends State<PushTestScreen> {
   }
 
   Future<void> _initializeAndCheckStatus() async {
+    if (!mounted) return;
+
     setState(() {
       _isLoading = true;
     });
@@ -33,19 +35,23 @@ class _PushTestScreenState extends State<PushTestScreen> {
     // 상태 확인
     await _checkNotificationStatus();
 
-    setState(() {
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _checkNotificationStatus() async {
     final token = await _oneSignalService.getPushToken();
     final isSubscribed = await _oneSignalService.isNotificationSubscribed();
 
-    setState(() {
-      _pushToken = token;
-      _isSubscribed = isSubscribed;
-    });
+    if (mounted) {
+      setState(() {
+        _pushToken = token;
+        _isSubscribed = isSubscribed;
+      });
+    }
   }
 
   Future<void> _sendTestNotification() async {
