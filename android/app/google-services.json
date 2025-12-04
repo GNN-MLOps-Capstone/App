@@ -1,37 +1,53 @@
 {
   "project_info": {
-    "project_number": "39483935865",
-    "project_id": "stockapp-3cebb",
-    "storage_bucket": "stockapp-3cebb.firebasestorage.app"
+    "project_number": "${FIREBASE_PROJECT_NUMBER}",
+    "project_id": "${FIREBASE_PROJECT_ID}",
+    "storage_bucket": "${FIREBASE_STORAGE_BUCKET}"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:39483935865:android:a49f94c4677cc487c298a8",
+        "mobilesdk_app_id": "${FIREBASE_MOBILESDK_APP_ID}",
         "android_client_info": {
           "package_name": "com.example.stock"
         }
       },
       "oauth_client": [
         {
-          "client_id": "39483935865-5o9jog8bv601kgebr6acvtov8tsvfjg0.apps.googleusercontent.com",
+          "client_id": "${FIREBASE_CLIENT_ID}",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.stock",
+            "certificate_hash": "55fb45c8acef94d2a54058178a0d519c755d0d00"
+          }
+        },
+        {
+          "client_id": "${FIREBASE_CLIENT_ID_ANDROID_CERT2}",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.stock",
+            "certificate_hash": "d52e9f312ed2c8da8edfb491a694f744f7288df3"
+          }
+        },
+        {
+          "client_id": "${FIREBASE_CLIENT_ID_WEB}",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyB7eYij11J8OMa_0IX4X6KaEBCqntQQFDM"
+          "current_key": "${FIREBASE_API_KEY}"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "39483935865-5o9jog8bv601kgebr6acvtov8tsvfjg0.apps.googleusercontent.com",
+              "client_id": "${FIREBASE_CLIENT_ID_WEB}",
               "client_type": 3
             },
             {
-              "client_id": "39483935865-mlscjg8deutbhkdi7v3207ij9upvhbjb.apps.googleusercontent.com",
+              "client_id": "${FIREBASE_IOS_CLIENT_ID}",
               "client_type": 2,
               "ios_info": {
                 "bundle_id": "com.example.stock.gnnproject"
