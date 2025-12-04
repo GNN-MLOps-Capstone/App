@@ -1,6 +1,4 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/foundation.dart';
 import 'onesignal_service.dart';
 
 class PushNotificationService {
@@ -8,7 +6,11 @@ class PushNotificationService {
   factory PushNotificationService() => _instance;
   PushNotificationService._internal();
 
-  // OneSignal REST API를 사용한 푸시 알림 발송
+  // ⚠️ 보안 경고: 클라이언트에서 직접 OneSignal REST API를 호출하는 것은 심각한 보안 위험입니다!
+  // 이 코드는 즉시 서버사이드 API로 마이그레이션해야 합니다.
+  // 현재는 테스트 목적으로 비활성화했습니다.
+
+  // 푸시 알림 발송 (현재 비활성화된 상태)
   Future<bool> sendPushNotification({
     required String title,
     required String message,
@@ -17,66 +19,14 @@ class PushNotificationService {
     Map<String, String>? data,
     List<String>? segments,
   }) async {
-    try {
-      String? appId = dotenv.env['ONESIGNAL_APP_ID'];
-      String? apiKey = dotenv.env['ONESIGNAL_REST_API_KEY'];
-
-      if (appId == null || apiKey == null ||
-          appId.isEmpty || apiKey.isEmpty) {
-        print('OneSignal App ID 또는 API Key가 설정되지 않았습니다.');
-        return false;
-      }
-
-      // OneSignal API 페이로드 구성
-      Map<String, dynamic> payload = {
-        'app_id': appId,
-        'contents': {'en': message},
-        'headings': {'en': title},
-      };
-
-      // 타겟 설정
-      if (targetUserId != null) {
-        payload['include_player_ids'] = [targetUserId];
-      } else if (targetUserIds != null && targetUserIds.isNotEmpty) {
-        payload['include_player_ids'] = targetUserIds;
-      } else {
-        // 자신의 토큰으로 발송
-        String? ownToken = await OneSignalService().getPushToken();
-        if (ownToken != null && ownToken.isNotEmpty) {
-          payload['include_player_ids'] = [ownToken];
-        } else {
-          payload['included_segments'] = ['All'];
-        }
-      }
-
-      // 추가 데이터 설정
-      if (data != null && data.isNotEmpty) {
-        payload['data'] = data;
-      }
-
-      // API 호출
-      final url = Uri.parse('https://onesignal.com/api/v1/notifications');
-      final response = await http.post(
-        url,
-        headers: {
-          'Content-Type': 'application/json; charset=utf-8',
-          'Authorization': 'Basic $apiKey',
-        },
-        body: jsonEncode(payload),
-      );
-
-      if (response.statusCode == 200) {
-        print('✅ 푸시 알림 발송 성공');
-        return true;
-      } else {
-        print('❌ 푸시 알림 발송 실패: ${response.statusCode}');
-        print('응답: ${response.body}');
-        return false;
-      }
-    } catch (e) {
-      print('❌ 푸시 알림 발송 오류: $e');
-      return false;
+    if (kDebugMode) {
+      print('⚠️ 보안 경고: 클라이언트 푸시 발송이 비활성화되었습니다.');
+      print('서버사이드 API 구축 후 재활성화해야 합니다.');
+      print('타겟 정보: $targetUserId, 제목: $title, 메시지: $message');
     }
+
+    // 보안을 위해 클라이언트에서는 푸시 발송을 하지 않음
+    return false;
   }
 
   // 주식 가격 알림
