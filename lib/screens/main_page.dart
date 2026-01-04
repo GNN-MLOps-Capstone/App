@@ -1,6 +1,7 @@
 // lib/screens/stock_home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'search_page.dart';
 
 class StockHomeScreen extends StatelessWidget {
   final String? userName;
@@ -138,10 +139,9 @@ class StockHomeScreen extends StatelessWidget {
                     icon: Icon(Icons.search),
                   ),
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('검색 기능은 곧 추가될 예정입니다.'),
-                      ),
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SearchPage()),
                     );
                   },
                 ),
