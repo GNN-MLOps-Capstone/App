@@ -1,4 +1,3 @@
-// lib/screens/stock_home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'search_page.dart';
@@ -18,11 +17,22 @@ class StockHomeScreen extends StatelessWidget {
 
     if (!context.mounted) return;
 
-    // 라우트 이름으로 로그인 화면으로 돌아감 (Login 위젯 import 안 해도 됨)
     Navigator.pushNamedAndRemoveUntil(
       context,
       '/login',
           (route) => false,
+    );
+  }
+
+  void _onBottomTap(BuildContext context, int index) {
+    if (index == 0) return; // 이미 홈
+
+    const labels = ['홈', '관심', '뉴스', '주식'];
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${labels[index]} 화면은 아직 준비 중입니다.'),
+        duration: const Duration(milliseconds: 800),
+      ),
     );
   }
 
@@ -32,13 +42,19 @@ class StockHomeScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF3F4F6),
+
+      // ✅ 홈 화면은 홈만 초록색(0)
+      bottomNavigationBar: _BottomNavBar(
+        initialIndex: 0,
+        onIndexChanged: (i) => _onBottomTap(context, i),
+      ),
+
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 상단 오른쪽 버튼들
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
@@ -124,7 +140,6 @@ class StockHomeScreen extends StatelessWidget {
 
               const SizedBox(height: 24),
 
-              // 검색창
               Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -149,7 +164,6 @@ class StockHomeScreen extends StatelessWidget {
 
               const SizedBox(height: 20),
 
-              // 초록 큰 카드
               GestureDetector(
                 onTap: () {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -216,9 +230,6 @@ class StockHomeScreen extends StatelessWidget {
               ),
 
               const Spacer(),
-
-              // 하단 네비게이션
-              const _BottomNavBar(),
             ],
           ),
         ),
@@ -229,30 +240,30 @@ class StockHomeScreen extends StatelessWidget {
 
 // ================== 하단 네비게이션 바 ==================
 class _BottomNavBar extends StatefulWidget {
-  const _BottomNavBar();
+  final int initialIndex;
+  final ValueChanged<int> onIndexChanged;
+
+  const _BottomNavBar({
+    required this.initialIndex,
+    required this.onIndexChanged,
+  });
 
   @override
   State<_BottomNavBar> createState() => _BottomNavBarState();
 }
 
 class _BottomNavBarState extends State<_BottomNavBar> {
-  int selectedIndex = 0;
+  late int selectedIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    selectedIndex = widget.initialIndex;
+  }
 
   void onTap(int index) {
     setState(() => selectedIndex = index);
-
-    if (index == 0) {
-      // 홈 버튼: 사실 이미 홈 화면이라 굳이 다시 푸시할 필요는 없음
-      return;
-    }
-
-    const labels = ['홈', '관심', '뉴스', '주식'];
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${labels[index]} 화면은 아직 준비 중입니다.'),
-        duration: const Duration(milliseconds: 800),
-      ),
-    );
+    widget.onIndexChanged(index);
   }
 
   @override

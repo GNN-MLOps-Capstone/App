@@ -3,9 +3,15 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'dart:convert';
 
 class StockItem {
-  final String name;
-  final String code;
-  StockItem({required this.name, required this.code});
+  final String displayName; // ✅ 한글명(대표명)만 화면에 표시
+  final List<String> aliases; // ✅ 추가명(별칭들)
+  final String code; // ✅ 표준코드
+
+  StockItem({
+    required this.displayName,
+    required this.aliases,
+    required this.code,
+  });
 }
 
 class SearchPage extends StatefulWidget {
@@ -25,6 +31,8 @@ class _SearchPageState extends State<SearchPage> {
   int _selectedIndex = -1;
   bool _loading = true;
 
+  String _norm(String s) => s.trim().toLowerCase().replaceAll(' ', '');
+
   @override
   void initState() {
     super.initState();
@@ -34,7 +42,6 @@ class _SearchPageState extends State<SearchPage> {
       _applyFilter(_controller.text);
     });
 
-    // 화면 들어오면 키보드 바로 올라오게
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
     });
@@ -49,25 +56,41 @@ class _SearchPageState extends State<SearchPage> {
 
   Future<void> _loadCsv() async {
     try {
-      // ✅ pubspec.yaml에 assets 등록되어 있어야 함 (아래 3번 참고)
-      // stock_list.csv가 "lib/screens/stock_list.csv"에 있으니 그대로 경로 사용
+      // ✅ CSV 경로 유지
       final bytes = await rootBundle.load('lib/screens/stock_list.csv');
       final text = utf8.decode(bytes.buffer.asUint8List());
 
-      // CSV 예시: "삼성전자,KR7005930003"
       final lines = text.split(RegExp(r'\r?\n')).map((e) => e.trim()).toList();
       final List<StockItem> items = [];
 
       for (final line in lines) {
         if (line.isEmpty) continue;
+
+        // CSV: 한글명,추가명,표준코드
         final parts = line.split(',');
         if (parts.isEmpty) continue;
 
-        final name = parts[0].trim();
-        final code = (parts.length >= 2) ? parts[1].trim() : '';
+        final colA = parts[0].trim(); // 한글명(대표명)
+        final colB = (parts.length >= 2) ? parts[1].trim() : ''; // 추가명
+        final colC = (parts.length >= 3) ? parts[2].trim() : ''; // 표준코드
 
-        if (name.isEmpty) continue;
-        items.add(StockItem(name: name, code: code));
+        // ✅ 헤더 제거
+        if (colA == '한글명') continue;
+
+        if (colA.isEmpty) continue;
+
+        // ✅ 추가명은 "삼에스"처럼 1개일 수도 있고, "동부화재,DB손해보험"처럼 여러 개일 수도 있음
+        // (콤마로 이미 split되므로 여러 별칭이 한 셀에 들어오는 케이스면 세미콜론/슬래시/공백 등으로 추가 분리 가능)
+        final List<String> aliases = [];
+        if (colB.isNotEmpty) aliases.add(colB);
+
+        items.add(
+          StockItem(
+            displayName: colA,
+            aliases: aliases,
+            code: colC,
+          ),
+        );
       }
 
       setState(() {
@@ -84,8 +107,9 @@ class _SearchPageState extends State<SearchPage> {
     }
   }
 
+  // ✅ 대표명/추가명 둘 다에서 대소문자 무시 검색
   void _applyFilter(String q) {
-    final query = q.trim();
+    final query = _norm(q);
     if (query.isEmpty) {
       setState(() {
         _filtered = [];
@@ -94,10 +118,16 @@ class _SearchPageState extends State<SearchPage> {
       return;
     }
 
-    final result = _allStocks
-        .where((s) => s.name.contains(query)) // ✅ "삼성" 포함 종목 전부
-        .take(50) // 너무 많으면 UI 느려질 수 있어서 상한
-        .toList();
+    final result = _allStocks.where((s) {
+      // 대표명 매칭
+      if (_norm(s.displayName).contains(query)) return true;
+
+      // 추가명(별칭) 매칭
+      for (final a in s.aliases) {
+        if (_norm(a).contains(query)) return true;
+      }
+      return false;
+    }).take(50).toList();
 
     setState(() {
       _filtered = result;
@@ -105,17 +135,46 @@ class _SearchPageState extends State<SearchPage> {
     });
   }
 
+  void _onBottomTap(int index) {
+    if (index == 0) {
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      } else {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/home',
+              (route) => false,
+        );
+      }
+      return;
+    }
+
+    const labels = ['홈', '관심', '뉴스', '주식'];
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${labels[index]} 화면은 아직 준비 중입니다.'),
+        duration: const Duration(milliseconds: 800),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF3F4F6),
+
+      // ✅ 검색화면: 선택 없음(-1) => 아이콘 전부 회색 유지
+      bottomNavigationBar: _BottomNavBar(
+        initialIndex: -1,
+        onIndexChanged: _onBottomTap,
+      ),
+
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 상단: "검색" + 아이콘들
               Row(
                 children: [
                   const Text(
@@ -206,7 +265,6 @@ class _SearchPageState extends State<SearchPage> {
 
               const SizedBox(height: 16),
 
-              // 리스트 영역
               Expanded(
                 child: _loading
                     ? const Center(child: CircularProgressIndicator())
@@ -227,22 +285,15 @@ class _SearchPageState extends State<SearchPage> {
                     final isSelected = index == _selectedIndex;
 
                     return GestureDetector(
-                      onTap: () {
-                        setState(() => _selectedIndex = index);
-                      },
+                      onTap: () => setState(() => _selectedIndex = index),
                       child: Container(
                         margin: const EdgeInsets.only(bottom: 14),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(
-                            color: isSelected
-                                ? const Color(0xFF3B82F6)
-                                : Colors.transparent,
+                            color: isSelected ? const Color(0xFF3B82F6) : Colors.transparent,
                             width: 2,
                           ),
                           boxShadow: [
@@ -257,11 +308,11 @@ class _SearchPageState extends State<SearchPage> {
                           children: [
                             Expanded(
                               child: Column(
-                                crossAxisAlignment:
-                                CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
+                                  // ✅ 화면에는 대표명(한글명)만 표시
                                   Text(
-                                    item.name,
+                                    item.displayName,
                                     style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
@@ -275,6 +326,16 @@ class _SearchPageState extends State<SearchPage> {
                                       _pill('실적'),
                                     ],
                                   ),
+
+                                  // (선택) 별칭도 참고로 보여주고 싶으면 주석 해제
+                                  // if (item.aliases.isNotEmpty) ...[
+                                  //   const SizedBox(height: 6),
+                                  //   Text(
+                                  //     item.aliases.join(' · '),
+                                  //     style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                  //   ),
+                                  // ],
+
                                   if (item.code.isNotEmpty) ...[
                                     const SizedBox(height: 8),
                                     Text(
@@ -288,18 +349,10 @@ class _SearchPageState extends State<SearchPage> {
                                 ],
                               ),
                             ),
-
-                            // 오른쪽: (지금은 등락률 미구현) + 즐겨찾기
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: const [
-                                SizedBox(height: 6),
-                                Icon(
-                                  Icons.star_border,
-                                  color: Colors.grey,
-                                  size: 28,
-                                ),
-                              ],
+                            const Icon(
+                              Icons.star_border,
+                              color: Colors.grey,
+                              size: 28,
                             ),
                           ],
                         ),
@@ -329,6 +382,124 @@ class _SearchPageState extends State<SearchPage> {
           fontSize: 11,
           fontWeight: FontWeight.w600,
         ),
+      ),
+    );
+  }
+}
+
+// ================== 하단 네비게이션 바 (SearchPage 전용: 회색 유지) ==================
+class _BottomNavBar extends StatefulWidget {
+  final int initialIndex;
+  final ValueChanged<int> onIndexChanged;
+
+  const _BottomNavBar({
+    required this.initialIndex,
+    required this.onIndexChanged,
+  });
+
+  @override
+  State<_BottomNavBar> createState() => _BottomNavBarState();
+}
+
+class _BottomNavBarState extends State<_BottomNavBar> {
+  late int selectedIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    selectedIndex = widget.initialIndex;
+  }
+
+  void onTap(int index) {
+    // ✅ SearchPage에서는 색이 바뀌면 안 되므로 selectedIndex 유지(-1)
+    widget.onIndexChanged(index);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final Color activeColor = const Color(0xFF22C55E);
+    final Color inactiveColor = Colors.grey.shade400;
+
+    return Container(
+      height: 80,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _BottomNavItem(
+            icon: Icons.home,
+            label: '홈',
+            isActive: selectedIndex == 0,
+            activeColor: activeColor,
+            inactiveColor: inactiveColor,
+            onTap: () => onTap(0),
+          ),
+          _BottomNavItem(
+            icon: Icons.favorite_border,
+            label: '관심',
+            isActive: selectedIndex == 1,
+            activeColor: activeColor,
+            inactiveColor: inactiveColor,
+            onTap: () => onTap(1),
+          ),
+          _BottomNavItem(
+            icon: Icons.article_outlined,
+            label: '뉴스',
+            isActive: selectedIndex == 2,
+            activeColor: activeColor,
+            inactiveColor: inactiveColor,
+            onTap: () => onTap(2),
+          ),
+          _BottomNavItem(
+            icon: Icons.candlestick_chart,
+            label: '주식',
+            isActive: selectedIndex == 3,
+            activeColor: activeColor,
+            inactiveColor: inactiveColor,
+            onTap: () => onTap(3),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BottomNavItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool isActive;
+  final Color activeColor;
+  final Color inactiveColor;
+  final VoidCallback onTap;
+
+  const _BottomNavItem({
+    required this.icon,
+    required this.label,
+    required this.isActive,
+    required this.activeColor,
+    required this.inactiveColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 26, color: isActive ? activeColor : inactiveColor),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(fontSize: 11, color: isActive ? activeColor : inactiveColor),
+          ),
+        ],
       ),
     );
   }
