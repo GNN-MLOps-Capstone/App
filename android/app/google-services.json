@@ -1,48 +1,56 @@
 {
   "project_info": {
-    "project_number": "1958939954",
-    "project_id": "app-stock-1f5cb",
-    "storage_bucket": "app-stock-1f5cb.firebasestorage.app"
+    "project_number": "${FIREBASE_PROJECT_NUMBER}",
+    "project_id": "${FIREBASE_PROJECT_ID}",
+    "storage_bucket": "${FIREBASE_STORAGE_BUCKET}"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1958939954:android:fa404dc5677b40cc495b2b",
+        "mobilesdk_app_id": "${FIREBASE_MOBILESDK_APP_ID}",
         "android_client_info": {
           "package_name": "com.example.stock"
         }
       },
       "oauth_client": [
         {
-          "client_id": "1958939954-vjr6bhgtu63hpimksvnba55v30f1b7kj.apps.googleusercontent.com",
+          "client_id": "${FIREBASE_CLIENT_ID}",
           "client_type": 1,
           "android_info": {
             "package_name": "com.example.stock",
-            "certificate_hash": "5985f7c2566d0303e1b9ed2e2e776ef577e9f6b3"
+            "certificate_hash": "55fb45c8acef94d2a54058178a0d519c755d0d00"
           }
         },
         {
-          "client_id": "1958939954-fk7ea006r1adf31hfvg6f52vum1q2mu0.apps.googleusercontent.com",
+          "client_id": "${FIREBASE_CLIENT_ID_ANDROID_CERT2}",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.stock",
+            "certificate_hash": "d52e9f312ed2c8da8edfb491a694f744f7288df3"
+          }
+        },
+        {
+          "client_id": "${FIREBASE_CLIENT_ID_WEB}",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyD6F0Nt8MgTwTbsVZUFQvlAce8eFZ8DPNw"
+          "current_key": "${FIREBASE_API_KEY}"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "1958939954-fk7ea006r1adf31hfvg6f52vum1q2mu0.apps.googleusercontent.com",
+              "client_id": "${FIREBASE_CLIENT_ID_WEB}",
               "client_type": 3
             },
             {
-              "client_id": "1958939954-1mbrhkl4dh39hc0evujb7deo8e412jre.apps.googleusercontent.com",
+              "client_id": "${FIREBASE_IOS_CLIENT_ID}",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.example.stock"
+                "bundle_id": "com.example.stock.gnnproject"
               }
             }
           ]

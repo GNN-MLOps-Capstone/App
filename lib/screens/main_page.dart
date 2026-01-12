@@ -53,9 +53,7 @@ class StockHomeScreen extends StatelessWidget {
                   ),
                   IconButton(
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('알림 화면은 아직 준비 중입니다.')),
-                      );
+                      Navigator.pushNamed(context, '/push_test');
                     },
                     icon: Stack(
                       clipBehavior: Clip.none,
