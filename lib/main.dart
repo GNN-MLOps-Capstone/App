@@ -7,6 +7,7 @@ import 'firebase_options.dart';
 import 'screens/main_page.dart';
 import 'screens/push_test_screen.dart';
 import 'screens/news_page.dart';
+import 'screens/search_page.dart';
 import 'services/onesignal_service.dart';
 
 Future<void> main() async {
@@ -47,6 +48,7 @@ class StockApp extends StatelessWidget {
         '/home': (_) => const StockHomeScreen(),
         '/push_test': (_) => const PushTestScreen(),
         '/news': (_) => const NewsScreen(),
+        '/search': (_) => const SearchPage(),
       },
     );
   }

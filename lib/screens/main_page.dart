@@ -1,6 +1,7 @@
 // lib/screens/main_page.dart
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'search_page.dart';
 
 class StockHomeScreen extends StatelessWidget {
   final String? userName;
@@ -24,19 +25,44 @@ class StockHomeScreen extends StatelessWidget {
     );
   }
 
+  void _onBottomTap(BuildContext context, int index) {
+    if (index == 0) return; // 이미 홈
+
+    const labels = ['홈', '관심', '뉴스', '주식'];
+
+    if (index == 2) {
+      // 뉴스
+      Navigator.pushReplacementNamed(context, '/news');
+    } else {
+      // 아직 안 만든 탭은 안내만
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${labels[index]} 화면은 아직 준비 중입니다.'),
+          duration: const Duration(milliseconds: 800),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final String greetingName = (userName ?? '').isEmpty ? '사용자' : userName!;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF3F4F6),
+
+      // ✅ 홈 화면은 홈만 초록색(0)
+      bottomNavigationBar: _BottomNavBar(
+        initialIndex: 0,
+        onIndexChanged: (i) => _onBottomTap(context, i),
+      ),
+
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 상단 오른쪽 버튼들
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
@@ -120,7 +146,6 @@ class StockHomeScreen extends StatelessWidget {
 
               const SizedBox(height: 24),
 
-              // 검색창
               Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -135,10 +160,9 @@ class StockHomeScreen extends StatelessWidget {
                     icon: Icon(Icons.search),
                   ),
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('검색 기능은 곧 추가될 예정입니다.'),
-                      ),
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SearchPage()),
                     );
                   },
                 ),
@@ -146,7 +170,6 @@ class StockHomeScreen extends StatelessWidget {
 
               const SizedBox(height: 20),
 
-              // 초록 큰 카드
               GestureDetector(
                 onTap: () {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -213,9 +236,6 @@ class StockHomeScreen extends StatelessWidget {
               ),
 
               const Spacer(),
-
-              // 하단 네비게이션
-              const BottomNavBar(initialIndex: 0), // ✅ 홈 인덱스
             ],
           ),
         ),
@@ -225,16 +245,20 @@ class StockHomeScreen extends StatelessWidget {
 }
 
 // ================== 하단 네비게이션 바 ==================
-class BottomNavBar extends StatefulWidget {
+class _BottomNavBar extends StatefulWidget {
   final int initialIndex;
+  final ValueChanged<int> onIndexChanged;
 
-  const BottomNavBar({super.key, this.initialIndex = 0});
+  const _BottomNavBar({
+    required this.initialIndex,
+    required this.onIndexChanged,
+  });
 
   @override
-  State<BottomNavBar> createState() => _BottomNavBarState();
+  State<_BottomNavBar> createState() => _BottomNavBarState();
 }
 
-class _BottomNavBarState extends State<BottomNavBar> {
+class _BottomNavBarState extends State<_BottomNavBar> {
   late int selectedIndex;
 
   @override
@@ -245,24 +269,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
 
   void _onTap(int index) {
     setState(() => selectedIndex = index);
-
-    const labels = ['홈', '관심', '뉴스', '주식'];
-
-    if (index == 0) {
-      // 홈
-      Navigator.pushReplacementNamed(context, '/home');
-    } else if (index == 2) {
-      // 뉴스
-      Navigator.pushReplacementNamed(context, '/news');
-    } else {
-      // 아직 안 만든 탭은 안내만
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${labels[index]} 화면은 아직 준비 중입니다.'),
-          duration: const Duration(milliseconds: 800),
-        ),
-      );
-    }
+    widget.onIndexChanged(index);
   }
 
   @override
