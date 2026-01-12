@@ -43,7 +43,7 @@ class _NewsScreenState extends State<NewsScreen> {
     final rows = const CsvToListConverter(eol: '\n').convert(csvString);
     if (rows.isEmpty) return [];
 
-    final headers = rows.first.map((e) => e.toString()).toList();
+    final headers = rows.first.map((e) => e.toString().trim()).toList();
 
     int idxTitle = headers.indexOf('title');
     int idxSummary = headers.indexOf('summary');
@@ -83,6 +83,25 @@ class _NewsScreenState extends State<NewsScreen> {
   }
 
   @override
+  void _onBottomTap(BuildContext context, int index) {
+    if (index == 2) return; // 이미 뉴스 페이지
+
+    const labels = ['홈', '관심', '뉴스', '주식'];
+
+    if (index == 0) {
+      // 홈
+      Navigator.pushReplacementNamed(context, '/home');
+    } else {
+      // 아직 안 만든 탭은 안내만
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${labels[index]} 화면은 아직 준비 중입니다.'),
+          duration: const Duration(milliseconds: 800),
+        ),
+      );
+    }
+  }
+
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF3F4F6),
@@ -159,7 +178,10 @@ class _NewsScreenState extends State<NewsScreen> {
               ),
 
               // 하단 네비게이션
-              const BottomNavBar(initialIndex: 2),
+              BottomNavBar(
+                initialIndex: 2,
+                onIndexChanged: (i) => _onBottomTap(context, i),
+              ),
             ],
           ),
         ),

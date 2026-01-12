@@ -52,7 +52,7 @@ class StockHomeScreen extends StatelessWidget {
       backgroundColor: const Color(0xFFF3F4F6),
 
       // ✅ 홈 화면은 홈만 초록색(0)
-      bottomNavigationBar: _BottomNavBar(
+      bottomNavigationBar: BottomNavBar(
         initialIndex: 0,
         onIndexChanged: (i) => _onBottomTap(context, i),
       ),
@@ -245,20 +245,20 @@ class StockHomeScreen extends StatelessWidget {
 }
 
 // ================== 하단 네비게이션 바 ==================
-class _BottomNavBar extends StatefulWidget {
+class BottomNavBar extends StatefulWidget {
   final int initialIndex;
   final ValueChanged<int> onIndexChanged;
 
-  const _BottomNavBar({
+  const BottomNavBar({
     required this.initialIndex,
     required this.onIndexChanged,
   });
 
   @override
-  State<_BottomNavBar> createState() => _BottomNavBarState();
+  State<BottomNavBar> createState() => BottomNavBarState();
 }
 
-class _BottomNavBarState extends State<_BottomNavBar> {
+class BottomNavBarState extends State<BottomNavBar> {
   late int selectedIndex;
 
   @override
