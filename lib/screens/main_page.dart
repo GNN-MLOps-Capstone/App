@@ -1,4 +1,4 @@
-// lib/screens/stock_home_screen.dart
+// lib/screens/main_page.dart
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -17,7 +17,6 @@ class StockHomeScreen extends StatelessWidget {
 
     if (!context.mounted) return;
 
-    // 라우트 이름으로 로그인 화면으로 돌아감 (Login 위젯 import 안 해도 됨)
     Navigator.pushNamedAndRemoveUntil(
       context,
       '/login',
@@ -216,7 +215,7 @@ class StockHomeScreen extends StatelessWidget {
               const Spacer(),
 
               // 하단 네비게이션
-              const _BottomNavBar(),
+              const BottomNavBar(initialIndex: 0), // ✅ 홈 인덱스
             ],
           ),
         ),
@@ -226,31 +225,44 @@ class StockHomeScreen extends StatelessWidget {
 }
 
 // ================== 하단 네비게이션 바 ==================
-class _BottomNavBar extends StatefulWidget {
-  const _BottomNavBar();
+class BottomNavBar extends StatefulWidget {
+  final int initialIndex;
+
+  const BottomNavBar({super.key, this.initialIndex = 0});
 
   @override
-  State<_BottomNavBar> createState() => _BottomNavBarState();
+  State<BottomNavBar> createState() => _BottomNavBarState();
 }
 
-class _BottomNavBarState extends State<_BottomNavBar> {
-  int selectedIndex = 0;
+class _BottomNavBarState extends State<BottomNavBar> {
+  late int selectedIndex;
 
-  void onTap(int index) {
+  @override
+  void initState() {
+    super.initState();
+    selectedIndex = widget.initialIndex;
+  }
+
+  void _onTap(int index) {
     setState(() => selectedIndex = index);
 
-    if (index == 0) {
-      // 홈 버튼: 사실 이미 홈 화면이라 굳이 다시 푸시할 필요는 없음
-      return;
-    }
-
     const labels = ['홈', '관심', '뉴스', '주식'];
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${labels[index]} 화면은 아직 준비 중입니다.'),
-        duration: const Duration(milliseconds: 800),
-      ),
-    );
+
+    if (index == 0) {
+      // 홈
+      Navigator.pushReplacementNamed(context, '/home');
+    } else if (index == 2) {
+      // 뉴스
+      Navigator.pushReplacementNamed(context, '/news');
+    } else {
+      // 아직 안 만든 탭은 안내만
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${labels[index]} 화면은 아직 준비 중입니다.'),
+          duration: const Duration(milliseconds: 800),
+        ),
+      );
+    }
   }
 
   @override
@@ -274,7 +286,7 @@ class _BottomNavBarState extends State<_BottomNavBar> {
             isActive: selectedIndex == 0,
             activeColor: activeColor,
             inactiveColor: inactiveColor,
-            onTap: () => onTap(0),
+            onTap: () => _onTap(0),
           ),
           _BottomNavItem(
             icon: Icons.favorite_border,
@@ -282,7 +294,7 @@ class _BottomNavBarState extends State<_BottomNavBar> {
             isActive: selectedIndex == 1,
             activeColor: activeColor,
             inactiveColor: inactiveColor,
-            onTap: () => onTap(1),
+            onTap: () => _onTap(1),
           ),
           _BottomNavItem(
             icon: Icons.article_outlined,
@@ -290,7 +302,7 @@ class _BottomNavBarState extends State<_BottomNavBar> {
             isActive: selectedIndex == 2,
             activeColor: activeColor,
             inactiveColor: inactiveColor,
-            onTap: () => onTap(2),
+            onTap: () => _onTap(2),
           ),
           _BottomNavItem(
             icon: Icons.candlestick_chart,
@@ -298,7 +310,7 @@ class _BottomNavBarState extends State<_BottomNavBar> {
             isActive: selectedIndex == 3,
             activeColor: activeColor,
             inactiveColor: inactiveColor,
-            onTap: () => onTap(3),
+            onTap: () => _onTap(3),
           ),
         ],
       ),
