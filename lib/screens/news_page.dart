@@ -5,6 +5,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:csv/csv.dart';
 
 import 'main_page.dart'; // BottomNavBar 사용
+import 'news_detail_page.dart'; // ✅ 상세 화면(2번 화면) 이동용
 
 // CSV 한 줄을 담는 모델
 class NewsItem {
@@ -50,11 +51,10 @@ class _NewsScreenState extends State<NewsScreen> {
     int idxPress = headers.indexOf('신문사');
     int idxPn = headers.indexOf('pn');
 
-    // 헤더 이름이 다를 경우 대비
     // 헤더 유효성 검사
     if (idxTitle == -1 || idxSummary == -1 || idxPress == -1 || idxPn == -1) {
       debugPrint('CSV 헤더 형식이 올바르지 않습니다: $headers');
-      return []; // 또는 throw 에러
+      return [];
     }
 
     final List<NewsItem> items = [];
@@ -176,58 +176,70 @@ class _NewsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    return InkWell(
+      borderRadius: BorderRadius.circular(22),
+      onTap: () {
+        // ✅ 뉴스 카드 클릭 시 상세 페이지(2번 화면)로 이동
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const NewsDetailScreen(),
           ),
-        ],
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 제목
-          Text(
-            item.title,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
-          ),
-          const SizedBox(height: 8),
-
-          // 요약
-          Text(
-            item.summary,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 13,
-              height: 1.4,
-              color: Colors.grey.shade700,
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // 태그(신문사 + 감성)
-          Row(
-            children: [
-              _TagChip(
-                label: item.press,
-                background: const Color(0xFFE5F4FF),
-                textColor: const Color(0xFF1D4ED8),
+          ],
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 제목
+            Text(
+              item.title,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
               ),
-              const SizedBox(width: 8),
-              _SentimentChip(sentiment: item.sentiment),
-            ],
-          ),
-        ],
+            ),
+            const SizedBox(height: 8),
+
+            // 요약
+            Text(
+              item.summary,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.4,
+                color: Colors.grey.shade700,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // 태그(신문사 + 감성)
+            Row(
+              children: [
+                _TagChip(
+                  label: item.press,
+                  background: const Color(0xFFE5F4FF),
+                  textColor: const Color(0xFF1D4ED8),
+                ),
+                const SizedBox(width: 8),
+                _SentimentChip(sentiment: item.sentiment),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
