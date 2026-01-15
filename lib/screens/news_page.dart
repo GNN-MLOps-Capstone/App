@@ -5,20 +5,41 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:csv/csv.dart';
 
 import 'main_page.dart'; // BottomNavBar 사용
+import '../services/news_api_service.dart' as api;
 
-// CSV 한 줄을 담는 모델
+/// 뉴스 아이템 모델
+/// 
+/// API 응답 또는 CSV 데이터를 담는 클래스입니다.
+/// 
+/// 필드:
+///   - title: 뉴스 제목 (naver_news.title)
+///   - summary: 뉴스 본문 (crawled_news.text)
+///   - press: 신문사 (TODO: 크롤링 구현 후 추가)
+///   - sentiment: 감성분석 (TODO: 구현 후 추가)
 class NewsItem {
   final String title;
   final String summary;
-  final String press;     // 신문사
-  final String sentiment; // 긍정 / 부정 / 중립 등
+  final String? press;      // TODO: 크롤링 구현 후 추가
+  final String? sentiment;  // TODO: 감성분석 구현 후 추가
 
   NewsItem({
     required this.title,
     required this.summary,
-    required this.press,
-    required this.sentiment,
+    this.press,
+    this.sentiment,
   });
+  
+  /// API 응답에서 NewsItem 생성
+  factory NewsItem.fromApiItem(api.NewsItem item) {
+    return NewsItem(
+      title: item.title,
+      summary: item.summary ?? '',
+      // TODO: 크롤링 구현 후 신문사 추가
+      press: null,
+      // TODO: 감성분석 구현 후 추가
+      sentiment: null,
+    );
+  }
 }
 
 class NewsScreen extends StatefulWidget {
@@ -30,13 +51,58 @@ class NewsScreen extends StatefulWidget {
 
 class _NewsScreenState extends State<NewsScreen> {
   late Future<List<NewsItem>> _futureNews;
+  final TextEditingController _searchController = TextEditingController();
+  bool _useApi = true; // API 사용 여부 (false면 CSV 폴백)
 
   @override
   void initState() {
     super.initState();
-    _futureNews = _loadNewsFromCsv();
+    _futureNews = _loadNews();
+  }
+  
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
+  /// 뉴스 로드 (API 우선, 실패 시 CSV 폴백)
+  Future<List<NewsItem>> _loadNews({String? searchQuery}) async {
+    if (_useApi) {
+      try {
+        // 먼저 서버 상태 확인
+        final isHealthy = await api.NewsApiService.checkHealth();
+        if (!isHealthy) {
+          debugPrint('API 서버 연결 실패, CSV 폴백 사용');
+          return _loadNewsFromCsv();
+        }
+        
+        // API에서 뉴스 로드
+        // naver_news 테이블에서 pub_date 기준 최신 20개 가져옴
+        final apiItems = await api.NewsApiService.getNewsList(
+          limit: 20,
+          search: searchQuery,
+        );
+        
+        return apiItems.map((item) => NewsItem.fromApiItem(item)).toList();
+      } catch (e) {
+        debugPrint('API 호출 실패: $e, CSV 폴백 사용');
+        return _loadNewsFromCsv();
+      }
+    } else {
+      return _loadNewsFromCsv();
+    }
+  }
+  
+  /// 검색 실행
+  void _performSearch() {
+    final query = _searchController.text.trim();
+    setState(() {
+      _futureNews = _loadNews(searchQuery: query.isEmpty ? null : query);
+    });
+  }
+
+  /// CSV에서 뉴스 로드 (폴백용)
   Future<List<NewsItem>> _loadNewsFromCsv() async {
     final csvString = await rootBundle.loadString('lib/dummy_data.csv');
 
@@ -50,11 +116,10 @@ class _NewsScreenState extends State<NewsScreen> {
     int idxPress = headers.indexOf('신문사');
     int idxPn = headers.indexOf('pn');
 
-    // 헤더 이름이 다를 경우 대비
     // 헤더 유효성 검사
     if (idxTitle == -1 || idxSummary == -1 || idxPress == -1 || idxPn == -1) {
       debugPrint('CSV 헤더 형식이 올바르지 않습니다: $headers');
-      return []; // 또는 throw 에러
+      return [];
     }
 
     final List<NewsItem> items = [];
@@ -128,11 +193,20 @@ class _NewsScreenState extends State<NewsScreen> {
                   borderRadius: BorderRadius.circular(18),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: const TextField(
+                child: TextField(
+                  controller: _searchController,
+                  onSubmitted: (_) => _performSearch(),
                   decoration: InputDecoration(
                     hintText: '원하는 종목을 검색해 보세요',
                     border: InputBorder.none,
-                    icon: Icon(Icons.search),
+                    icon: const Icon(Icons.search),
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.clear, size: 18),
+                      onPressed: () {
+                        _searchController.clear();
+                        _performSearch();
+                      },
+                    ),
                   ),
                 ),
               ),
@@ -224,7 +298,7 @@ class _NewsCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
 
-          // 요약
+          // 요약 (crawled_news.text)
           Text(
             item.summary,
             maxLines: 2,
@@ -237,16 +311,41 @@ class _NewsCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // 태그(신문사 + 감성)
+          // 태그 (신문사 + 감성)
+          // TODO: 크롤링/감성분석 구현 후 표시
           Row(
             children: [
-              _TagChip(
-                label: item.press,
-                background: const Color(0xFFE5F4FF),
-                textColor: const Color(0xFF1D4ED8),
-              ),
-              const SizedBox(width: 8),
-              _SentimentChip(sentiment: item.sentiment),
+              // ---------------------------------------------------------
+              // 신문사 태그
+              // TODO: 크롤링 구현 후 표시
+              // ---------------------------------------------------------
+              if (item.press != null && item.press!.isNotEmpty)
+                _TagChip(
+                  label: item.press!,
+                  background: const Color(0xFFE5F4FF),
+                  textColor: const Color(0xFF1D4ED8),
+                ),
+              
+              // ---------------------------------------------------------
+              // 감성 태그
+              // TODO: 감성분석 구현 후 표시
+              // ---------------------------------------------------------
+              if (item.sentiment != null && item.sentiment!.isNotEmpty) ...[
+                if (item.press != null && item.press!.isNotEmpty)
+                  const SizedBox(width: 8),
+                _SentimentChip(sentiment: item.sentiment!),
+              ],
+              
+              // 태그가 없을 때 표시
+              if ((item.press == null || item.press!.isEmpty) && 
+                  (item.sentiment == null || item.sentiment!.isEmpty))
+                Text(
+                  '태그 정보 없음',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey.shade500,
+                  ),
+                ),
             ],
           ),
         ],
