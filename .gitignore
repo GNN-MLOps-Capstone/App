@@ -43,9 +43,12 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
 # Environment variables and sensitive files
 .env
 .env.local
 *.jks
 /android/app/google-services.json
 android/app/src/google-services.json
+
+ios/build/
