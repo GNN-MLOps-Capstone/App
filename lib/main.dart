@@ -14,7 +14,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // .env 파일 로드
-  await dotenv.load(fileName: ".env");
+  await dotenv.load(fileName: ".env.local");
 
   try {
     // Firebase 기본 앱 초기화
