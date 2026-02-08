@@ -9,6 +9,9 @@ import 'screens/push_test_screen.dart';
 import 'screens/news_page.dart';
 import 'screens/search_page.dart';
 import 'services/onesignal_service.dart';
+import 'screens/setting_page.dart';
+import 'screens/login_page.dart';
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -43,12 +46,14 @@ class StockApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      initialRoute: '/home',
+      initialRoute: '/login',
       routes: {
         '/home': (_) => const StockHomeScreen(),
         '/push_test': (_) => const PushTestScreen(),
         '/news': (_) => const NewsScreen(),
         '/search': (_) => const SearchPage(),
+        '/settings': (_) => const SettingPage(),
+        '/login': (_) => const GoogleLoginPage(),
       },
     );
   }
