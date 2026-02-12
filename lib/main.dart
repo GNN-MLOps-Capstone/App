@@ -8,6 +8,7 @@ import 'screens/main_page.dart';
 import 'screens/push_test_screen.dart';
 import 'screens/news_page.dart';
 import 'screens/search_page.dart';
+import 'screens/stock_detail_page.dart';  // ✅ 추가
 import 'services/onesignal_service.dart';
 import 'screens/setting_page.dart';
 import 'screens/login_page.dart';
@@ -54,6 +55,7 @@ class StockApp extends StatelessWidget {
         '/search': (_) => const SearchPage(),
         '/settings': (_) => const SettingPage(),
         '/login': (_) => const GoogleLoginPage(),
+        '/stock-detail': (_) => const StockDetailPage(stockName: '삼성전자'),  // ✅ 추가
       },
     );
   }
