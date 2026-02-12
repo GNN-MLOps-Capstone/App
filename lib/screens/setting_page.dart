@@ -1,6 +1,7 @@
 // lib/screens/setting_page.dart
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import '../services/user_api_service.dart';
 
 class SettingPage extends StatefulWidget {
   const SettingPage({super.key});
@@ -35,25 +36,50 @@ class _SettingPageState extends State<SettingPage> {
   void initState() {
     super.initState();
     _loadUserProfile();
+    _loadServerSettings();
   }
 
   Future<void> _loadUserProfile() async {
     try {
-      final googleSignIn = GoogleSignIn(scopes: ['email']);
-      final account = await googleSignIn.signInSilently();
+      final userProfile = await UserApiService.getProfile();
 
       if (!mounted) return;
 
-      if (account != null) {
+      setState(() {
+        _nickname = userProfile.nickname;
+        _email = userProfile.email;
+        _photoUrl = userProfile.imgUrl; // 서버 컬럼명 img_url 반영
+      });
+    } catch (e) {
+      debugPrint('서버 프로필 로드 실패: $e');
+
+      final googleSignIn = GoogleSignIn(scopes: ['email']);
+      final account = await googleSignIn.signInSilently();
+      if (account != null && mounted) {
         setState(() {
-          _nickname =
-          (account.displayName ?? '').isEmpty ? '사용자' : account.displayName!;
-          _email = account.email.isEmpty ? 'email@gmail.com' : account.email;
-          _photoUrl = account.photoUrl; // ✅ 핵심
+          _nickname = account.displayName ?? '사용자';
+          _email = account.email;
+          _photoUrl = account.photoUrl;
         });
       }
-    } catch (_) {}
+    }
   }
+
+  Future<void> _loadServerSettings() async {
+  try {
+    final settings = await UserApiService.getSettings(); // 서버 DB 호출
+    if (!mounted) return;
+    setState(() {
+      _riskAlert = settings.riskOnly;
+      _goodNewsAlert = settings.positiveOnly;
+      _favoriteAlert = settings.interestOnly;
+      // DB에 저장된 시간에 맞춰 라벨 업데이트
+      _dndTimeRangeLabel = '${settings.dndStart} ~ ${settings.dndFinish}';
+    });
+  } catch (e) {
+    debugPrint('서버 설정 로드 실패: $e');
+  }
+}
 
   Future<void> _logout(BuildContext context) async {
     try {
@@ -82,12 +108,35 @@ class _SettingPageState extends State<SettingPage> {
       _goodNewsAlert = value;
       _favoriteAlert = value;
     });
+    UserApiService.updateSettings({
+    'push': value,
+    'risk_only': value,
+    'positive_only': value,
+    'interest_only': value,
+  });
   }
 
-  void _toggleRisk(bool value) => setState(() => _riskAlert = value);
-  void _toggleGoodNews(bool value) => setState(() => _goodNewsAlert = value);
-  void _toggleFavorite(bool value) => setState(() => _favoriteAlert = value);
-
+  void _toggleRisk(bool value) {
+      setState(() => _riskAlert = value);
+      UserApiService.updateSettings({
+        'risk_only': value,
+        'push': _allPush,
+      });
+  }
+  void _toggleGoodNews(bool value) {
+    setState(() => _goodNewsAlert = value);
+    UserApiService.updateSettings({
+        'positive_only': value,
+        'push': _allPush,
+    });
+  } 
+  void _toggleFavorite(bool value) {
+    setState(() => _favoriteAlert = value);
+    UserApiService.updateSettings({
+        'interest_only': value,
+        'push': _allPush,
+    });
+  }
   Future<void> _openDndDialog() async {
     await showDialog(
       context: context,
@@ -162,8 +211,11 @@ class _SettingPageState extends State<SettingPage> {
     );
 
     if (!mounted) return;
-
+    
     if (confirmed == true) {
+      await UserApiService.deleteUser();
+      if (!mounted) return;
+      
       setState(() {
         _riskAlert = false;
         _goodNewsAlert = false;

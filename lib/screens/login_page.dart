@@ -1,6 +1,7 @@
 // lib/screens/google_login_page.dart
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import '../services/user_api_service.dart';
 import 'main_page.dart'; // 홈 화면으로 이동할 때 필요
 
 class GoogleLoginPage extends StatefulWidget {
@@ -25,6 +26,15 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
       final account = await _googleSignIn.signIn();
       if (account == null) return; // 취소
 
+      if (!mounted) return;
+
+      final loginRequest = UserLoginRequest(
+        googleId: account.id,           // 서버에서 유저를 식별할 고유 키
+        email: account.email,           // 유저 이메일
+        nickname: account.displayName ?? '사용자', // 닉네임 (없으면 기본값)
+        imgUrl: account.photoUrl,       // 프로필 사진 URL
+      );
+      final authResponse = await UserApiService.login(loginRequest);
       if (!mounted) return;
 
       // 홈 화면으로 이동
