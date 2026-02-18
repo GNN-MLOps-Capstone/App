@@ -50,7 +50,10 @@ class StockApp extends StatelessWidget {
         '/push_test': (_) => const PushTestScreen(),
         '/news': (_) => const NewsScreen(),
         '/search': (_) => const SearchPage(),
-        '/stock-detail': (_) => const StockDetailPage(stockName: '삼성전자'),  // ✅ 추가
+        '/stock-detail': (_) => const StockDetailPage(
+              stockName: '삼성전자',
+              stockCode: '005930',
+            ),  // ✅ 추가
       },
     );
   }
