@@ -223,7 +223,8 @@ class _SettingPageState extends State<SettingPage> {
                           child: Column(
                             children: [
                               Image.asset(
-                                'assets/images/Capston.png',
+                                '/Users/hyegyoung/AndroidStudioProjects/StockApp/App/lib/screens/Capston.png',
+                                // 'assets/images/Capston.png',
                                 height: 70,
                                 fit: BoxFit.contain,
                                 errorBuilder: (_, __, ___) => const SizedBox(height: 70),
@@ -264,7 +265,7 @@ class _SettingPageState extends State<SettingPage> {
 
                                   _teamRow('이수호', 'Product Manager', '백혜경', 'Frontend'),
                                   const SizedBox(height: 8),
-                                  _teamRow('신동빈', 'Backend', '이상진', 'Backend'),
+                                  _teamRow('신동빈', 'data engineer', '이상진', 'Backend'),
                                   const SizedBox(height: 8),
                                   _teamRow('최윤형', 'Data/Design', '하성우', 'Data'),
 
