@@ -5,6 +5,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:csv/csv.dart';
 
 import 'main_page.dart'; // BottomNavBar 사용
+// import 'stock_page.dart'; // 주식 탭 이동용
 
 // CSV 한 줄을 담는 모델
 class NewsItem {
@@ -83,15 +84,21 @@ class _NewsScreenState extends State<NewsScreen> {
   }
 
   @override
+
   void _onBottomTap(BuildContext context, int index) {
     if (index == 2) return; // 이미 뉴스 페이지
 
     const labels = ['홈', '관심', '뉴스', '주식'];
 
     if (index == 0) {
-      // 홈
       Navigator.pushReplacementNamed(context, '/home');
-    } else {
+      return;
+    }
+    if (index == 3) {
+      Navigator.pushReplacementNamed(context, '/stock');
+      return;
+    }
+    else{
       // 아직 안 만든 탭은 안내만
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

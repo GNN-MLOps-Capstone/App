@@ -10,6 +10,7 @@ import 'screens/news_page.dart';
 import 'screens/search_page.dart';
 import 'screens/stock_detail_page.dart';  // ✅ 추가
 import 'services/onesignal_service.dart';
+import 'screens/stock_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -50,7 +51,8 @@ class StockApp extends StatelessWidget {
         '/push_test': (_) => const PushTestScreen(),
         '/news': (_) => const NewsScreen(),
         '/search': (_) => const SearchPage(),
-        '/stock-detail': (_) => const StockDetailPage(stockName: '삼성전자'),  // ✅ 추가
+        '/stock': (_) => const StockPage(),
+        '/stock-detail': (_) => const StockDetailPage(stockName: '삼성전자'),
       },
     );
   }

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import 'search_page.dart';
-import 'stock_page.dart'; // ✅ 추가: 주식 탭 이동용
+import 'stock_page.dart';
 
 class StockHomeScreen extends StatelessWidget {
   final String? userName;
