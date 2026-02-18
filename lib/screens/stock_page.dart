@@ -22,6 +22,8 @@ class StockPage extends StatefulWidget {
 class _StockPageState extends State<StockPage> {
   bool _loading = true;
   List<StockItem> _allStocks = [];
+  static final RegExp _shortCodePattern = RegExp(r'^[0-9A-Z]{6}$');
+  static final RegExp _isuCdPattern = RegExp(r'^KR[0-9A-Z]{10}$');
 
   // (1번 화면) Top5는 지금은 더미
   final List<_TrendItem> _top5 = const [
@@ -42,48 +44,43 @@ class _StockPageState extends State<StockPage> {
     setState(() => _loading = true);
 
     try {
-      // ✅ 너가 말한 경로
       final raw = await rootBundle.loadString('lib/screens/name.csv');
-      final lines = const LineSplitter().convert(raw);
+      final normalizedRaw = raw.replaceFirst('\uFEFF', '');
+      final lines = const LineSplitter().convert(normalizedRaw);
 
       final parsed = <StockItem>[];
+      int invalidCount = 0;
 
-      for (final line in lines) {
+      for (int i = 0; i < lines.length; i++) {
+        final line = lines[i];
         final t = line.trim();
         if (t.isEmpty) continue;
 
-        // 헤더 추정 스킵
+        // 헤더 스킵 (Name,Market,ISU_CD[,SHORT_CODE])
         final lower = t.toLowerCase();
-        if (lower.contains('code') && lower.contains('name')) continue;
+        if (i == 0 && lower.contains('name') && lower.contains('isu_cd')) continue;
 
         final cols = t.split(',');
-        String name = '';
-        String code = '';
-
-        if (cols.length >= 2) {
-          final a = cols[0].trim();
-          final b = cols[1].trim();
-
-          // code처럼 보이는 쪽을 code로 추정
-          final looksA = RegExp(r'^[0-9A-Za-z]{4,}$').hasMatch(a);
-          final looksB = RegExp(r'^[0-9A-Za-z]{4,}$').hasMatch(b);
-
-          if (looksA && !looksB) {
-            code = a;
-            name = b;
-          } else {
-            name = a;
-            code = b;
-          }
-        } else {
-          name = cols[0].trim();
-          code = '';
+        if (cols.length < 3) {
+          invalidCount++;
+          continue;
         }
 
-        if (name.isEmpty) continue;
+        final name = cols[0].trim();
+        final isuCd = cols[2].trim();
+        final explicitCode = cols.length >= 4 ? cols[3].trim().toUpperCase() : '';
+        final code = _shortCodePattern.hasMatch(explicitCode)
+            ? explicitCode
+            : _toShortCode(isuCd);
+
+        if (name.isEmpty || code == null) {
+          invalidCount++;
+          continue;
+        }
         parsed.add(StockItem(name: name, code: code));
       }
 
+      debugPrint('name.csv 파싱 완료: valid=${parsed.length}, invalid=$invalidCount');
       _allStocks = parsed;
     } catch (e) {
       debugPrint('name.csv 로드 실패: $e');
@@ -92,6 +89,16 @@ class _StockPageState extends State<StockPage> {
 
     if (!mounted) return;
     setState(() => _loading = false);
+  }
+
+  String? _toShortCode(String isuCd) {
+    final normalized = isuCd.trim().toUpperCase();
+    if (_shortCodePattern.hasMatch(normalized)) return normalized;
+    if (_isuCdPattern.hasMatch(normalized)) {
+      // KR + [시장1자리] + [단축코드6자리] + [체크3자리]
+      return normalized.substring(3, 9);
+    }
+    return null;
   }
 
   void _openSearch() {
@@ -275,6 +282,7 @@ class StockSearchPage extends StatefulWidget {
 class _StockSearchPageState extends State<StockSearchPage> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
+  static final RegExp _shortCodePattern = RegExp(r'^[0-9A-Z]{6}$');
 
   List<StockItem> _filtered = [];
 
@@ -316,10 +324,19 @@ class _StockSearchPageState extends State<StockSearchPage> {
 
   // ✅ 여기서 종목 탭 시 상세 화면으로 이동
   void _onTapStock(StockItem item) {
+    if (!_shortCodePattern.hasMatch(item.code.toUpperCase())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('유효하지 않은 종목코드입니다.')),
+      );
+      return;
+    }
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => StockDetailPage(stockName: item.name),
+        builder: (_) => StockDetailPage(
+          stockName: item.name,
+          stockCode: item.code.toUpperCase(),
+        ),
       ),
     );
   }
