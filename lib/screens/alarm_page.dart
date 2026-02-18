@@ -1,23 +1,75 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 
 enum AlarmTag { highRisk, risk, keyword }
 
 class AlarmItem {
   final String id;
   final AlarmTag tag;
+  final String stockName;
+  final double? sentimentScore;
+
   final String title;
   final String body;
-  final String timeLabel; // 예: "방금 전", "3시간 전"
+
+  /// 알림 발생 시각(정렬/시간표시 핵심)
+  final DateTime createdAt;
+
   bool isRead;
+
+  /// ✅ 즐겨찾기(= 중요 탭에 들어갈지)
+  bool isStarred;
 
   AlarmItem({
     required this.id,
     required this.tag,
+    required this.stockName,
     required this.title,
     required this.body,
-    required this.timeLabel,
+    required this.createdAt,
+    this.sentimentScore,
     this.isRead = false,
+    this.isStarred = false,
   });
+
+  AlarmItem copyWith({
+    AlarmTag? tag,
+    String? stockName,
+    double? sentimentScore,
+    String? title,
+    String? body,
+    DateTime? createdAt,
+    bool? isRead,
+    bool? isStarred,
+  }) {
+    return AlarmItem(
+      id: id,
+      tag: tag ?? this.tag,
+      stockName: stockName ?? this.stockName,
+      sentimentScore: sentimentScore ?? this.sentimentScore,
+      title: title ?? this.title,
+      body: body ?? this.body,
+      createdAt: createdAt ?? this.createdAt,
+      isRead: isRead ?? this.isRead,
+      isStarred: isStarred ?? this.isStarred,
+    );
+  }
+
+  /// 요청 규칙대로 timeLabel 생성
+  String timeLabelNow(DateTime now) {
+    final diff = now.difference(createdAt);
+    if (diff.isNegative) return '방금 전';
+
+    final minutes = diff.inMinutes;
+    final hours = diff.inHours;
+    final days = diff.inDays;
+
+    if (minutes <= 5) return '방금 전';          // 0~5분
+    if (minutes < 60) return '${minutes}분 전';   // 5분 초과~1시간 미만
+    if (hours < 24) return '${hours}시간 전';     // 1시간 이상~24시간 미만(분 버림)
+    return '${days}일 전';                       // 1일 이상
+  }
 }
 
 class AlarmPage extends StatefulWidget {
@@ -28,58 +80,227 @@ class AlarmPage extends StatefulWidget {
 }
 
 class _AlarmPageState extends State<AlarmPage> {
-  // ✅ 더미 데이터 (원하면 나중에 API로 교체)
-  final List<AlarmItem> _items = [
-    AlarmItem(
-      id: '1',
-      tag: AlarmTag.highRisk,
-      title: '삼성전자 급락 리스크 감지',
-      body: '최근 3일간 부정적 뉴스 급증 (15건) 및 주가 -5.2% 하락, 실적 발표 전 변동성 증가 예상',
-      timeLabel: '방금 전',
-      isRead: false,
-    ),
-    AlarmItem(
-      id: '2',
-      tag: AlarmTag.keyword,
-      title: '카카오 규제 이슈 발생',
-      body: '공정거래위원회 조사 착수, 관련 키워드 “규제”, “조사” 급증 중',
-      timeLabel: '3시간 전',
-      isRead: false,
-    ),
-    AlarmItem(
-      id: '3',
-      tag: AlarmTag.risk,
-      title: 'NAVER 감성 지수 하락',
-      body: 'AI 서비스 관련 부정적 여론 증가, 감성 지수 70→45로 하락',
-      timeLabel: '1일 전',
-      isRead: true,
-    ),
-    AlarmItem(
-      id: '4',
-      tag: AlarmTag.keyword,
-      title: '삼성전자 “반도체” 키워드 급등',
-      body: '관련 기사/언급량이 급증했습니다. 단기 이슈로 변동성 주의',
-      timeLabel: '2일 전',
-      isRead: true,
-    ),
-    AlarmItem(
-      id: '5',
-      tag: AlarmTag.risk,
-      title: 'LG에너지솔루션 변동성 확대',
-      body: '최근 거래량 급증과 함께 변동성이 커지고 있습니다.',
-      timeLabel: '3일 전',
-      isRead: false,
-    ),
-  ];
+  Timer? _ticker;
+  late List<AlarmItem> _items = [];
+
+  // ==============================
+  // 정렬/추가 공통 유틸
+  // ==============================
+
+  void _sortByNewest() {
+    _items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  }
+
+  List<AlarmItem> _mergeAndSort(List<AlarmItem> a, List<AlarmItem> b) {
+    final merged = [...a, ...b];
+    merged.sort((x, y) => y.createdAt.compareTo(x.createdAt));
+    return merged;
+  }
+
+  /// ✅ 새 알림 도착 시 호출하면 됨 (자동 최신순 + 맨 위)
+  /// - 같은 id가 있으면 업데이트(중복 방지)
+  void addOrUpdateAlarm(AlarmItem newItem) {
+    setState(() {
+      final idx = _items.indexWhere((e) => e.id == newItem.id);
+      if (idx >= 0) {
+        final old = _items[idx];
+        // 기존 읽음/즐겨찾기 상태는 유지하면서 본문/시간/태그만 갱신
+        _items[idx] = old.copyWith(
+          tag: newItem.tag,
+          stockName: newItem.stockName,
+          sentimentScore: newItem.sentimentScore,
+          title: newItem.title,
+          body: newItem.body,
+          createdAt: newItem.createdAt,
+        );
+      } else {
+        _items.add(newItem);
+      }
+      _sortByNewest();
+    });
+  }
+
+  void _deleteItem(String id) {
+    setState(() {
+      _items.removeWhere((e) => e.id == id);
+    });
+  }
+
+  void _toggleStar(String id) {
+    setState(() {
+      final idx = _items.indexWhere((e) => e.id == id);
+      if (idx < 0) return;
+      final it = _items[idx];
+      _items[idx] = it.copyWith(isStarred: !it.isStarred);
+      // 즐겨찾기 토글해도 정렬은 최신순 유지(필요하면 여기서 고정정렬 정책 변경 가능)
+      _sortByNewest();
+    });
+  }
+
+  // ==============================
+  // 리스크/키워드 생성 로직 (더미)
+  // ==============================
+
+  AlarmTag _tagBySentiment(double sentimentScore) {
+    // TODO(임계값 튜닝 필요):
+    // - sentimentScore가 X 이하이면 highRisk
+    // - sentimentScore가 Y 이하이면 risk
+    if (sentimentScore <= 35) return AlarmTag.highRisk; // TODO
+    if (sentimentScore <= 55) return AlarmTag.risk;     // TODO
+    return AlarmTag.risk; // TODO: 정책에 따라 "알림 생성 안 함"으로 바꿀 수 있음
+  }
+
+  Future<List<String>> _fetchFavoriteStocks() async {
+    // TODO: 관심종목 페이지에서 가져오기 (상태관리/Firestore/로컬저장 등)
+    return ['삼성전자', 'NAVER', '카카오'];
+  }
+
+  Future<List<String>> _fetchUserKeywordsFromFavorites() async {
+    // TODO: 관심종목 기반 키워드 정책 결정
+    final favorites = await _fetchFavoriteStocks();
+    return favorites;
+  }
+
+  List<AlarmItem> _generateRiskAlarmsDummy() {
+    final now = DateTime.now();
+    final dummy = [
+      {
+        'stock': '삼성전자',
+        'sent': 30.0,
+        'title': '삼성전자 급락 리스크 감지',
+        'body': '최근 3일간 부정적 뉴스 급증 (15건) 및 주가 -5.2% 하락, 실적 발표 전 변동성 증가 예상',
+        'createdAt': now.subtract(const Duration(minutes: 3)),
+        'read': false,
+        'star': false,
+      },
+      {
+        'stock': 'NAVER',
+        'sent': 45.0,
+        'title': 'NAVER 감성 지수 하락',
+        'body': 'AI 서비스 관련 부정적 여론 증가, 감성 지수 70→45로 하락',
+        'createdAt': now.subtract(const Duration(hours: 3)),
+        'read': true,
+        'star': false, // 더미로 중요 하나 넣어둠
+      },
+      {
+        'stock': 'LG에너지솔루션',
+        'sent': 55.0,
+        'title': 'LG에너지솔루션 변동성 확대',
+        'body': '최근 거래량 급증과 함께 변동성이 커지고 있습니다.',
+        'createdAt': now.subtract(const Duration(days: 3, hours: 2)),
+        'read': false,
+        'star': false,
+      },
+    ];
+
+    return dummy.map((d) {
+      final s = d['sent'] as double;
+      final createdAt = d['createdAt'] as DateTime;
+      final stock = d['stock'] as String;
+
+      return AlarmItem(
+        id: 'risk_${stock}_${createdAt.millisecondsSinceEpoch}',
+        tag: _tagBySentiment(s),
+        stockName: stock,
+        sentimentScore: s,
+        title: d['title'] as String,
+        body: d['body'] as String,
+        createdAt: createdAt,
+        isRead: d['read'] as bool,
+        isStarred: d['star'] as bool,
+      );
+    }).toList();
+  }
+
+  List<AlarmItem> _generateKeywordAlarmsDummy(List<String> userKeywords) {
+    final now = DateTime.now();
+    final dummy = [
+      {
+        'stock': '카카오',
+        'title': '카카오 규제 이슈 발생',
+        'body': '공정거래위원회 조사 착수, 관련 키워드 “규제”, “조사” 급증 중',
+        'createdAt': now.subtract(const Duration(minutes: 32)),
+        'read': false,
+        'star': false,
+      },
+      {
+        'stock': '삼성전자',
+        'title': '삼성전자 “반도체” 키워드 급등',
+        'body': '관련 기사/언급량이 급증했습니다. 단기 이슈로 변동성 주의',
+        'createdAt': now.subtract(const Duration(days: 2, minutes: 5)),
+        'read': true,
+        'star': false,
+      },
+    ];
+
+    final List<AlarmItem> results = [];
+    for (final n in dummy) {
+      final text = '${n['title']} ${n['body']}';
+      final matched = userKeywords.any((kw) => text.contains(kw));
+      if (!matched) continue;
+
+      final createdAt = n['createdAt'] as DateTime;
+      final stock = n['stock'] as String;
+
+      results.add(
+        AlarmItem(
+          id: 'kw_${stock}_${createdAt.millisecondsSinceEpoch}',
+          tag: AlarmTag.keyword,
+          stockName: stock,
+          title: n['title'] as String,
+          body: n['body'] as String,
+          createdAt: createdAt,
+          isRead: n['read'] as bool,
+          isStarred: n['star'] as bool,
+        ),
+      );
+    }
+    return results;
+  }
+
+  // ==============================
+  // 초기 로드
+  // ==============================
+
+  @override
+  void initState() {
+    super.initState();
+    _initDummyItems();
+
+    // timeLabel 갱신 (1분마다)
+    _ticker = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (!mounted) return;
+      setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _initDummyItems() async {
+    final riskItems = _generateRiskAlarmsDummy();
+    final userKeywords = await _fetchUserKeywordsFromFavorites();
+    final keywordItems = _generateKeywordAlarmsDummy(userKeywords);
+
+    setState(() {
+      _items = _mergeAndSort(riskItems, keywordItems);
+    });
+  }
+
+  // ==============================
+  // 탭 카운트/필터
+  // ==============================
 
   int get _totalCount => _items.length;
+  int get _starCount => _items.where((e) => e.isStarred).length;
   int get _unreadCount => _items.where((e) => !e.isRead).length;
 
-  // 긴급/리스크 탭 카운트 = HighRisk + Risk
   int get _riskTabCount =>
       _items.where((e) => e.tag == AlarmTag.highRisk || e.tag == AlarmTag.risk).length;
 
-  // 키워드 탭 카운트
   int get _keywordTabCount => _items.where((e) => e.tag == AlarmTag.keyword).length;
 
   void _markAllRead() {
@@ -98,40 +319,45 @@ class _AlarmPageState extends State<AlarmPage> {
       ),
     );
 
-    // ✅ 4) 읽지 않은 알람 클릭 후 돌아오면 읽음 처리
     if (!mounted) return;
     if (!item.isRead) {
-      setState(() {
-        item.isRead = true;
-      });
+      setState(() => item.isRead = true);
     }
   }
 
+  /// 탭 순서:
+  /// 0 전체 / 1 중요 / 2 읽지 않음 / 3 긴급/리스크 / 4 키워드
   List<AlarmItem> _filteredItems(int tabIndex) {
-    // 탭 순서: 0 전체, 1 읽지 않음, 2 긴급/리스크, 3 키워드
     switch (tabIndex) {
       case 1:
-        return _items.where((e) => !e.isRead).toList();
+        return _items.where((e) => e.isStarred).toList();
       case 2:
+        return _items.where((e) => !e.isRead).toList();
+      case 3:
         return _items
             .where((e) => e.tag == AlarmTag.highRisk || e.tag == AlarmTag.risk)
             .toList();
-      case 3:
+      case 4:
         return _items.where((e) => e.tag == AlarmTag.keyword).toList();
       default:
         return _items;
     }
   }
 
+  // ==============================
+  // UI
+  // ==============================
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 4,
+      length: 5, // ✅ 중요 탭 추가!
       child: Scaffold(
         backgroundColor: const Color(0xFFF3F4F6),
         appBar: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
+          centerTitle: false,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.black87),
             onPressed: () => Navigator.pop(context),
@@ -141,16 +367,10 @@ class _AlarmPageState extends State<AlarmPage> {
             style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w800),
           ),
           actions: [
-            // (옵션) 톱니 버튼 자리
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(Icons.settings_outlined, color: Colors.black54),
-              tooltip: '설정',
-            ),
             Padding(
               padding: const EdgeInsets.only(right: 10),
               child: TextButton.icon(
-                onPressed: _unreadCount == 0 ? null : _markAllRead, // ✅ 읽을 게 없으면 비활성화
+                onPressed: _unreadCount == 0 ? null : _markAllRead,
                 icon: const Icon(Icons.check, size: 18),
                 label: const Text('모두 읽음'),
                 style: TextButton.styleFrom(
@@ -175,8 +395,9 @@ class _AlarmPageState extends State<AlarmPage> {
                 indicatorWeight: 2.6,
                 tabs: [
                   Tab(text: '전체 ($_totalCount)'),
+                  Tab(text: '중요 ($_starCount)'),
                   Tab(text: '읽지 않음 ($_unreadCount)'),
-                  Tab(text: '🚨 긴급/리스크 ($_riskTabCount)'),
+                  Tab(text: '긴급/리스크 ($_riskTabCount)'),
                   Tab(text: '키워드 ($_keywordTabCount)'),
                 ],
               ),
@@ -184,7 +405,7 @@ class _AlarmPageState extends State<AlarmPage> {
           ),
         ),
         body: TabBarView(
-          children: List.generate(4, (tabIndex) {
+          children: List.generate(5, (tabIndex) {
             final list = _filteredItems(tabIndex);
 
             return ListView.builder(
@@ -192,11 +413,14 @@ class _AlarmPageState extends State<AlarmPage> {
               itemCount: list.length,
               itemBuilder: (_, i) {
                 final item = list[i];
+
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 10),
-                  child: _AlarmCard(
+                  child: _AlarmSlidableCard(
                     item: item,
                     onTap: () => _openDetailAndMarkRead(item),
+                    onDelete: () => _deleteItem(item.id),
+                    onToggleStar: () => _toggleStar(item.id),
                   ),
                 );
               },
@@ -204,6 +428,56 @@ class _AlarmPageState extends State<AlarmPage> {
           }),
         ),
       ),
+    );
+  }
+}
+
+/// ✅ 슬라이드 액션(삭제/중요) 포함 카드
+class _AlarmSlidableCard extends StatelessWidget {
+  final AlarmItem item;
+  final VoidCallback onTap;
+  final VoidCallback onDelete;
+  final VoidCallback onToggleStar;
+
+  const _AlarmSlidableCard({
+    required this.item,
+    required this.onTap,
+    required this.onDelete,
+    required this.onToggleStar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Slidable(
+      key: ValueKey(item.id),
+
+      /// ✅ 오른쪽으로 슬라이드하면(=startToEnd) 왼쪽에 버튼
+      startActionPane: ActionPane(
+        motion: const DrawerMotion(),
+        extentRatio: 0.52, // 버튼 2개가 딱 들어가는 폭
+        children: [
+          SlidableAction(
+            onPressed: (_) => onDelete(),
+            backgroundColor: const Color(0xFFEF4444),
+            foregroundColor: Colors.white,
+            icon: Icons.delete_outline,
+            label: '삭제',
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(14),
+              bottomLeft: Radius.circular(14),
+            ),
+          ),
+          SlidableAction(
+            onPressed: (_) => onToggleStar(),
+            backgroundColor: const Color(0xFF10B981),
+            foregroundColor: Colors.white,
+            icon: item.isStarred ? Icons.star : Icons.star_border,
+            label: '중요',
+          ),
+        ],
+      ),
+
+      child: _AlarmCard(item: item, onTap: onTap),
     );
   }
 }
@@ -216,15 +490,13 @@ class _AlarmCard extends StatelessWidget {
 
   bool get _isUnread => !item.isRead;
 
-  // 1) 읽지 않음: 빨강(리스크) / 파랑(이슈)
   Color get _bgColor {
     if (!_isUnread) return Colors.white;
 
     if (item.tag == AlarmTag.highRisk || item.tag == AlarmTag.risk) {
-      return const Color(0xFFFDECEC); // 연한 빨강 배경
+      return const Color(0xFFFDECEC);
     }
-    // keyword(이슈)
-    return const Color(0xFFEAF3FF); // 연한 파랑 배경
+    return const Color(0xFFEAF3FF);
   }
 
   Color get _borderColor {
@@ -235,68 +507,51 @@ class _AlarmCard extends StatelessWidget {
     return const Color(0xFFB9D8FF);
   }
 
-  // 아이콘(좌측)
-  Widget _leadingIcon() {
-    // 5) 읽지 않음 표시 파란 점 (읽음이면 없음)
+  Widget _leadingDot() {
     return SizedBox(
-      width: 36,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.start,
-        children: [
-          if (_isUnread)
-            Container(
-              width: 10,
-              height: 10,
-              decoration: const BoxDecoration(
-                color: Color(0xFF2F80ED), // 파란 점
-                shape: BoxShape.circle,
-              ),
-            )
-          else
-            const SizedBox(width: 10),
-          const SizedBox(width: 10),
-        ],
+      width: 26,
+      child: Center(
+        child: _isUnread
+            ? Container(
+          width: 10,
+          height: 10,
+          decoration: const BoxDecoration(
+            color: Color(0xFF2F80ED),
+            shape: BoxShape.circle,
+          ),
+        )
+            : const SizedBox.shrink(),
       ),
     );
   }
 
-  // 제목 앞 작은 이모지
-  String get _emoji {
-    switch (item.tag) {
-      case AlarmTag.highRisk:
-      case AlarmTag.risk:
-        return '🧨';
-      case AlarmTag.keyword:
-        return '📌';
-    }
-  }
-
-  // 배지(높은 리스크/리스크/키워드)
   Widget _badge() {
     switch (item.tag) {
       case AlarmTag.highRisk:
-        return _Chip(
+        return const _Chip(
           text: '높은 리스크',
           fg: Colors.white,
-          bg: const Color(0xFFEF4444),
+          bg: Color(0xFFEF4444),
         );
       case AlarmTag.risk:
-        return _Chip(
+        return const _Chip(
           text: '리스크',
-          fg: const Color(0xFFEF4444),
-          bg: const Color(0xFFFDE2E2),
+          fg: Color(0xFFEF4444),
+          bg: Color(0xFFFDE2E2),
         );
       case AlarmTag.keyword:
-        return _Chip(
+        return const _Chip(
           text: '키워드',
-          fg: const Color(0xFF2F80ED),
-          bg: const Color(0xFFDCEBFF),
+          fg: Color(0xFF2F80ED),
+          bg: Color(0xFFDCEBFF),
         );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final timeLabel = item.timeLabelNow(DateTime.now());
+
     return InkWell(
       borderRadius: BorderRadius.circular(14),
       onTap: onTap,
@@ -313,21 +568,18 @@ class _AlarmCard extends StatelessWidget {
             ),
           ],
         ),
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+        padding: const EdgeInsets.fromLTRB(10, 14, 14, 14),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _leadingIcon(),
+            _leadingDot(),
+            const SizedBox(width: 6),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 제목줄
                   Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Text(_emoji, style: const TextStyle(fontSize: 16)),
-                      const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           item.title,
@@ -345,8 +597,6 @@ class _AlarmCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 8),
-
-                  // 본문
                   Text(
                     item.body,
                     style: const TextStyle(
@@ -359,10 +609,8 @@ class _AlarmCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 10),
-
-                  // 시간
                   Text(
-                    item.timeLabel,
+                    timeLabel,
                     style: const TextStyle(
                       fontSize: 12,
                       color: Colors.black54,
@@ -417,6 +665,7 @@ class AlarmDetailPage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
+        centerTitle: false,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black87),
           onPressed: () => Navigator.pop(context),
@@ -427,7 +676,6 @@ class AlarmDetailPage extends StatelessWidget {
         ),
       ),
       body: Center(
-        // 3) 빈 화면 + 연결 예정
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
