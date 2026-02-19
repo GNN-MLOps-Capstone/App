@@ -265,7 +265,7 @@ class _SettingPageState extends State<SettingPage> {
 
                                   _teamRow('이수호', 'Product Manager', '백혜경', 'Frontend'),
                                   const SizedBox(height: 8),
-                                  _teamRow('신동빈', 'data engineer', '이상진', 'Backend'),
+                                  _teamRow('신동빈', 'Data engineer', '이상진', 'Backend'),
                                   const SizedBox(height: 8),
                                   _teamRow('최윤형', 'Data/Design', '하성우', 'Data'),
 
