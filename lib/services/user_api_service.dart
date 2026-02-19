@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 
 /// 유저 API 서비스
 /// 
@@ -12,7 +13,7 @@ class UserApiService {
   // API 서버 주소
   // 개발 환경: localhost
   // 배포 환경: 실제 서버 주소로 변경
-  static const String _baseUrl = 'http://localhost:8000';
+  static const String _baseUrl = 'http://10.0.2.2:8000';
   static const _storage = FlutterSecureStorage();
 
   static Future<Map<String, String>> _getHeaders() async {
@@ -26,12 +27,23 @@ class UserApiService {
   /// 로그인 시 회원 정보 db에 저장
   static Future<AuthResponse> login(UserLoginRequest request) async {
     try {
+      String? onesignalId = OneSignal.User.pushSubscription.id;
+    
+      // 2. 기존 request에 onesignalId를 포함한 새로운 request 생성 (혹은 필드 할당)
+      final updatedRequest = UserLoginRequest(
+        googleId: request.googleId,
+        email: request.email,
+        nickname: request.nickname,
+        imgUrl: request.imgUrl,
+        onesignalId: onesignalId, // 추출한 ID 주입
+      );
+
       final uri = Uri.parse('$_baseUrl/api/users/login');
       
       final response = await http.post(
         uri,
         headers: {'Content-Type': 'application/json'},
-        body: json.encode(request.toJson()),
+        body: json.encode(updatedRequest.toJson()),
       ).timeout(const Duration(seconds: 10));
       
       if (response.statusCode == 200) {
@@ -253,12 +265,14 @@ class UserLoginRequest {
   final String email;
   final String nickname;
   final String? imgUrl;
+  final String? onesignalId;
 
   UserLoginRequest({
     required this.googleId,
     required this.email,
     required this.nickname,
-    this.imgUrl,
+    required this.imgUrl,
+    this.onesignalId,
   });
 
   Map<String, dynamic> toJson() => {
@@ -266,5 +280,6 @@ class UserLoginRequest {
     'email': email,
     'nickname': nickname,
     'img_url': imgUrl,
+    'onesignal_id': onesignalId,
   };
 }
