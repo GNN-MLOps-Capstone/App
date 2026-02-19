@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'onesignal_service.dart';
+import 'notification_service.dart';
 
 class PushNotificationService {
   static final PushNotificationService _instance = PushNotificationService._internal();
@@ -73,6 +74,19 @@ class PushNotificationService {
         if (kDebugMode) {
           print('✅ 푸시 알림 발송 성공: $title');
         }
+        final String? onesignalId = targetUserId ?? targetUserIds?.first ?? await OneSignalService().getPushToken();
+        if (onesignalId != null && onesignalId.isNotEmpty) {
+          await NotificationApiService.createNotification(
+            NotificationCreateRequest(
+              targetOnesignalId: onesignalId,
+              type: data?['type'] ?? 'general',
+              title: title,
+              body: message,
+              stockName: data?['stock_name'],
+            ),
+          );
+        }
+
         return true;
       } else {
         if (kDebugMode) {

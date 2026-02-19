@@ -3,16 +3,26 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class NotificationApiService {
-  static const String _baseUrl = 'http://10.0.2.2:8000';
+  static const String _baseUrl = 'http://localhost:8000';
   static const _storage = FlutterSecureStorage();
 
-  // 토큰 헤더 가져오기 (UserApiService와 동일)
+  // 토큰 헤더 가져오기
   static Future<Map<String, String>> _getHeaders() async {
+    // 여기서 로그인하는 페이지가 없으니깐 임의로 알람을 불러오기 위한 코드
+    const String tempToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdHJpbmciLCJleHAiOjE3NzQwODQwOTh9.DSWHY7OlzNVccv4IOZngjMDqBiuDw-QpWdk6WbZt09E';
+
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $tempToken',
+    };
+
+    /* // 나중에 실제 배포 시 사용할 원래 코드:
     final token = await _storage.read(key: 'access_token');
     return {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer ${token ?? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdHJpbmciLCJleHAiOjE3NzQwNzY4ODd9.inH6T4M7MT03krV6Jwt05vUZ2BhHiDsadz2BWEwty2U'}'
+      'Authorization': 'Bearer ${token ?? ""}',
     };
+    */
   }
 
   /// 알림 내역 조회 (무한 스크롤 지원)
@@ -100,7 +110,7 @@ class NotificationApiService {
         uri,
         headers: await _getHeaders(),
         body: json.encode(req.toJson()),
-      );
+      ).timeout(const Duration(seconds: 10));;
 
       if (response.statusCode == 201) {
         final data = json.decode(response.body);
@@ -148,19 +158,28 @@ class NotificationResponse {
 
 /// 알림 생성 요청 모델
 class NotificationCreateRequest {
+  final String targetOnesignalId;
   final String type;
   final String title;
   final String? body;
+  final String? stockName;
+  final double? sentimentScore;
 
   NotificationCreateRequest({
+    required this.targetOnesignalId,
     required this.type,
     required this.title,
     this.body,
+    this.stockName,
+    this.sentimentScore,
   });
 
   Map<String, dynamic> toJson() => {
+    'onesignal_id': targetOnesignalId,
     'type': type,
     'title': title,
     'body': body,
+    'stock_name': stockName,
+    'sentiment_score': sentimentScore,
   };
 }
