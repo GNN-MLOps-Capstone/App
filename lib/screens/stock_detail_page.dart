@@ -1,6 +1,7 @@
 // lib/screens/stock_detail_page.dart
 import 'dart:async';
 import 'dart:math';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -39,11 +40,15 @@ class _StockDetailPageState extends State<StockDetailPage> {
   StockRealtimeConnection? _wsConnection;
   StockRealtimePrice? _realtimePrice;
   Timer? _seriesRefreshTimer;
-  bool _isRefreshingSeries = false;
-  static const Duration _seriesRefreshInterval = Duration(minutes: 5);
+  final Map<ChartRange, Future<StockSeries>> _seriesInFlight = {};
+  int _rangeChangeSeq = 0;
+  static const Duration _daySeriesRefreshInterval = Duration(seconds: 30);
+  static const Duration _otherSeriesRefreshInterval = Duration(minutes: 5);
 
   // 천 단위 콤마 포맷
   static final _wonFormat = NumberFormat('#,###');
+  static final DateFormat _tooltipDayFormat = DateFormat('MM/dd HH:mm');
+  static final DateFormat _tooltipDateFormat = DateFormat('yyyy/MM/dd');
 
   @override
   void initState() {
@@ -107,27 +112,82 @@ class _StockDetailPageState extends State<StockDetailPage> {
 
   /// Series 데이터를 캐시 / 네트워크에서 가져옴
   Future<StockSeries> _fetchSeries(ChartRange range) async {
-    if (_seriesCache.containsKey(range)) return _seriesCache[range]!;
-    final rangeStr = _rangeToString(range);
-    final series = await StockApiService.getSeries(widget.stockCode, range: rangeStr);
-    _seriesCache[range] = series;
-    return series;
+    return _requestSeries(range);
+  }
+
+  Future<StockSeries> _requestSeries(
+    ChartRange range, {
+    bool forceRefresh = false,
+  }) {
+    if (!forceRefresh && _seriesCache.containsKey(range)) {
+      return Future.value(_seriesCache[range]!);
+    }
+
+    final inFlight = _seriesInFlight[range];
+    if (inFlight != null) return inFlight;
+
+    late final Future<StockSeries> future;
+    future = (() async {
+      final rangeStr = _rangeToString(range);
+      final series = await StockApiService.getSeries(
+        widget.stockCode,
+        range: rangeStr,
+        forceRefresh: forceRefresh,
+      );
+      _seriesCache[range] = series;
+      debugPrint(
+        '[상세] series loaded range=${_rangeToString(range)} '
+        'points=${series.points.length} force=$forceRefresh',
+      );
+      return series;
+    })();
+
+    _seriesInFlight[range] = future;
+    unawaited(
+      future.then<void>(
+        (_) {
+          if (identical(_seriesInFlight[range], future)) {
+            _seriesInFlight.remove(range);
+          }
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          if (identical(_seriesInFlight[range], future)) {
+            _seriesInFlight.remove(range);
+          }
+        },
+      ),
+    );
+    return future;
   }
 
   /// Range 변경 시
   Future<void> _onRangeChanged(ChartRange newRange) async {
     if (!_isStockCodeValid) return;
-    setState(() => _range = newRange);
-    if (!_seriesCache.containsKey(newRange)) {
-      setState(() => _loading = true);
-      try {
-        await _fetchSeries(newRange);
-      } catch (e) {
-        debugPrint('Series 로드 실패: $e');
-      }
-      if (mounted) setState(() => _loading = false);
+    if (newRange == _range) {
+      unawaited(_refreshRange(newRange));
+      return;
     }
-    unawaited(_refreshVisibleSeries());
+
+    final seq = ++_rangeChangeSeq;
+    setState(() => _range = newRange);
+    _startSeriesAutoRefresh();
+    final hasCache = _seriesCache.containsKey(newRange);
+    if (!hasCache) {
+      setState(() => _loading = true);
+    }
+
+    try {
+      await _requestSeries(newRange);
+    } catch (e) {
+      debugPrint('Series 로드 실패(${_rangeToString(newRange)}): $e');
+    } finally {
+      if (mounted && seq == _rangeChangeSeq && _range == newRange && !hasCache) {
+        setState(() => _loading = false);
+      }
+    }
+
+    if (!mounted || seq != _rangeChangeSeq || _range != newRange) return;
+    unawaited(_refreshRange(newRange));
   }
 
   /// 실시간 WebSocket 연결
@@ -148,8 +208,12 @@ class _StockDetailPageState extends State<StockDetailPage> {
 
   void _startSeriesAutoRefresh() {
     _seriesRefreshTimer?.cancel();
-    _seriesRefreshTimer = Timer.periodic(_seriesRefreshInterval, (_) {
-      unawaited(_refreshVisibleSeries());
+    final interval = _range == ChartRange.day
+        ? _daySeriesRefreshInterval
+        : _otherSeriesRefreshInterval;
+    _seriesRefreshTimer = Timer.periodic(interval, (_) {
+      final targetRange = _range;
+      unawaited(_refreshRange(targetRange));
     });
   }
 
@@ -158,24 +222,20 @@ class _StockDetailPageState extends State<StockDetailPage> {
     _seriesRefreshTimer = null;
   }
 
-  Future<void> _refreshVisibleSeries() async {
-    if (!mounted || _isRefreshingSeries || !_isStockCodeValid) return;
-
-    _isRefreshingSeries = true;
+  Future<void> _refreshRange(ChartRange range) async {
+    if (!mounted || !_isStockCodeValid) return;
     try {
-      final rangeStr = _rangeToString(_range);
-      final latest = await StockApiService.getSeries(
-        widget.stockCode,
-        range: rangeStr,
-        forceRefresh: true,
-      );
-      _seriesCache[_range] = latest;
+      final latest = await _requestSeries(range, forceRefresh: true);
       if (!mounted) return;
-      setState(() {});
+      if (_range == range) {
+        setState(() {});
+      }
+      debugPrint(
+        '[상세] series refresh requested=${_rangeToString(range)} '
+        'applied=${_rangeToString(_range)} points=${latest.points.length}',
+      );
     } catch (e) {
-      debugPrint('[상세] 시리즈 자동 갱신 실패 (${_rangeToString(_range)}): $e');
-    } finally {
-      _isRefreshingSeries = false;
+      debugPrint('[상세] 시리즈 자동 갱신 실패 (${_rangeToString(range)}): $e');
     }
   }
 
@@ -249,19 +309,22 @@ class _StockDetailPageState extends State<StockDetailPage> {
   Widget _buildContent() {
     final series = _seriesCache[_range];
     List<double> chartPoints = [];
-    List<String> xLabels = [];
+    List<XAxisLabelSpec> xAxisLabels = [];
+    List<DateTime?> pointTimes = [];
 
     if (series != null && series.points.isNotEmpty) {
       final prepared = _prepareChartData(series);
       chartPoints = prepared.points;
-      xLabels = prepared.xLabels;
+      xAxisLabels = prepared.xAxisLabels;
+      pointTimes = prepared.pointTimes;
     }
 
     final finitePoints = chartPoints.where((v) => v.isFinite).toList();
     final allZero = finitePoints.isNotEmpty && finitePoints.every((v) => v == 0);
     if (allZero) {
       chartPoints = [];
-      xLabels = [];
+      xAxisLabels = [];
+      pointTimes = [];
       finitePoints.clear();
     }
 
@@ -324,11 +387,22 @@ class _StockDetailPageState extends State<StockDetailPage> {
                                 style: TextStyle(color: Colors.grey)))
                         : LineChartInteractive(
                             points: chartPoints,
-                            xLabels: xLabels,
+                            xAxisLabels: xAxisLabels,
                             maxLabel: maxLabel,
                             minLabel: minLabel,
-                            tooltipText: (idx) =>
-                                '${_wonFormat.format(chartPoints[idx].round())}원',
+                            isDayRange: _range == ChartRange.day,
+                            tooltipData: (idx) {
+                              final hasTime = idx >= 0 && idx < pointTimes.length;
+                              final headerText = hasTime
+                                  ? _formatTooltipHeader(pointTimes[idx])
+                                  : '';
+                              final priceText =
+                                  '${_wonFormat.format(chartPoints[idx].round())}원';
+                              return TooltipInfo(
+                                headerText: headerText,
+                                priceText: priceText,
+                              );
+                            },
                           ),
                   ),
           ),
@@ -400,13 +474,20 @@ class _StockDetailPageState extends State<StockDetailPage> {
     }
     return _PreparedChartData(
       points: series.points.map((p) => p.c.toDouble()).toList(),
-      xLabels: _buildXLabels(series),
+      xAxisLabels: _buildXAxisLabels(series),
+      pointTimes: series.points
+          .map((p) => DateTime.fromMillisecondsSinceEpoch(p.t))
+          .toList(),
     );
   }
 
   _PreparedChartData _buildDayTimelineChart(StockSeries series) {
     if (series.points.isEmpty) {
-      return _PreparedChartData(points: const [], xLabels: const []);
+      return _PreparedChartData(
+        points: const [],
+        xAxisLabels: const [],
+        pointTimes: const [],
+      );
     }
 
     const startHour = 8;
@@ -421,6 +502,10 @@ class _StockDetailPageState extends State<StockDetailPage> {
     final dayEnd = DateTime(anchorDt.year, anchorDt.month, anchorDt.day, endHour);
 
     final points = List<double>.filled(slotCount, double.nan);
+    final pointTimes = List<DateTime?>.generate(
+      slotCount,
+      (i) => dayStart.add(Duration(minutes: i * intervalMinutes)),
+    );
 
     for (final p in sorted) {
       final dt = DateTime.fromMillisecondsSinceEpoch(p.t);
@@ -450,12 +535,29 @@ class _StockDetailPageState extends State<StockDetailPage> {
 
     return _PreparedChartData(
       points: points,
-      xLabels: const ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00'],
+      xAxisLabels: const [
+        XAxisLabelSpec(text: '08:00', pointIndex: 0),
+        XAxisLabelSpec(text: '10:00', pointIndex: 24),
+        XAxisLabelSpec(text: '12:00', pointIndex: 48),
+        XAxisLabelSpec(text: '14:00', pointIndex: 72),
+        XAxisLabelSpec(text: '16:00', pointIndex: 96),
+        XAxisLabelSpec(text: '18:00', pointIndex: 120),
+        XAxisLabelSpec(text: '20:00', pointIndex: 144),
+      ],
+      pointTimes: pointTimes,
     );
   }
 
+  String _formatTooltipHeader(DateTime? dt) {
+    if (dt == null) return '';
+    if (_range == ChartRange.day) {
+      return _tooltipDayFormat.format(dt);
+    }
+    return _tooltipDateFormat.format(dt);
+  }
+
   /// X축 라벨 생성 (5~7개로 균등 분할)
-  List<String> _buildXLabels(StockSeries series) {
+  List<XAxisLabelSpec> _buildXAxisLabels(StockSeries series) {
     if (series.points.isEmpty) return [];
 
     final points = series.points;
@@ -465,15 +567,15 @@ class _StockDetailPageState extends State<StockDetailPage> {
     final labelCount = min(7, n);
     if (labelCount <= 1) {
       final dt = DateTime.fromMillisecondsSinceEpoch(points[0].t);
-      return [_formatTime(dt)];
+      return [XAxisLabelSpec(text: _formatTime(dt), pointIndex: 0)];
     }
 
-    final labels = <String>[];
+    final labels = <XAxisLabelSpec>[];
     for (int i = 0; i < labelCount; i++) {
       // 균등 분할 인덱스
       final idx = (i * (n - 1)) ~/ (labelCount - 1);
       final dt = DateTime.fromMillisecondsSinceEpoch(points[idx].t);
-      labels.add(_formatTime(dt));
+      labels.add(XAxisLabelSpec(text: _formatTime(dt), pointIndex: idx));
     }
     return labels;
   }
@@ -522,6 +624,8 @@ class _StockDetailPageState extends State<StockDetailPage> {
                   return;
                 }
                 _seriesCache.clear();
+                _seriesInFlight.clear();
+                _rangeChangeSeq++;
                 _loadData();
                 _startSeriesAutoRefresh();
               }),
@@ -561,11 +665,33 @@ class _StockDetailPageState extends State<StockDetailPage> {
 
 class _PreparedChartData {
   final List<double> points;
-  final List<String> xLabels;
+  final List<XAxisLabelSpec> xAxisLabels;
+  final List<DateTime?> pointTimes;
 
   const _PreparedChartData({
     required this.points,
-    required this.xLabels,
+    required this.xAxisLabels,
+    required this.pointTimes,
+  });
+}
+
+class XAxisLabelSpec {
+  final String text;
+  final int pointIndex;
+
+  const XAxisLabelSpec({
+    required this.text,
+    required this.pointIndex,
+  });
+}
+
+class TooltipInfo {
+  final String headerText;
+  final String priceText;
+
+  const TooltipInfo({
+    required this.headerText,
+    required this.priceText,
   });
 }
 
@@ -755,17 +881,19 @@ class _TagChip extends StatelessWidget {
 
 class LineChartInteractive extends StatefulWidget {
   final List<double> points;
-  final List<String> xLabels;
+  final List<XAxisLabelSpec> xAxisLabels;
   final String maxLabel, minLabel;
-  final String Function(int) tooltipText;
+  final bool isDayRange;
+  final TooltipInfo Function(int) tooltipData;
 
   const LineChartInteractive({
     super.key,
     required this.points,
-    required this.xLabels,
+    required this.xAxisLabels,
     required this.maxLabel,
     required this.minLabel,
-    required this.tooltipText,
+    required this.isDayRange,
+    required this.tooltipData,
   });
 
   @override
@@ -776,10 +904,16 @@ class _LineChartInteractiveState extends State<LineChartInteractive> {
   int? _idx;
   Offset? _pos;
   Timer? _timer;
+  final GlobalKey _chartStackKey = GlobalKey();
+  double _chartGlobalLeft = 0.0;
 
   static const _pad = EdgeInsets.fromLTRB(10, 28, 10, 40);
   static const _scale = 0.72;
   static const _lift = 10.0;
+  static const _xLabelBandHeight = 20.0;
+  static const _screenTooltipPadding = 6.0;
+  static const _tapTooltipDuration = Duration(seconds: 5);
+  static const _dragTooltipDuration = Duration(seconds: 2);
 
   bool _isValidPoint(int i) {
     if (i < 0 || i >= widget.points.length) return false;
@@ -794,15 +928,90 @@ class _LineChartInteractiveState extends State<LineChartInteractive> {
     return out;
   }
 
-  int? _nearestValidIndex(int idx) {
-    if (_isValidPoint(idx)) return idx;
-    for (int d = 1; d < widget.points.length; d++) {
-      final left = idx - d;
-      if (_isValidPoint(left)) return left;
-      final right = idx + d;
-      if (_isValidPoint(right)) return right;
+  _ChartGeometry? _buildChartGeometry(Size sz) {
+    final n = widget.points.length;
+    if (n == 0) return null;
+
+    final valid = _validIndices();
+    if (valid.isEmpty) return null;
+
+    final rect = Rect.fromLTWH(
+      _pad.left,
+      _pad.top,
+      sz.width - _pad.horizontal,
+      sz.height - _pad.vertical,
+    );
+
+    if (n == 1 || valid.length == 1) {
+      final idx = valid.first;
+      final dx = n == 1 ? 0.0 : rect.width / (n - 1);
+      final x = n == 1 ? rect.left + rect.width / 2 : rect.left + dx * idx;
+      final y = rect.top + rect.height / 2;
+      return _ChartGeometry(
+        rect: rect,
+        pointPositions: {idx: Offset(x, y)},
+      );
     }
-    return null;
+
+    final validValues = valid.map((i) => widget.points[i]).toList();
+    final mn = validValues.reduce(min);
+    final mx = validValues.reduce(max);
+    final span = max(mx - mn, 1e-6);
+    final dx = rect.width / (n - 1);
+    final h = rect.height * _scale;
+    final top = max(0.0, (rect.height - h) / 2 - _lift);
+
+    final pointPositions = <int, Offset>{};
+    for (final i in valid) {
+      final x = rect.left + dx * i;
+      final y = rect.top + top + (1 - (widget.points[i] - mn) / span) * h;
+      pointPositions[i] = Offset(x, y);
+    }
+
+    return _ChartGeometry(rect: rect, pointPositions: pointPositions);
+  }
+
+  void _selectNearestPoint(
+    Offset localPosition,
+    Size sz, {
+    required Duration? hideAfter,
+    required bool clearWhenOutside,
+    required bool clampOutside,
+  }) {
+    final geometry = _buildChartGeometry(sz);
+    if (geometry == null) {
+      _clear();
+      return;
+    }
+
+    if (!geometry.rect.contains(localPosition) && clearWhenOutside) {
+      _clear();
+      return;
+    }
+
+    final probe = clampOutside
+        ? Offset(
+            localPosition.dx
+                .clamp(geometry.rect.left, geometry.rect.right)
+                .toDouble(),
+            localPosition.dy
+                .clamp(geometry.rect.top, geometry.rect.bottom)
+                .toDouble(),
+          )
+        : localPosition;
+
+    final idx = geometry.nearestIndex(probe);
+    if (idx == null) {
+      _clear();
+      return;
+    }
+
+    final point = geometry.pointPositions[idx];
+    if (point == null) {
+      _clear();
+      return;
+    }
+    _show(idx, point, hideAfter: hideAfter);
   }
 
   @override
@@ -824,44 +1033,50 @@ class _LineChartInteractiveState extends State<LineChartInteractive> {
   }
 
   void _onTap(TapDownDetails d, Size sz) {
-    final rect = Rect.fromLTWH(
-        _pad.left, _pad.top, sz.width - _pad.horizontal, sz.height - _pad.vertical);
-    if (!rect.contains(d.localPosition)) return _clear();
-
-    final n = widget.points.length;
-    if (n == 0) return;
-    final valid = _validIndices();
-    if (valid.isEmpty) return _clear();
-
-    if (n == 1) {
-      if (!_isValidPoint(0)) return _clear();
-      return _show(0, Offset(rect.left + rect.width / 2, rect.top + rect.height / 2));
-    }
-
-    final dx = rect.width / (n - 1);
-    final rawIdx = ((d.localPosition.dx - rect.left) / dx).round().clamp(0, n - 1);
-    final idx = _nearestValidIndex(rawIdx);
-    if (idx == null) return _clear();
-
-    final validValues = valid.map((i) => widget.points[i]).toList();
-    final mn = validValues.reduce(min), mx = validValues.reduce(max);
-    final span = max(mx - mn, 1e-6);
-    final h = rect.height * _scale;
-    final top = max(0.0, (rect.height - h) / 2 - _lift);
-
-    final x = rect.left + dx * idx;
-    final y = rect.top + top + (1 - (widget.points[idx] - mn) / span) * h;
-
-    _show(idx, Offset(x, y));
+    _selectNearestPoint(
+      d.localPosition,
+      sz,
+      hideAfter: _tapTooltipDuration,
+      clearWhenOutside: true,
+      clampOutside: false,
+    );
   }
 
-  void _show(int i, Offset p) {
+  void _onHorizontalDragStart(DragStartDetails d, Size sz) {
+    _selectNearestPoint(
+      d.localPosition,
+      sz,
+      hideAfter: null,
+      clearWhenOutside: false,
+      clampOutside: true,
+    );
+  }
+
+  void _onHorizontalDragUpdate(DragUpdateDetails d, Size sz) {
+    _selectNearestPoint(
+      d.localPosition,
+      sz,
+      hideAfter: null,
+      clearWhenOutside: false,
+      clampOutside: true,
+    );
+  }
+
+  void _onHorizontalDragEnd() {
+    if (_idx == null || _pos == null) return;
+    _timer?.cancel();
+    _timer = Timer(_dragTooltipDuration, _clear);
+  }
+
+  void _show(int i, Offset p, {required Duration? hideAfter}) {
     setState(() {
       _idx = i;
       _pos = p;
     });
     _timer?.cancel();
-    _timer = Timer(const Duration(seconds: 5), _clear);
+    if (hideAfter != null) {
+      _timer = Timer(hideAfter, _clear);
+    }
   }
 
   void _clear() {
@@ -878,50 +1093,81 @@ class _LineChartInteractiveState extends State<LineChartInteractive> {
     _pos = null;
   }
 
+  void _scheduleChartGlobalOffsetMeasure() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final context = _chartStackKey.currentContext;
+      if (context == null) return;
+      final renderObject = context.findRenderObject();
+      if (renderObject is! RenderBox || !renderObject.hasSize) return;
+      final nextLeft = renderObject.localToGlobal(Offset.zero).dx;
+      if ((nextLeft - _chartGlobalLeft).abs() > 0.5) {
+        setState(() => _chartGlobalLeft = nextLeft);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) => LayoutBuilder(builder: (_, c) {
+        _scheduleChartGlobalOffsetMeasure();
         final sz = Size(c.maxWidth, c.maxHeight);
+        final viewportWidth = MediaQuery.sizeOf(context).width;
         final tooltipIdx = _idx;
         final hasValidTooltip = tooltipIdx != null &&
             _pos != null &&
             tooltipIdx >= 0 &&
             tooltipIdx < widget.points.length &&
             widget.points[tooltipIdx].isFinite;
+        final tooltipInfo =
+            hasValidTooltip ? widget.tooltipData(tooltipIdx) : null;
         return GestureDetector(
           behavior: HitTestBehavior.translucent,
           onTapDown: (d) => _onTap(d, sz),
+          onHorizontalDragStart: (d) => _onHorizontalDragStart(d, sz),
+          onHorizontalDragUpdate: (d) => _onHorizontalDragUpdate(d, sz),
+          onHorizontalDragEnd: (_) => _onHorizontalDragEnd(),
+          onHorizontalDragCancel: _onHorizontalDragEnd,
           child: Stack(
+            key: _chartStackKey,
+            clipBehavior: Clip.none,
             children: [
               Positioned.fill(
                   child: Padding(
                       padding: _pad,
                       child:
-                          CustomPaint(painter: _Painter(widget.points)))),
+                          CustomPaint(
+                            painter: _Painter(
+                              widget.points,
+                              dotRadius: widget.isDayRange ? 3.5 : 5.0,
+                              singleDotRadius: widget.isDayRange ? 4.5 : 6.0,
+                            ),
+                          ))),
               if (_validIndices().length >= 2) ..._labels(sz),
               Positioned(
-                  left: 0, right: 0, bottom: 0, child: _xLabels()),
-              if (hasValidTooltip)
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: _xLabelBandHeight,
+                child: _xLabels(sz),
+              ),
+              if (hasValidTooltip && tooltipInfo != null)
                 _Tooltip(
                     anchor: _pos!,
-                    text: widget.tooltipText(tooltipIdx),
-                    maxW: sz.width),
+                    headerText: tooltipInfo.headerText,
+                    priceText: tooltipInfo.priceText,
+                    viewportWidth: viewportWidth,
+                    chartGlobalLeft: _chartGlobalLeft,
+                    screenPadding: _screenTooltipPadding),
             ],
           ),
         );
       });
 
   List<Widget> _labels(Size sz) {
-    final n = widget.points.length;
     final valid = _validIndices();
     if (valid.length < 2) return const [];
-    final rect = Rect.fromLTWH(_pad.left, _pad.top, sz.width - _pad.horizontal, sz.height - _pad.vertical);
-    final dx = rect.width / (n - 1);
-
-    final validValues = valid.map((i) => widget.points[i]).toList();
-    final mn = validValues.reduce(min), mx = validValues.reduce(max);
-    final span = max(mx - mn, 1e-6);
-    final h = rect.height * _scale;
-    final top = max(0.0, (rect.height - h) / 2 - _lift);
+    final geometry = _buildChartGeometry(sz);
+    if (geometry == null) return const [];
 
     int maxI = valid.first, minI = valid.first;
     for (final i in valid.skip(1)) {
@@ -929,50 +1175,98 @@ class _LineChartInteractiveState extends State<LineChartInteractive> {
       if (widget.points[i] < widget.points[minI]) minI = i;
     }
 
-    final maxX = rect.left + dx * maxI;
-    final maxY = rect.top + top + (1 - (widget.points[maxI] - mn) / span) * h;
-    final minX = rect.left + dx * minI;
-    final minY = rect.top + top + (1 - (widget.points[minI] - mn) / span) * h;
+    final maxPos = geometry.pointPositions[maxI];
+    final minPos = geometry.pointPositions[minI];
+    if (maxPos == null || minPos == null) return const [];
 
     const style = TextStyle(
         fontSize: 11,
         color: Color(0xFF3B82F6),
         fontWeight: FontWeight.w600);
+    final maxPainter = TextPainter(
+      text: TextSpan(text: widget.maxLabel, style: style),
+      textDirection: ui.TextDirection.ltr,
+      maxLines: 1,
+    )..layout();
+    final minPainter = TextPainter(
+      text: TextSpan(text: widget.minLabel, style: style),
+      textDirection: ui.TextDirection.ltr,
+      maxLines: 1,
+    )..layout();
+
+    final graphRect = geometry.rect;
+    final maxLeftLimit = max(graphRect.left, graphRect.right - maxPainter.width);
+    final minLeftLimit = max(graphRect.left, graphRect.right - minPainter.width);
+    final maxTopLimit = max(graphRect.top, graphRect.bottom - maxPainter.height);
+    final maxTopLowerBound = max(0.0, graphRect.top - maxPainter.height - 6);
+    final minTopLimit = max(graphRect.top, graphRect.bottom - minPainter.height);
+
+    final maxLeft =
+        (maxPos.dx - maxPainter.width / 2).clamp(graphRect.left, maxLeftLimit).toDouble();
+    final maxTop =
+        (maxPos.dy - maxPainter.height - 8).clamp(maxTopLowerBound, maxTopLimit).toDouble();
+    final minLeft =
+        (minPos.dx - minPainter.width / 2).clamp(graphRect.left, minLeftLimit).toDouble();
+    final minTop = (minPos.dy + 4).clamp(graphRect.top, minTopLimit).toDouble();
+
     return [
       Positioned(
-          left: maxX - 35,
-          top: maxY - 20,
+          left: maxLeft,
+          top: maxTop,
           child: Text(widget.maxLabel, style: style)),
       Positioned(
-          left: minX - 35,
-          top: minY + 10,
+          left: minLeft,
+          top: minTop,
           child: Text(widget.minLabel, style: style)),
     ];
   }
 
-  Widget _xLabels() {
-    if (widget.xLabels.isEmpty) return const SizedBox();
-    const style = TextStyle(fontSize: 10, color: Colors.grey);
-    if (widget.xLabels.length == 1) {
-      return Center(
-          child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: Text(widget.xLabels[0], style: style)));
+  Widget _xLabels(Size sz) {
+    if (widget.xAxisLabels.isEmpty || widget.points.isEmpty) {
+      return const SizedBox();
     }
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children:
-            widget.xLabels.map((t) => Text(t, style: style)).toList(),
-      ),
-    );
+    final geometry = _buildChartGeometry(sz);
+    if (geometry == null) return const SizedBox();
+
+    const style = TextStyle(fontSize: 10, color: Colors.grey);
+    final rect = geometry.rect;
+    final n = widget.points.length;
+    final dx = n <= 1 ? 0.0 : rect.width / (n - 1);
+
+    final widgets = <Widget>[];
+    for (final spec in widget.xAxisLabels) {
+      if (spec.pointIndex < 0 || spec.pointIndex >= n) continue;
+      final x = n == 1
+          ? rect.left + rect.width / 2
+          : rect.left + dx * spec.pointIndex;
+      final painter = TextPainter(
+        text: TextSpan(text: spec.text, style: style),
+        textDirection: ui.TextDirection.ltr,
+        maxLines: 1,
+      )..layout();
+      final maxLeft = max(0.0, sz.width - painter.width);
+      final left = (x - painter.width / 2).clamp(0.0, maxLeft);
+      widgets.add(
+        Positioned(
+          left: left.toDouble(),
+          bottom: 0,
+          child: Text(spec.text, style: style),
+        ),
+      );
+    }
+    return SizedBox.expand(child: Stack(children: widgets));
   }
 }
 
 class _Painter extends CustomPainter {
   final List<double> points;
-  _Painter(this.points);
+  final double dotRadius;
+  final double singleDotRadius;
+  _Painter(
+    this.points, {
+    this.dotRadius = 5.0,
+    this.singleDotRadius = 6.0,
+  });
 
   @override
   void paint(Canvas canvas, Size sz) {
@@ -994,7 +1288,8 @@ class _Painter extends CustomPainter {
       final idx = valid.first;
       final dx = points.length == 1 ? 0.0 : sz.width / (points.length - 1);
       final x = points.length == 1 ? sz.width / 2 : dx * idx;
-      canvas.drawCircle(Offset(x, sz.height / 2), 6, Paint()..color = const Color(0xFF1D4ED8));
+      canvas.drawCircle(
+          Offset(x, sz.height / 2), singleDotRadius, Paint()..color = const Color(0xFF1D4ED8));
       return;
     }
 
@@ -1011,7 +1306,9 @@ class _Painter extends CustomPainter {
     final line = Paint()
       ..color = const Color(0xFF1D4ED8)
       ..strokeWidth = 3
-      ..style = PaintingStyle.stroke;
+      ..style = PaintingStyle.stroke
+      ..strokeJoin = StrokeJoin.round
+      ..strokeCap = StrokeCap.round;
     final dot = Paint()..color = const Color(0xFF1D4ED8);
 
     final path = Path();
@@ -1032,44 +1329,82 @@ class _Painter extends CustomPainter {
     canvas.drawPath(path, line);
 
     for (final i in valid) {
-      canvas.drawCircle(pt(i), 5, dot);
+      canvas.drawCircle(pt(i), dotRadius, dot);
     }
   }
 
   @override
-  bool shouldRepaint(_Painter old) => old.points != points;
+  bool shouldRepaint(_Painter old) =>
+      old.points != points ||
+      old.dotRadius != dotRadius ||
+      old.singleDotRadius != singleDotRadius;
 }
 
 class _Tooltip extends StatelessWidget {
   final Offset anchor;
-  final String text;
-  final double maxW;
-  const _Tooltip(
-      {required this.anchor, required this.text, required this.maxW});
+  final String headerText;
+  final String priceText;
+  final double viewportWidth;
+  final double chartGlobalLeft;
+  final double screenPadding;
+  const _Tooltip({
+    required this.anchor,
+    required this.headerText,
+    required this.priceText,
+    required this.viewportWidth,
+    required this.chartGlobalLeft,
+    required this.screenPadding,
+  });
 
   @override
   Widget build(BuildContext context) {
-    const w = 90.0, h = 28.0, tail = 7.0;
-    final left = (anchor.dx - w / 2).clamp(6.0, maxW - w - 6);
-    final top = max(6.0, anchor.dy - h - tail - 8);
-    final tailX = (anchor.dx - left).clamp(12.0, w - 12);
+    const tail = 7.0;
+    final hasHeader = headerText.isNotEmpty;
+    final w = hasHeader ? 132.0 : 96.0;
+    final h = hasHeader ? 46.0 : 28.0;
+    final showBelow = anchor.dy - h - tail - 8 < 6;
+    final localLeft = anchor.dx - w / 2;
+    final globalLeft = chartGlobalLeft + localLeft;
+    final maxGlobalLeft = max(screenPadding, viewportWidth - w - screenPadding);
+    final clampedGlobalLeft = globalLeft.clamp(screenPadding, maxGlobalLeft).toDouble();
+    final left = clampedGlobalLeft - chartGlobalLeft;
+    final top = showBelow ? anchor.dy + 8 : max(6.0, anchor.dy - h - tail - 8);
+    final tailX = anchor.dx - left;
 
     return Positioned(
       left: left,
       top: top,
       child: CustomPaint(
-        painter: _TooltipPainter(tailX, w, h, tail),
+        painter: _TooltipPainter(tailX, w, h, tail, tailOnTop: showBelow),
         child: SizedBox(
           width: w,
           height: h + tail,
           child: Padding(
-            padding: const EdgeInsets.only(bottom: tail),
-            child: Center(
-              child: Text(text,
+            padding: showBelow
+                ? const EdgeInsets.fromLTRB(8, tail + 6, 8, 6)
+                : const EdgeInsets.fromLTRB(8, 6, 8, tail),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (hasHeader)
+                  Text(
+                    headerText,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                if (hasHeader) const SizedBox(height: 2),
+                Text(
+                  priceText,
                   style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600)),
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -1080,24 +1415,75 @@ class _Tooltip extends StatelessWidget {
 
 class _TooltipPainter extends CustomPainter {
   final double tailX, w, h, tail;
-  _TooltipPainter(this.tailX, this.w, this.h, this.tail);
+  final bool tailOnTop;
+  _TooltipPainter(
+    this.tailX,
+    this.w,
+    this.h,
+    this.tail, {
+    required this.tailOnTop,
+  });
 
   @override
   void paint(Canvas canvas, Size sz) {
     final paint = Paint()..color = Colors.black.withOpacity(0.75);
+    final boxTop = tailOnTop ? tail : 0.0;
     canvas.drawRRect(
-        RRect.fromRectAndRadius(
-            Rect.fromLTWH(0, 0, w, h), const Radius.circular(10)),
-        paint);
-    final path = Path()
-      ..moveTo(tailX - 7, h)
-      ..lineTo(tailX, h + tail)
-      ..lineTo(tailX + 7, h)
-      ..close();
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(0, boxTop, w, h),
+        const Radius.circular(10),
+      ),
+      paint,
+    );
+
+    final path = Path();
+    if (tailOnTop) {
+      path
+        ..moveTo(tailX - 7, tail)
+        ..lineTo(tailX, 0)
+        ..lineTo(tailX + 7, tail)
+        ..close();
+    } else {
+      path
+        ..moveTo(tailX - 7, h)
+        ..lineTo(tailX, h + tail)
+        ..lineTo(tailX + 7, h)
+        ..close();
+    }
     canvas.drawPath(path, paint);
   }
 
   @override
   bool shouldRepaint(_TooltipPainter old) =>
-      old.tailX != tailX || old.w != w || old.h != h || old.tail != tail;
+      old.tailX != tailX ||
+      old.w != w ||
+      old.h != h ||
+      old.tail != tail ||
+      old.tailOnTop != tailOnTop;
+}
+
+class _ChartGeometry {
+  final Rect rect;
+  final Map<int, Offset> pointPositions;
+
+  const _ChartGeometry({
+    required this.rect,
+    required this.pointPositions,
+  });
+
+  int? nearestIndex(Offset target) {
+    if (pointPositions.isEmpty) return null;
+    int? nearest;
+    double bestDistanceSquared = double.infinity;
+    pointPositions.forEach((idx, point) {
+      final dx = point.dx - target.dx;
+      final dy = point.dy - target.dy;
+      final distanceSquared = dx * dx + dy * dy;
+      if (distanceSquared < bestDistanceSquared) {
+        bestDistanceSquared = distanceSquared;
+        nearest = idx;
+      }
+    });
+    return nearest;
+  }
 }
