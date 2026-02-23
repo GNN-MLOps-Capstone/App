@@ -22,7 +22,7 @@ class WatchlistStock {
       code: json['code'] as String? ?? '',
       name: json['name'] as String? ?? '',
       weather: json['weather'] as String? ?? 'CLOUDY',
-      price: json['price'] as int? ?? 0,
+      price: (json['price'] as num?)?.toInt() ?? 0,
       changeRate: (json['changeRate'] as num?)?.toDouble() ?? 0.0,
       keyword: json['keyword'] as String? ?? '',
       aiSummary: json['aiSummary'] as String? ?? '',

@@ -19,6 +19,7 @@ enum SortOption {
   volumeLow('거래량 적은 순');
 
   final String label;
+
   const SortOption(this.label);
 }
 
@@ -61,16 +62,22 @@ class _WatchlistPageState extends State<WatchlistPage> {
   }
 
   Future<void> _loadData() async {
-    final results = await Future.wait([
-      _service.getWatchlist(),
-      _service.getBriefing(),
-    ]);
-    if (!mounted) return;
-    setState(() {
-      _stocks = results[0] as List<WatchlistStock>;
-      _briefing = results[1] as WatchlistBriefing;
-      _loading = false;
-    });
+    try {
+      final results = await Future.wait([
+        _service.getWatchlist(),
+        _service.getBriefing(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _stocks = results[0] as List<WatchlistStock>;
+        _briefing = results[1] as WatchlistBriefing;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      debugPrint('관심종목 로드 실패: $e');
+    }
   }
 
   // ── 정렬 ──
@@ -187,8 +194,9 @@ class _WatchlistPageState extends State<WatchlistPage> {
                       color: isActive
                           ? const Color(0xFF22C55E)
                           : Colors.black87,
-                      fontWeight:
-                          isActive ? FontWeight.bold : FontWeight.normal,
+                      fontWeight: isActive
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                     ),
                   ),
                   trailing: isActive
@@ -227,12 +235,9 @@ class _WatchlistPageState extends State<WatchlistPage> {
                 children: [
                   _buildAppBar(),
                   Expanded(
-                    child: _stocks.isEmpty
-                        ? _buildEmptyView()
-                        : _buildBody(),
+                    child: _stocks.isEmpty ? _buildEmptyView() : _buildBody(),
                   ),
-                  if (_editMode && _selectedCodes.isNotEmpty)
-                    _buildDeleteBar(),
+                  if (_editMode && _selectedCodes.isNotEmpty) _buildDeleteBar(),
                 ],
               ),
       ),
@@ -248,10 +253,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
         children: [
           const Text(
             '관심',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
           const Spacer(),
           if (!_editMode)
@@ -262,13 +264,12 @@ class _WatchlistPageState extends State<WatchlistPage> {
               icon: Stack(
                 clipBehavior: Clip.none,
                 children: const [
-                  Icon(Icons.notifications_none_outlined,
-                      size: 26, color: Colors.black87),
-                  Positioned(
-                    right: -2,
-                    top: -2,
-                    child: _Badge(),
+                  Icon(
+                    Icons.notifications_none_outlined,
+                    size: 26,
+                    color: Colors.black87,
                   ),
+                  Positioned(right: -2, top: -2, child: _Badge()),
                 ],
               ),
             ),
@@ -277,9 +278,14 @@ class _WatchlistPageState extends State<WatchlistPage> {
               onPressed: () => setState(() {
                 _editMode = true;
                 _selectedCodes.clear();
+                _sortOption = SortOption.userDefined;
+                _filter = StockFilter.none;
               }),
-              icon: const Icon(Icons.edit_outlined,
-                  size: 24, color: Colors.black87),
+              icon: const Icon(
+                Icons.edit_outlined,
+                size: 24,
+                color: Colors.black87,
+              ),
             ),
           if (_editMode)
             TextButton(
@@ -310,17 +316,12 @@ class _WatchlistPageState extends State<WatchlistPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.favorite_border,
-                size: 64, color: Colors.grey.shade300),
+            Icon(Icons.favorite_border, size: 64, color: Colors.grey.shade300),
             const SizedBox(height: 20),
             const Text(
               '아직 관심 종목이 없네요.\n요즘 핫한 종목을 추천해 드릴까요?',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-                height: 1.5,
-              ),
+              style: TextStyle(fontSize: 16, color: Colors.grey, height: 1.5),
             ),
             const SizedBox(height: 28),
             SizedBox(
@@ -378,7 +379,10 @@ class _WatchlistPageState extends State<WatchlistPage> {
           const SizedBox(height: 12),
 
           // 종목 카드 리스트 (편집 모드에 따라 분기)
-          if (_editMode) _buildEditableList(filtered) else _buildStockList(filtered),
+          if (_editMode)
+            _buildEditableList(filtered)
+          else
+            _buildStockList(filtered),
         ],
       ),
     );
@@ -454,19 +458,25 @@ class _WatchlistPageState extends State<WatchlistPage> {
               spacing: 8,
               runSpacing: 6,
               children: briefing.topIssues
-                  .map((issue) => Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.25),
-                          borderRadius: BorderRadius.circular(20),
+                  .map(
+                    (issue) => Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '#$issue',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
                         ),
-                        child: Text(
-                          '#$issue',
-                          style: const TextStyle(
-                              color: Colors.white, fontSize: 12),
-                        ),
-                      ))
+                      ),
+                    ),
+                  )
                   .toList(),
             ),
           ],
@@ -482,10 +492,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
       children: [
         Text(
           '$count개',
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
         ),
         const SizedBox(width: 8),
         GestureDetector(
@@ -618,7 +625,9 @@ class _WatchlistPageState extends State<WatchlistPage> {
                 title: Text(
                   stock.name,
                   style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 15),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
                 ),
                 subtitle: Text(
                   '${_formatPrice(stock.price)}원',
@@ -774,7 +783,9 @@ class _StockCard extends StatelessWidget {
                             padding: const EdgeInsets.only(top: 4),
                             child: Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 2),
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFF0FDF4),
                                 borderRadius: BorderRadius.circular(10),

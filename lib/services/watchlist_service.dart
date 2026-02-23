@@ -11,7 +11,7 @@ class WatchlistService {
   WatchlistService._internal();
 
   /// ISIN 코드(KR7005930003)를 6자리 종목코드(005930)로 변환
-  String _toStockCode(String code) {
+  String toStockCode(String code) {
     // 이미 6자리면 그대로 반환
     if (code.length == 6) return code;
     // ISIN 형식이면 3~8번째 자리 추출 (KR7XXXXXX000 → XXXXXX)
@@ -116,7 +116,8 @@ class WatchlistService {
     if (base == null) return List.from(_localList);
 
     try {
-      final res = await http.get(Uri.parse('$base/api/watchlist'));
+      final res = await http.get(Uri.parse('$base/api/watchlist'))
+          .timeout(const Duration(seconds: 10));
       if (res.statusCode == 200) {
         final List<dynamic> data = jsonDecode(res.body);
         return data.map((e) => WatchlistStock.fromJson(e)).toList();
@@ -128,7 +129,7 @@ class WatchlistService {
   }
 
   Future<bool> addStock(String code, {String? name}) async {
-    final stockCode = _toStockCode(code);
+    final stockCode = toStockCode(code);
     final base = _baseUrl;
     if (base == null) {
       if (_localList.any((s) => s.code == stockCode)) return true;
@@ -149,7 +150,7 @@ class WatchlistService {
         Uri.parse('$base/api/watchlist'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'code': stockCode}),
-      );
+      ).timeout(const Duration(seconds: 10));
       return res.statusCode == 200 || res.statusCode == 201;
     } catch (e) {
       if (kDebugMode) print('addStock 오류: $e');
@@ -158,7 +159,7 @@ class WatchlistService {
   }
 
   Future<bool> deleteStock(String code) async {
-    final stockCode = _toStockCode(code);
+    final stockCode = toStockCode(code);
     final base = _baseUrl;
     if (base == null) {
       _localList.removeWhere((s) => s.code == stockCode);
@@ -166,7 +167,8 @@ class WatchlistService {
     }
 
     try {
-      final res = await http.delete(Uri.parse('$base/api/watchlist/$stockCode'));
+      final res = await http.delete(Uri.parse('$base/api/watchlist/$stockCode'))
+          .timeout(const Duration(seconds: 10));
       return res.statusCode == 200 || res.statusCode == 204;
     } catch (e) {
       if (kDebugMode) print('deleteStock 오류: $e');
@@ -179,7 +181,8 @@ class WatchlistService {
     if (base == null) return _dummyBriefing;
 
     try {
-      final res = await http.get(Uri.parse('$base/api/watchlist/briefing'));
+      final res = await http.get(Uri.parse('$base/api/watchlist/briefing'))
+          .timeout(const Duration(seconds: 10));
       if (res.statusCode == 200) {
         return WatchlistBriefing.fromJson(jsonDecode(res.body));
       }
@@ -200,7 +203,8 @@ class WatchlistService {
     }
 
     try {
-      final res = await http.get(Uri.parse('$base/api/stocks/$code'));
+      final res = await http.get(Uri.parse('$base/api/stocks/$code'))
+          .timeout(const Duration(seconds: 10));
       if (res.statusCode == 200) {
         return WatchlistStock.fromJson(jsonDecode(res.body));
       }
