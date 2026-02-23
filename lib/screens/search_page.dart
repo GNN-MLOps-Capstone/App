@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'dart:convert';
 
+import '../services/watchlist_service.dart';
+
 class StockItem {
   final String displayName; // ✅ 한글명(대표명)만 화면에 표시
   final List<String> aliases; // ✅ 추가명(별칭들)
@@ -31,12 +33,16 @@ class _SearchPageState extends State<SearchPage> {
   int _selectedIndex = -1;
   bool _loading = true;
 
+  final WatchlistService _watchlistService = WatchlistService();
+  final Set<String> _favoriteCodes = {};
+
   String _norm(String s) => s.trim().toLowerCase().replaceAll(' ', '');
 
   @override
   void initState() {
     super.initState();
     _loadCsv();
+    _loadFavorites();
 
     _controller.addListener(() {
       _applyFilter(_controller.text);
@@ -107,6 +113,29 @@ class _SearchPageState extends State<SearchPage> {
     }
   }
 
+  Future<void> _loadFavorites() async {
+    final stocks = await _watchlistService.getWatchlist();
+    if (!mounted) return;
+    setState(() {
+      _favoriteCodes.addAll(stocks.map((s) => s.code));
+    });
+  }
+
+  Future<void> _toggleFavorite(StockItem item) async {
+    final code = item.code;
+    final isFav = _favoriteCodes.contains(code);
+
+    if (isFav) {
+      await _watchlistService.deleteStock(code);
+      if (!mounted) return;
+      setState(() => _favoriteCodes.remove(code));
+    } else {
+      await _watchlistService.addStock(code, name: item.displayName);
+      if (!mounted) return;
+      setState(() => _favoriteCodes.add(code));
+    }
+  }
+
   // ✅ 대표명/추가명 둘 다에서 대소문자 무시 검색
   void _applyFilter(String q) {
     final query = _norm(q);
@@ -137,23 +166,26 @@ class _SearchPageState extends State<SearchPage> {
 
   void _onBottomTap(int index) {
     if (index == 0) {
-      if (Navigator.canPop(context)) {
-        Navigator.pop(context);
-      } else {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/home',
-              (route) => false,
-        );
-      }
+      // 홈
+      Navigator.pushReplacementNamed(context, '/home');
+      return;
+    }
+    if (index == 1) {
+      // 관심
+      Navigator.pushReplacementNamed(context, '/watchlist');
+      return;
+    }
+    if (index == 2) {
+      // 뉴스
+      Navigator.pushReplacementNamed(context, '/news');
       return;
     }
 
-    const labels = ['홈', '관심', '뉴스', '주식'];
+    // 주식 탭은 아직 준비 중
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${labels[index]} 화면은 아직 준비 중입니다.'),
-        duration: const Duration(milliseconds: 800),
+      const SnackBar(
+        content: Text('주식 화면은 아직 준비 중입니다.'),
+        duration: Duration(milliseconds: 800),
       ),
     );
   }
@@ -349,10 +381,17 @@ class _SearchPageState extends State<SearchPage> {
                                 ],
                               ),
                             ),
-                            const Icon(
-                              Icons.star_border,
-                              color: Colors.grey,
-                              size: 28,
+                            GestureDetector(
+                              onTap: () => _toggleFavorite(item),
+                              child: Icon(
+                                _favoriteCodes.contains(item.code)
+                                    ? Icons.favorite
+                                    : Icons.favorite_border,
+                                color: _favoriteCodes.contains(item.code)
+                                    ? const Color(0xFF22C55E)
+                                    : Colors.grey,
+                                size: 28,
+                              ),
                             ),
                           ],
                         ),

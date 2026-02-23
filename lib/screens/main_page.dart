@@ -30,7 +30,10 @@ class StockHomeScreen extends StatelessWidget {
 
     const labels = ['홈', '관심', '뉴스', '주식'];
 
-    if (index == 2) {
+    if (index == 1) {
+      // 관심
+      Navigator.pushReplacementNamed(context, '/watchlist');
+    } else if (index == 2) {
       // 뉴스
       Navigator.pushReplacementNamed(context, '/news');
     } else {
@@ -172,11 +175,7 @@ class StockHomeScreen extends StatelessWidget {
 
               GestureDetector(
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('내 관심종목 화면은 아직 준비 중입니다.'),
-                    ),
-                  );
+                  Navigator.pushReplacementNamed(context, '/watchlist');
                 },
                 child: Container(
                   height: 160,
