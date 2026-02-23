@@ -8,7 +8,7 @@ import 'package:intl/intl.dart';
 import '../services/stock_api_service.dart';
 
 enum ChartRange { day, week, month }
-enum Sentiment { positive, negative }
+enum Sentiment { positive, neutral, negative }
 
 class StockDetailPage extends StatefulWidget {
   final String stockName;
@@ -260,7 +260,8 @@ class _StockDetailPageState extends State<StockDetailPage> {
   double get _currentChangeRate =>
       _realtimePrice?.changeRate ?? _overview?.changeRate ?? 0;
 
-  bool get _isUp => _currentChange >= 0;
+  bool get _isUp => _currentChange > 0;
+  bool get _isFlat => _currentChange == 0;
 
   int get _currentOpen => _realtimePrice?.open ?? _overview?.open ?? 0;
   int get _currentHigh => _realtimePrice?.high ?? _overview?.high ?? 0;
@@ -344,9 +345,10 @@ class _StockDetailPageState extends State<StockDetailPage> {
           _HeaderPriceSection(
             stockName: widget.stockName,
             priceText: '${_wonFormat.format(_currentPrice)}원',
-            changeText: '${_currentChangeRate >= 0 ? "+" : ""}${_currentChangeRate.toStringAsFixed(2)}%',
+            changeText: '${_currentChangeRate > 0 ? "+" : ""}${_currentChangeRate.toStringAsFixed(2)}%',
             isUp: _isUp,
-            sentiment: _isUp ? Sentiment.positive : Sentiment.negative,
+            isFlat: _isFlat,
+            sentiment: _isFlat ? Sentiment.neutral : (_isUp ? Sentiment.positive : Sentiment.negative),
           ),
 
           const SizedBox(height: 14),
@@ -591,7 +593,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
   List<String> _buildAiSummary() {
     return [
       '${widget.stockName}의 현재가는 ${_wonFormat.format(_currentPrice)}원입니다.',
-      '전일 대비 ${_currentChange >= 0 ? "상승" : "하락"} (${_currentChangeRate >= 0 ? "+" : ""}${_currentChangeRate.toStringAsFixed(2)}%)',
+      '전일 대비 ${_isFlat ? "보합" : (_isUp ? "상승" : "하락")} (${_currentChangeRate > 0 ? "+" : ""}${_currentChangeRate.toStringAsFixed(2)}%)',
       '거래량 ${_wonFormat.format(_currentVolume)}주로 시장 참여가 ${_currentVolume > 100000 ? "활발" : "보통"}합니다.',
     ];
   }
@@ -599,7 +601,9 @@ class _StockDetailPageState extends State<StockDetailPage> {
   /// AI 태그 (현재는 더미)
   List<String> _buildAiTags() {
     final tags = <String>[];
-    if (_isUp) {
+    if (_isFlat) {
+      tags.add('보합');
+    } else if (_isUp) {
       tags.add('상승');
     } else {
       tags.add('하락');
@@ -737,6 +741,7 @@ class _OverviewItem extends StatelessWidget {
 class _HeaderPriceSection extends StatelessWidget {
   final String stockName, priceText, changeText;
   final bool isUp;
+  final bool isFlat;
   final Sentiment sentiment;
 
   const _HeaderPriceSection({
@@ -744,13 +749,14 @@ class _HeaderPriceSection extends StatelessWidget {
     required this.priceText,
     required this.changeText,
     required this.isUp,
+    this.isFlat = false,
     required this.sentiment,
   });
 
   @override
   Widget build(BuildContext context) {
-    final color = isUp ? Colors.red : Colors.blue;
-    final arrow = isUp ? '▲' : '▼';
+    final color = isFlat ? Colors.grey : (isUp ? Colors.red : Colors.blue);
+    final arrow = isFlat ? '─' : (isUp ? '▲' : '▼');
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -791,11 +797,23 @@ class _SentimentBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isPos = sentiment == Sentiment.positive;
-    final icon = isPos ? Icons.wb_sunny : Icons.cloud;
-    final label = isPos ? 'AI 긍정' : 'AI 부정';
-    final accent =
-        isPos ? const Color(0xFF22C55E) : const Color(0xFF64748B);
+    final IconData icon;
+    final String label;
+    final Color accent;
+    switch (sentiment) {
+      case Sentiment.positive:
+        icon = Icons.wb_sunny;
+        label = 'AI 긍정';
+        accent = const Color(0xFF22C55E);
+      case Sentiment.neutral:
+        icon = Icons.remove_circle_outline;
+        label = 'AI 보합';
+        accent = Colors.grey;
+      case Sentiment.negative:
+        icon = Icons.cloud;
+        label = 'AI 부정';
+        accent = const Color(0xFF64748B);
+    }
 
     return Column(
       children: [

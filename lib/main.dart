@@ -8,7 +8,6 @@ import 'screens/main_page.dart';
 import 'screens/push_test_screen.dart';
 import 'screens/news_page.dart';
 import 'screens/search_page.dart';
-import 'screens/stock_detail_page.dart';  // ✅ 추가
 import 'services/onesignal_service.dart';
 
 Future<void> main() async {
@@ -50,10 +49,6 @@ class StockApp extends StatelessWidget {
         '/push_test': (_) => const PushTestScreen(),
         '/news': (_) => const NewsScreen(),
         '/search': (_) => const SearchPage(),
-        '/stock-detail': (_) => const StockDetailPage(
-              stockName: '삼성전자',
-              stockCode: '005930',
-            ),  // ✅ 추가
       },
     );
   }
