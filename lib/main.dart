@@ -14,7 +14,7 @@ import 'screens/alarm_page.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // .env 파일 로드
+  // .env.local 파일 로드
   await dotenv.load(fileName: ".env.local");
 
   try {

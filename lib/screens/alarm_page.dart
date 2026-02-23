@@ -16,10 +16,10 @@ class AlarmItem {
   /// 알림 발생 시각(정렬/시간표시 핵심)
   final DateTime createdAt;
 
-  bool isRead;
+  final bool isRead;
 
   /// ✅ 즐겨찾기(= 중요 탭에 들어갈지)
-  bool isStarred;
+  final bool isStarred;
 
   AlarmItem({
     required this.id,
@@ -81,7 +81,7 @@ class AlarmPage extends StatefulWidget {
 
 class _AlarmPageState extends State<AlarmPage> {
   Timer? _ticker;
-  late List<AlarmItem> _items = [];
+  List<AlarmItem> _items = [];
 
   // ==============================
   // 정렬/추가 공통 유틸
@@ -284,6 +284,7 @@ class _AlarmPageState extends State<AlarmPage> {
     final riskItems = _generateRiskAlarmsDummy();
     final userKeywords = await _fetchUserKeywordsFromFavorites();
     final keywordItems = _generateKeywordAlarmsDummy(userKeywords);
+    if (!mounted) return;
 
     setState(() {
       _items = _mergeAndSort(riskItems, keywordItems);
@@ -305,9 +306,7 @@ class _AlarmPageState extends State<AlarmPage> {
 
   void _markAllRead() {
     setState(() {
-      for (final it in _items) {
-        it.isRead = true;
-      }
+      _items = _items.map((it) => it.isRead ? it : it.copyWith(isRead: true)).toList();
     });
   }
 
@@ -321,7 +320,12 @@ class _AlarmPageState extends State<AlarmPage> {
 
     if (!mounted) return;
     if (!item.isRead) {
-      setState(() => item.isRead = true);
+      setState(() {
+        final idx = _items.indexWhere((e) => e.id == item.id);
+        if (idx >= 0) {
+          _items[idx] = _items[idx].copyWith(isRead: true);
+        }
+      });
     }
   }
 
