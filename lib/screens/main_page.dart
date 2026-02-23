@@ -93,7 +93,7 @@ class StockHomeScreen extends StatelessWidget {
                   ),
                   IconButton(
                     onPressed: () {
-                      Navigator.pushNamed(context, '/push_test');
+                      Navigator.pushNamed(context, '/alarm');
                     },
                     icon: Stack(
                       clipBehavior: Clip.none,
@@ -107,18 +107,11 @@ class StockHomeScreen extends StatelessWidget {
                           right: -2,
                           top: -2,
                           child: Container(
-                            padding: const EdgeInsets.all(2),
+                            width: 10,
+                            height: 10,
                             decoration: const BoxDecoration(
                               color: Color(0xFF22C55E),
                               shape: BoxShape.circle,
-                            ),
-                            child: const Text(
-                              '2',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
                             ),
                           ),
                         ),

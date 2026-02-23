@@ -11,6 +11,7 @@ import 'screens/search_page.dart';
 import 'screens/watchlist_page.dart';
 import 'screens/stock_detail_page.dart';  // ✅ 추가
 import 'services/onesignal_service.dart';
+import 'screens/alarm_page.dart';
 import 'screens/setting_page.dart';
 import 'screens/login_page.dart';
 
@@ -18,7 +19,7 @@ import 'screens/login_page.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // .env 파일 로드
+  // .env.local 파일 로드
   await dotenv.load(fileName: ".env.local");
 
   try {
@@ -54,6 +55,7 @@ class StockApp extends StatelessWidget {
         '/push_test': (_) => const PushTestScreen(),
         '/news': (_) => const NewsScreen(),
         '/search': (_) => const SearchPage(),
+        '/alarm': (_) => const AlarmPage(),
         '/settings': (_) => const SettingPage(),
         '/login': (_) => const GoogleLoginPage(),
         '/watchlist': (_) => const WatchlistPage(),
