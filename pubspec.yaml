@@ -34,7 +34,7 @@ dependencies:
   google_sign_in: ^6.2.1
   onesignal_flutter: ^5.3.4
   flutter_dotenv: ^6.0.0
-  http: ^1.1.0
+  http: ^1.2.0
   csv: ^5.0.2
 
   # The following adds the Cupertino Icons font to your application.
@@ -68,6 +68,7 @@ flutter:
     - .env.local
     - lib/dummy_data.csv
     - lib/screens/stock_list.csv
+    - lib/screens/name.csv
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

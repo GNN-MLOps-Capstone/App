@@ -1,7 +1,9 @@
 // lib/screens/main_page.dart
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+
 import 'search_page.dart';
+import 'stock_page.dart'; // ✅ 추가: 주식 탭 이동용
 
 class StockHomeScreen extends StatelessWidget {
   final String? userName;
@@ -36,15 +38,25 @@ class StockHomeScreen extends StatelessWidget {
     } else if (index == 2) {
       // 뉴스
       Navigator.pushReplacementNamed(context, '/news');
-    } else {
-      // 아직 안 만든 탭은 안내만
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${labels[index]} 화면은 아직 준비 중입니다.'),
-          duration: const Duration(milliseconds: 800),
-        ),
-      );
+      return;
     }
+
+    if (index == 3) {
+      // ✅ 주식
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const StockPage()),
+      );
+      return;
+    }
+
+    // 아직 안 만든 탭은 안내만
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${labels[index]} 화면은 아직 준비 중입니다.'),
+        duration: const Duration(milliseconds: 800),
+      ),
+    );
   }
 
   @override
@@ -249,6 +261,7 @@ class BottomNavBar extends StatefulWidget {
   final ValueChanged<int> onIndexChanged;
 
   const BottomNavBar({
+    super.key,
     required this.initialIndex,
     required this.onIndexChanged,
   });
