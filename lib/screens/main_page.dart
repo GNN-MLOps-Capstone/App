@@ -127,9 +127,7 @@ class StockHomeScreen extends StatelessWidget {
                   ),
                   IconButton(
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('설정 화면은 아직 준비 중입니다.')),
-                      );
+                      Navigator.pushNamed(context, '/settings'); // ✅ 설정 페이지로 이동
                     },
                     icon: const Icon(
                       Icons.settings,

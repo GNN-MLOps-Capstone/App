@@ -11,6 +11,9 @@ import 'screens/search_page.dart';
 import 'screens/watchlist_page.dart';
 import 'screens/stock_detail_page.dart';  // ✅ 추가
 import 'services/onesignal_service.dart';
+import 'screens/setting_page.dart';
+import 'screens/login_page.dart';
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,14 +48,16 @@ class StockApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      initialRoute: '/home',
+      initialRoute: '/login',
       routes: {
         '/home': (_) => const StockHomeScreen(),
         '/push_test': (_) => const PushTestScreen(),
         '/news': (_) => const NewsScreen(),
         '/search': (_) => const SearchPage(),
+        '/settings': (_) => const SettingPage(),
+        '/login': (_) => const GoogleLoginPage(),
         '/watchlist': (_) => const WatchlistPage(),
-        '/stock-detail': (_) => const StockDetailPage(stockName: '삼성전자'),  // ✅ 추가
+        '/stock-detail': (_) => const StockDetailPage(stockName: '삼성전자'),
       },
     );
   }
