@@ -44,6 +44,11 @@ class _StockDetailPageState extends State<StockDetailPage> {
   int _rangeChangeSeq = 0;
   static const Duration _daySeriesRefreshInterval = Duration(seconds: 30);
   static const Duration _otherSeriesRefreshInterval = Duration(minutes: 5);
+  static const Duration _seriesWarningSnackInterval = Duration(seconds: 60);
+  static const String _seriesWarningMessage =
+      '시세 그래프 최신 갱신에 실패했습니다. (서버 502 가능)';
+  String? _seriesSyncWarning;
+  DateTime? _lastSeriesWarnAt;
 
   // 천 단위 콤마 포맷
   static final _wonFormat = NumberFormat('#,###');
@@ -94,6 +99,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
         await _fetchSeries(_range);
       } catch (e) {
         debugPrint('[상세] 초기 시리즈 로드 실패: $e');
+        _setSeriesWarning(_seriesWarningMessage, showSnackBar: true);
       }
 
       if (!mounted) return;
@@ -135,6 +141,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
         forceRefresh: forceRefresh,
       );
       _seriesCache[range] = series;
+      _clearSeriesWarning();
       debugPrint(
         '[상세] series loaded range=${_rangeToString(range)} '
         'points=${series.points.length} force=$forceRefresh',
@@ -180,8 +187,12 @@ class _StockDetailPageState extends State<StockDetailPage> {
       await _requestSeries(newRange);
     } catch (e) {
       debugPrint('Series 로드 실패(${_rangeToString(newRange)}): $e');
+      _setSeriesWarning(_seriesWarningMessage, showSnackBar: true);
     } finally {
-      if (mounted && seq == _rangeChangeSeq && _range == newRange && !hasCache) {
+      if (mounted &&
+          seq == _rangeChangeSeq &&
+          _range == newRange &&
+          !hasCache) {
         setState(() => _loading = false);
       }
     }
@@ -194,16 +205,13 @@ class _StockDetailPageState extends State<StockDetailPage> {
   void _connectWebSocket() {
     if (!_isStockCodeValid) return;
     _wsConnection = StockApiService.connectRealtime(widget.stockCode);
-    _wsConnection!.stream.listen(
-      (price) {
-        // 비정상 실시간 틱(0원)은 overview 값을 덮어쓰지 않도록 무시
-        if (price.price <= 0) return;
-        if (mounted) {
-          setState(() => _realtimePrice = price);
-        }
-      },
-      onError: (e) => debugPrint('[상세] WS 에러: $e'),
-    );
+    _wsConnection!.stream.listen((price) {
+      // 비정상 실시간 틱(0원)은 overview 값을 덮어쓰지 않도록 무시
+      if (price.price <= 0) return;
+      if (mounted) {
+        setState(() => _realtimePrice = price);
+      }
+    }, onError: (e) => debugPrint('[상세] WS 에러: $e'));
   }
 
   void _startSeriesAutoRefresh() {
@@ -222,6 +230,35 @@ class _StockDetailPageState extends State<StockDetailPage> {
     _seriesRefreshTimer = null;
   }
 
+  void _clearSeriesWarning() {
+    if (!mounted || _seriesSyncWarning == null) return;
+    setState(() => _seriesSyncWarning = null);
+  }
+
+  void _setSeriesWarning(String message, {bool showSnackBar = false}) {
+    if (!mounted) return;
+    final now = DateTime.now();
+    final shouldShowSnackBar =
+        showSnackBar &&
+        (_lastSeriesWarnAt == null ||
+            now.difference(_lastSeriesWarnAt!) >= _seriesWarningSnackInterval);
+
+    if (_seriesSyncWarning != message || shouldShowSnackBar) {
+      setState(() {
+        _seriesSyncWarning = message;
+        if (shouldShowSnackBar) {
+          _lastSeriesWarnAt = now;
+        }
+      });
+    }
+
+    if (shouldShowSnackBar) {
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      messenger?.hideCurrentSnackBar();
+      messenger?.showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+
   Future<void> _refreshRange(ChartRange range) async {
     if (!mounted || !_isStockCodeValid) return;
     try {
@@ -236,6 +273,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
       );
     } catch (e) {
       debugPrint('[상세] 시리즈 자동 갱신 실패 (${_rangeToString(range)}): $e');
+      _setSeriesWarning(_seriesWarningMessage, showSnackBar: true);
     }
   }
 
@@ -278,8 +316,8 @@ class _StockDetailPageState extends State<StockDetailPage> {
         child: _loading && _overview == null
             ? const Center(child: CircularProgressIndicator())
             : _error != null && _overview == null
-                ? _buildError()
-                : _buildContent(),
+            ? _buildError()
+            : _buildContent(),
       ),
     );
   }
@@ -294,11 +332,16 @@ class _StockDetailPageState extends State<StockDetailPage> {
           children: [
             const Icon(Icons.error_outline, size: 48, color: Colors.grey),
             const SizedBox(height: 16),
-            Text(_error ?? '알 수 없는 오류', textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.grey)),
+            Text(
+              _error ?? '알 수 없는 오류',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.grey),
+            ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: invalidCode ? () => Navigator.maybePop(context) : _loadData,
+              onPressed: invalidCode
+                  ? () => Navigator.maybePop(context)
+                  : _loadData,
               child: Text(invalidCode ? '뒤로가기' : '재시도'),
             ),
           ],
@@ -321,7 +364,8 @@ class _StockDetailPageState extends State<StockDetailPage> {
     }
 
     final finitePoints = chartPoints.where((v) => v.isFinite).toList();
-    final allZero = finitePoints.isNotEmpty && finitePoints.every((v) => v == 0);
+    final allZero =
+        finitePoints.isNotEmpty && finitePoints.every((v) => v == 0);
     if (allZero) {
       chartPoints = [];
       xAxisLabels = [];
@@ -345,7 +389,8 @@ class _StockDetailPageState extends State<StockDetailPage> {
           _HeaderPriceSection(
             stockName: widget.stockName,
             priceText: '${_wonFormat.format(_currentPrice)}원',
-            changeText: '${_currentChangeRate > 0 ? "+" : ""}${_currentChangeRate.toStringAsFixed(2)}%',
+            changeText:
+                '${_currentChangeRate >= 0 ? "+" : ""}${_currentChangeRate.toStringAsFixed(2)}%',
             isUp: _isUp,
             isFlat: _isFlat,
             sentiment: _isFlat ? Sentiment.neutral : (_isUp ? Sentiment.positive : Sentiment.negative),
@@ -361,15 +406,38 @@ class _StockDetailPageState extends State<StockDetailPage> {
           // ── 차트 범위 선택 ──
           Row(
             children: [
-              const Text('가격 추이',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-              const Spacer(),
-              _RangeSelector(
-                range: _range,
-                onChanged: _onRangeChanged,
+              const Text(
+                '가격 추이',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
               ),
+              const Spacer(),
+              _RangeSelector(range: _range, onChanged: _onRangeChanged),
             ],
           ),
+          if (_seriesSyncWarning != null) ...[
+            const SizedBox(height: 6),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.warning_amber_rounded,
+                  size: 16,
+                  color: Color(0xFFB45309),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    _seriesSyncWarning!,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFFB45309),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 12),
 
           // ── 차트 카드 ──
@@ -385,16 +453,19 @@ class _StockDetailPageState extends State<StockDetailPage> {
                     height: 210,
                     child: chartPoints.isEmpty
                         ? const Center(
-                            child: Text('장 마감 또는 데이터가 없습니다',
-                                style: TextStyle(color: Colors.grey)))
+                            child: Text(
+                              '장 마감 또는 데이터가 없습니다',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          )
                         : LineChartInteractive(
                             points: chartPoints,
                             xAxisLabels: xAxisLabels,
                             maxLabel: maxLabel,
                             minLabel: minLabel,
-                            isDayRange: _range == ChartRange.day,
                             tooltipData: (idx) {
-                              final hasTime = idx >= 0 && idx < pointTimes.length;
+                              final hasTime =
+                                  idx >= 0 && idx < pointTimes.length;
                               final headerText = hasTime
                                   ? _formatTooltipHeader(pointTimes[idx])
                                   : '';
@@ -418,24 +489,28 @@ class _StockDetailPageState extends State<StockDetailPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('AI 요약',
-                    style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                const Text(
+                  'AI 요약',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                ),
                 const SizedBox(height: 12),
-                ..._buildAiSummary().map((line) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('•  ',
-                              style: TextStyle(fontSize: 14)),
-                          Expanded(
-                              child: Text(line,
-                                  style: const TextStyle(
-                                      fontSize: 14, height: 1.3))),
-                        ],
-                      ),
-                    )),
+                ..._buildAiSummary().map(
+                  (line) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('•  ', style: TextStyle(fontSize: 14)),
+                        Expanded(
+                          child: Text(
+                            line,
+                            style: const TextStyle(fontSize: 14, height: 1.3),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 10),
                 Wrap(
                   spacing: 8,
@@ -459,11 +534,20 @@ class _StockDetailPageState extends State<StockDetailPage> {
       decoration: _cardDeco(),
       child: Row(
         children: [
-          _OverviewItem(label: '시가', value: '${_wonFormat.format(_currentOpen)}원'),
-          _OverviewItem(label: '고가', value: '${_wonFormat.format(_currentHigh)}원',
-              valueColor: Colors.red),
-          _OverviewItem(label: '저가', value: '${_wonFormat.format(_currentLow)}원',
-              valueColor: Colors.blue),
+          _OverviewItem(
+            label: '시가',
+            value: '${_wonFormat.format(_currentOpen)}원',
+          ),
+          _OverviewItem(
+            label: '고가',
+            value: '${_wonFormat.format(_currentHigh)}원',
+            valueColor: Colors.red,
+          ),
+          _OverviewItem(
+            label: '저가',
+            value: '${_wonFormat.format(_currentLow)}원',
+            valueColor: Colors.blue,
+          ),
           _OverviewItem(label: '거래량', value: _wonFormat.format(_currentVolume)),
         ],
       ),
@@ -500,8 +584,18 @@ class _StockDetailPageState extends State<StockDetailPage> {
 
     final sorted = [...series.points]..sort((a, b) => a.t.compareTo(b.t));
     final anchorDt = DateTime.fromMillisecondsSinceEpoch(sorted.last.t);
-    final dayStart = DateTime(anchorDt.year, anchorDt.month, anchorDt.day, startHour);
-    final dayEnd = DateTime(anchorDt.year, anchorDt.month, anchorDt.day, endHour);
+    final dayStart = DateTime(
+      anchorDt.year,
+      anchorDt.month,
+      anchorDt.day,
+      startHour,
+    );
+    final dayEnd = DateTime(
+      anchorDt.year,
+      anchorDt.month,
+      anchorDt.day,
+      endHour,
+    );
 
     final points = List<double>.filled(slotCount, double.nan);
     final pointTimes = List<DateTime?>.generate(
@@ -511,7 +605,9 @@ class _StockDetailPageState extends State<StockDetailPage> {
 
     for (final p in sorted) {
       final dt = DateTime.fromMillisecondsSinceEpoch(p.t);
-      if (dt.year != dayStart.year || dt.month != dayStart.month || dt.day != dayStart.day) {
+      if (dt.year != dayStart.year ||
+          dt.month != dayStart.month ||
+          dt.day != dayStart.day) {
         continue;
       }
       if (dt.isBefore(dayStart) || dt.isAfter(dayEnd)) {
@@ -526,7 +622,9 @@ class _StockDetailPageState extends State<StockDetailPage> {
 
     // 현재 시각 이후 구간은 NaN으로 유지하여 축만 보이고 라인은 미표시
     final now = DateTime.now();
-    if (now.year == dayStart.year && now.month == dayStart.month && now.day == dayStart.day) {
+    if (now.year == dayStart.year &&
+        now.month == dayStart.month &&
+        now.day == dayStart.day) {
       final nowMinutes = now.difference(dayStart).inMinutes;
       final nowIdx = nowMinutes ~/ intervalMinutes;
       final startClear = (nowIdx + 1).clamp(0, slotCount);
@@ -614,57 +712,54 @@ class _StockDetailPageState extends State<StockDetailPage> {
   }
 
   AppBar _buildAppBar() => AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: const BackButton(color: Colors.black),
-        title:
-            const Text('종목 상세', style: TextStyle(color: Colors.black)),
-        actions: [
-          IconButton(
-              icon: const Icon(Icons.refresh, color: Colors.black),
-              onPressed: () {
-                if (!_isStockCodeValid) {
-                  Navigator.maybePop(context);
-                  return;
-                }
-                _seriesCache.clear();
-                _seriesInFlight.clear();
-                _rangeChangeSeq++;
-                _loadData();
-                _startSeriesAutoRefresh();
-              }),
-          IconButton(
-              icon:
-                  const Icon(Icons.notifications_none, color: Colors.black),
-              onPressed: () {}),
-        ],
-      );
+    backgroundColor: Colors.white,
+    elevation: 0,
+    leading: const BackButton(color: Colors.black),
+    title: const Text('종목 상세', style: TextStyle(color: Colors.black)),
+    actions: [
+      IconButton(
+        icon: const Icon(Icons.refresh, color: Colors.black),
+        onPressed: () {
+          if (!_isStockCodeValid) {
+            Navigator.maybePop(context);
+            return;
+          }
+          _seriesCache.clear();
+          _seriesInFlight.clear();
+          _rangeChangeSeq++;
+          _loadData();
+          _startSeriesAutoRefresh();
+        },
+      ),
+      IconButton(
+        icon: const Icon(Icons.notifications_none, color: Colors.black),
+        onPressed: () {},
+      ),
+    ],
+  );
 
   BottomNavigationBar _buildBottomNav() => BottomNavigationBar(
-        currentIndex: 3,
-        type: BottomNavigationBarType.fixed,
-        onTap: (i) {
-          if (i == 3) return;
-          if (i == 0) {
-            Navigator.pushReplacementNamed(context, '/home');
-          } else if (i == 2) {
-            Navigator.pushReplacementNamed(context, '/news');
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('아직 구현되지 않았습니다.')));
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(
-              icon: Icon(Icons.home_outlined), label: '홈'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.favorite_border), label: '관심'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.article_outlined), label: '뉴스'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.show_chart), label: '주식'),
-        ],
-      );
+    currentIndex: 3,
+    type: BottomNavigationBarType.fixed,
+    onTap: (i) {
+      if (i == 3) return;
+      if (i == 0) {
+        Navigator.pushReplacementNamed(context, '/home');
+      } else if (i == 2) {
+        Navigator.pushReplacementNamed(context, '/news');
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('아직 구현되지 않았습니다.')));
+      }
+    },
+    items: const [
+      BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: '홈'),
+      BottomNavigationBarItem(icon: Icon(Icons.favorite_border), label: '관심'),
+      BottomNavigationBarItem(icon: Icon(Icons.article_outlined), label: '뉴스'),
+      BottomNavigationBarItem(icon: Icon(Icons.show_chart), label: '주식'),
+    ],
+  );
 }
 
 class _PreparedChartData {
@@ -683,27 +778,21 @@ class XAxisLabelSpec {
   final String text;
   final int pointIndex;
 
-  const XAxisLabelSpec({
-    required this.text,
-    required this.pointIndex,
-  });
+  const XAxisLabelSpec({required this.text, required this.pointIndex});
 }
 
 class TooltipInfo {
   final String headerText;
   final String priceText;
 
-  const TooltipInfo({
-    required this.headerText,
-    required this.priceText,
-  });
+  const TooltipInfo({required this.headerText, required this.priceText});
 }
 
 BoxDecoration _cardDeco() => BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(18),
-      border: Border.all(color: const Color(0xFFE5E7EB)),
-    );
+  color: Colors.white,
+  borderRadius: BorderRadius.circular(18),
+  border: Border.all(color: const Color(0xFFE5E7EB)),
+);
 
 /* ==================== UI 컴포넌트 ==================== */
 
@@ -723,15 +812,16 @@ class _OverviewItem extends StatelessWidget {
     return Expanded(
       child: Column(
         children: [
-          Text(label,
-              style: const TextStyle(fontSize: 11, color: Colors.grey)),
+          Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
           const SizedBox(height: 4),
-          Text(value,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: valueColor ?? Colors.black87,
-              )),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: valueColor ?? Colors.black87,
+            ),
+          ),
         ],
       ),
     );
@@ -765,27 +855,38 @@ class _HeaderPriceSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(stockName,
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.w700)),
+              Text(
+                stockName,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               const SizedBox(height: 6),
-              Text(priceText,
-                  style: const TextStyle(
-                      fontSize: 30,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.2)),
+              Text(
+                priceText,
+                style: const TextStyle(
+                  fontSize: 30,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.2,
+                ),
+              ),
               const SizedBox(height: 6),
-              Text('$arrow $changeText',
-                  style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: color)),
+              Text(
+                '$arrow $changeText',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
+              ),
             ],
           ),
         ),
         Padding(
-            padding: const EdgeInsets.only(top: 36),
-            child: _SentimentBadge(sentiment: sentiment)),
+          padding: const EdgeInsets.only(top: 36),
+          child: _SentimentBadge(sentiment: sentiment),
+        ),
       ],
     );
   }
@@ -821,12 +922,13 @@ class _SentimentBadge extends StatelessWidget {
           width: 34,
           height: 34,
           decoration: BoxDecoration(
-              color: accent.withOpacity(0.15), shape: BoxShape.circle),
+            color: accent.withOpacity(0.15),
+            shape: BoxShape.circle,
+          ),
           child: Icon(icon, color: accent, size: 20),
         ),
         const SizedBox(height: 6),
-        Text(label,
-            style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
       ],
     );
   }
@@ -839,21 +941,22 @@ class _RangeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-            color: const Color(0xFFEDEFF2),
-            borderRadius: BorderRadius.circular(12)),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _chip('1일', ChartRange.day),
-            const SizedBox(width: 6),
-            _chip('1주', ChartRange.week),
-            const SizedBox(width: 6),
-            _chip('1달', ChartRange.month),
-          ],
-        ),
-      );
+    padding: const EdgeInsets.all(4),
+    decoration: BoxDecoration(
+      color: const Color(0xFFEDEFF2),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _chip('1일', ChartRange.day),
+        const SizedBox(width: 6),
+        _chip('1주', ChartRange.week),
+        const SizedBox(width: 6),
+        _chip('1달', ChartRange.month),
+      ],
+    ),
+  );
 
   Widget _chip(String text, ChartRange r) {
     final sel = range == r;
@@ -865,13 +968,17 @@ class _RangeSelector extends StatelessWidget {
           color: sel ? Colors.white : const Color(0xFFEDEFF2),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-              color: sel ? const Color(0xFFCBD5E1) : Colors.transparent),
+            color: sel ? const Color(0xFFCBD5E1) : Colors.transparent,
+          ),
         ),
-        child: Text(text,
-            style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: sel ? Colors.black : Colors.grey)),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: sel ? Colors.black : Colors.grey,
+          ),
+        ),
       ),
     );
   }
@@ -883,16 +990,20 @@ class _TagChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-            color: const Color(0xFF22C55E),
-            borderRadius: BorderRadius.circular(18)),
-        child: Text(text,
-            style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w700)),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+    decoration: BoxDecoration(
+      color: const Color(0xFF22C55E),
+      borderRadius: BorderRadius.circular(18),
+    ),
+    child: Text(
+      text,
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+  );
 }
 
 /* ==================== 차트 ==================== */
@@ -901,7 +1012,6 @@ class LineChartInteractive extends StatefulWidget {
   final List<double> points;
   final List<XAxisLabelSpec> xAxisLabels;
   final String maxLabel, minLabel;
-  final bool isDayRange;
   final TooltipInfo Function(int) tooltipData;
 
   const LineChartInteractive({
@@ -910,7 +1020,6 @@ class LineChartInteractive extends StatefulWidget {
     required this.xAxisLabels,
     required this.maxLabel,
     required this.minLabel,
-    required this.isDayRange,
     required this.tooltipData,
   });
 
@@ -965,10 +1074,7 @@ class _LineChartInteractiveState extends State<LineChartInteractive> {
       final dx = n == 1 ? 0.0 : rect.width / (n - 1);
       final x = n == 1 ? rect.left + rect.width / 2 : rect.left + dx * idx;
       final y = rect.top + rect.height / 2;
-      return _ChartGeometry(
-        rect: rect,
-        pointPositions: {idx: Offset(x, y)},
-      );
+      return _ChartGeometry(rect: rect, pointPositions: {idx: Offset(x, y)});
     }
 
     final validValues = valid.map((i) => widget.points[i]).toList();
@@ -1045,7 +1151,8 @@ class _LineChartInteractiveState extends State<LineChartInteractive> {
       _resetSelection();
       return;
     }
-    if (_idx != null && (_idx! < 0 || _idx! >= widget.points.length || !_isValidPoint(_idx!))) {
+    if (_idx != null &&
+        (_idx! < 0 || _idx! >= widget.points.length || !_isValidPoint(_idx!))) {
       _resetSelection();
     }
   }
@@ -1126,60 +1233,60 @@ class _LineChartInteractiveState extends State<LineChartInteractive> {
   }
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(builder: (_, c) {
-        _scheduleChartGlobalOffsetMeasure();
-        final sz = Size(c.maxWidth, c.maxHeight);
-        final viewportWidth = MediaQuery.sizeOf(context).width;
-        final tooltipIdx = _idx;
-        final hasValidTooltip = tooltipIdx != null &&
-            _pos != null &&
-            tooltipIdx >= 0 &&
-            tooltipIdx < widget.points.length &&
-            widget.points[tooltipIdx].isFinite;
-        final tooltipInfo =
-            hasValidTooltip ? widget.tooltipData(tooltipIdx) : null;
-        return GestureDetector(
-          behavior: HitTestBehavior.translucent,
-          onTapDown: (d) => _onTap(d, sz),
-          onHorizontalDragStart: (d) => _onHorizontalDragStart(d, sz),
-          onHorizontalDragUpdate: (d) => _onHorizontalDragUpdate(d, sz),
-          onHorizontalDragEnd: (_) => _onHorizontalDragEnd(),
-          onHorizontalDragCancel: _onHorizontalDragEnd,
-          child: Stack(
-            key: _chartStackKey,
-            clipBehavior: Clip.none,
-            children: [
-              Positioned.fill(
-                  child: Padding(
-                      padding: _pad,
-                      child:
-                          CustomPaint(
-                            painter: _Painter(
-                              widget.points,
-                              dotRadius: widget.isDayRange ? 3.5 : 5.0,
-                              singleDotRadius: widget.isDayRange ? 4.5 : 6.0,
-                            ),
-                          ))),
-              if (_validIndices().length >= 2) ..._labels(sz),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                height: _xLabelBandHeight,
-                child: _xLabels(sz),
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (_, c) {
+      _scheduleChartGlobalOffsetMeasure();
+      final sz = Size(c.maxWidth, c.maxHeight);
+      final viewportWidth = MediaQuery.sizeOf(context).width;
+      final tooltipIdx = _idx;
+      final hasValidTooltip =
+          tooltipIdx != null &&
+          _pos != null &&
+          tooltipIdx >= 0 &&
+          tooltipIdx < widget.points.length &&
+          widget.points[tooltipIdx].isFinite;
+      final tooltipInfo = hasValidTooltip
+          ? widget.tooltipData(tooltipIdx)
+          : null;
+      return GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTapDown: (d) => _onTap(d, sz),
+        onHorizontalDragStart: (d) => _onHorizontalDragStart(d, sz),
+        onHorizontalDragUpdate: (d) => _onHorizontalDragUpdate(d, sz),
+        onHorizontalDragEnd: (_) => _onHorizontalDragEnd(),
+        onHorizontalDragCancel: _onHorizontalDragEnd,
+        child: Stack(
+          key: _chartStackKey,
+          clipBehavior: Clip.none,
+          children: [
+            Positioned.fill(
+              child: Padding(
+                padding: _pad,
+                child: CustomPaint(painter: _Painter(widget.points)),
               ),
-              if (hasValidTooltip && tooltipInfo != null)
-                _Tooltip(
-                    anchor: _pos!,
-                    headerText: tooltipInfo.headerText,
-                    priceText: tooltipInfo.priceText,
-                    viewportWidth: viewportWidth,
-                    chartGlobalLeft: _chartGlobalLeft,
-                    screenPadding: _screenTooltipPadding),
-            ],
-          ),
-        );
-      });
+            ),
+            if (_validIndices().length >= 2) ..._labels(sz),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: _xLabelBandHeight,
+              child: _xLabels(sz),
+            ),
+            if (hasValidTooltip && tooltipInfo != null)
+              _Tooltip(
+                anchor: _pos!,
+                headerText: tooltipInfo.headerText,
+                priceText: tooltipInfo.priceText,
+                viewportWidth: viewportWidth,
+                chartGlobalLeft: _chartGlobalLeft,
+                screenPadding: _screenTooltipPadding,
+              ),
+          ],
+        ),
+      );
+    },
+  );
 
   List<Widget> _labels(Size sz) {
     final valid = _validIndices();
@@ -1198,9 +1305,10 @@ class _LineChartInteractiveState extends State<LineChartInteractive> {
     if (maxPos == null || minPos == null) return const [];
 
     const style = TextStyle(
-        fontSize: 11,
-        color: Color(0xFF3B82F6),
-        fontWeight: FontWeight.w600);
+      fontSize: 11,
+      color: Color(0xFF3B82F6),
+      fontWeight: FontWeight.w600,
+    );
     final maxPainter = TextPainter(
       text: TextSpan(text: widget.maxLabel, style: style),
       textDirection: ui.TextDirection.ltr,
@@ -1213,29 +1321,46 @@ class _LineChartInteractiveState extends State<LineChartInteractive> {
     )..layout();
 
     final graphRect = geometry.rect;
-    final maxLeftLimit = max(graphRect.left, graphRect.right - maxPainter.width);
-    final minLeftLimit = max(graphRect.left, graphRect.right - minPainter.width);
-    final maxTopLimit = max(graphRect.top, graphRect.bottom - maxPainter.height);
+    final maxLeftLimit = max(
+      graphRect.left,
+      graphRect.right - maxPainter.width,
+    );
+    final minLeftLimit = max(
+      graphRect.left,
+      graphRect.right - minPainter.width,
+    );
+    final maxTopLimit = max(
+      graphRect.top,
+      graphRect.bottom - maxPainter.height,
+    );
     final maxTopLowerBound = max(0.0, graphRect.top - maxPainter.height - 6);
-    final minTopLimit = max(graphRect.top, graphRect.bottom - minPainter.height);
+    final minTopLimit = max(
+      graphRect.top,
+      graphRect.bottom - minPainter.height,
+    );
 
-    final maxLeft =
-        (maxPos.dx - maxPainter.width / 2).clamp(graphRect.left, maxLeftLimit).toDouble();
-    final maxTop =
-        (maxPos.dy - maxPainter.height - 8).clamp(maxTopLowerBound, maxTopLimit).toDouble();
-    final minLeft =
-        (minPos.dx - minPainter.width / 2).clamp(graphRect.left, minLeftLimit).toDouble();
+    final maxLeft = (maxPos.dx - maxPainter.width / 2)
+        .clamp(graphRect.left, maxLeftLimit)
+        .toDouble();
+    final maxTop = (maxPos.dy - maxPainter.height - 8)
+        .clamp(maxTopLowerBound, maxTopLimit)
+        .toDouble();
+    final minLeft = (minPos.dx - minPainter.width / 2)
+        .clamp(graphRect.left, minLeftLimit)
+        .toDouble();
     final minTop = (minPos.dy + 4).clamp(graphRect.top, minTopLimit).toDouble();
 
     return [
       Positioned(
-          left: maxLeft,
-          top: maxTop,
-          child: Text(widget.maxLabel, style: style)),
+        left: maxLeft,
+        top: maxTop,
+        child: Text(widget.maxLabel, style: style),
+      ),
       Positioned(
-          left: minLeft,
-          top: minTop,
-          child: Text(widget.minLabel, style: style)),
+        left: minLeft,
+        top: minTop,
+        child: Text(widget.minLabel, style: style),
+      ),
     ];
   }
 
@@ -1278,13 +1403,7 @@ class _LineChartInteractiveState extends State<LineChartInteractive> {
 
 class _Painter extends CustomPainter {
   final List<double> points;
-  final double dotRadius;
-  final double singleDotRadius;
-  _Painter(
-    this.points, {
-    this.dotRadius = 5.0,
-    this.singleDotRadius = 6.0,
-  });
+  _Painter(this.points);
 
   @override
   void paint(Canvas canvas, Size sz) {
@@ -1293,8 +1412,7 @@ class _Painter extends CustomPainter {
     final axis = Paint()
       ..color = const Color(0xFFCBD5E1)
       ..strokeWidth = 2;
-    canvas.drawLine(
-        Offset(0, sz.height), Offset(sz.width, sz.height), axis);
+    canvas.drawLine(Offset(0, sz.height), Offset(sz.width, sz.height), axis);
 
     final valid = <int>[];
     for (int i = 0; i < points.length; i++) {
@@ -1307,7 +1425,10 @@ class _Painter extends CustomPainter {
       final dx = points.length == 1 ? 0.0 : sz.width / (points.length - 1);
       final x = points.length == 1 ? sz.width / 2 : dx * idx;
       canvas.drawCircle(
-          Offset(x, sz.height / 2), singleDotRadius, Paint()..color = const Color(0xFF1D4ED8));
+        Offset(x, sz.height / 2),
+        6.0,
+        Paint()..color = const Color(0xFF1D4ED8),
+      );
       return;
     }
 
@@ -1318,8 +1439,7 @@ class _Painter extends CustomPainter {
     final h = sz.height * 0.72;
     final top = max(0.0, (sz.height - h) / 2 - 10);
 
-    Offset pt(int i) =>
-        Offset(dx * i, top + (1 - (points[i] - mn) / span) * h);
+    Offset pt(int i) => Offset(dx * i, top + (1 - (points[i] - mn) / span) * h);
 
     final line = Paint()
       ..color = const Color(0xFF1D4ED8)
@@ -1327,7 +1447,6 @@ class _Painter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeJoin = StrokeJoin.round
       ..strokeCap = StrokeCap.round;
-    final dot = Paint()..color = const Color(0xFF1D4ED8);
 
     final path = Path();
     bool started = false;
@@ -1345,17 +1464,10 @@ class _Painter extends CustomPainter {
       }
     }
     canvas.drawPath(path, line);
-
-    for (final i in valid) {
-      canvas.drawCircle(pt(i), dotRadius, dot);
-    }
   }
 
   @override
-  bool shouldRepaint(_Painter old) =>
-      old.points != points ||
-      old.dotRadius != dotRadius ||
-      old.singleDotRadius != singleDotRadius;
+  bool shouldRepaint(_Painter old) => old.points != points;
 }
 
 class _Tooltip extends StatelessWidget {
@@ -1384,7 +1496,9 @@ class _Tooltip extends StatelessWidget {
     final localLeft = anchor.dx - w / 2;
     final globalLeft = chartGlobalLeft + localLeft;
     final maxGlobalLeft = max(screenPadding, viewportWidth - w - screenPadding);
-    final clampedGlobalLeft = globalLeft.clamp(screenPadding, maxGlobalLeft).toDouble();
+    final clampedGlobalLeft = globalLeft
+        .clamp(screenPadding, maxGlobalLeft)
+        .toDouble();
     final left = clampedGlobalLeft - chartGlobalLeft;
     final top = showBelow ? anchor.dy + 8 : max(6.0, anchor.dy - h - tail - 8);
     final tailX = anchor.dx - left;
@@ -1484,10 +1598,7 @@ class _ChartGeometry {
   final Rect rect;
   final Map<int, Offset> pointPositions;
 
-  const _ChartGeometry({
-    required this.rect,
-    required this.pointPositions,
-  });
+  const _ChartGeometry({required this.rect, required this.pointPositions});
 
   int? nearestIndex(Offset target) {
     if (pointPositions.isEmpty) return null;
