@@ -151,17 +151,18 @@ class _NewsScreenState extends State<NewsScreen> {
   void _onBottomTap(BuildContext context, int index) {
     if (index == 2) return; // 이미 뉴스 페이지
 
-    const labels = ['홈', '관심', '뉴스', '주식'];
-
     if (index == 0) {
       // 홈
       Navigator.pushReplacementNamed(context, '/home');
+    } else if (index == 1) {
+      // 관심
+      Navigator.pushReplacementNamed(context, '/watchlist');
     } else {
-      // 아직 안 만든 탭은 안내만
+      // 주식 탭은 아직 준비 중
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${labels[index]} 화면은 아직 준비 중입니다.'),
-          duration: const Duration(milliseconds: 800),
+        const SnackBar(
+          content: Text('주식 화면은 아직 준비 중입니다.'),
+          duration: Duration(milliseconds: 800),
         ),
       );
     }
