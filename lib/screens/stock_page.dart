@@ -115,13 +115,8 @@ class _StockPageState extends State<StockPage> {
       Navigator.pushReplacementNamed(context, '/home');
     } else if (index == 2) {
       Navigator.pushReplacementNamed(context, '/news');
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${labels[index]} 화면은 아직 준비 중입니다.'),
-          duration: const Duration(milliseconds: 800),
-        ),
-      );
+    } else if (index == 1) {
+      Navigator.pushReplacementNamed(context, '/watchlist');
     }
   }
 

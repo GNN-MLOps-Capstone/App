@@ -39,24 +39,10 @@ class StockHomeScreen extends StatelessWidget {
       // 뉴스
       Navigator.pushReplacementNamed(context, '/news');
       return;
-    }
-
-    if (index == 3) {
-      // ✅ 주식
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const StockPage()),
-      );
+    } else if (index == 3){
+      Navigator.pushReplacementNamed(context, '/stock');
       return;
     }
-
-    // 아직 안 만든 탭은 안내만
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${labels[index]} 화면은 아직 준비 중입니다.'),
-        duration: const Duration(milliseconds: 800),
-      ),
-    );
   }
 
   @override

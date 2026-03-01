@@ -147,7 +147,7 @@ class _NewsScreenState extends State<NewsScreen> {
     return items;
   }
 
-  @override
+
   void _onBottomTap(BuildContext context, int index) {
     if (index == 2) return; // 이미 뉴스 페이지
 
@@ -157,20 +157,18 @@ class _NewsScreenState extends State<NewsScreen> {
     } else if (index == 1) {
       // 관심
       Navigator.pushReplacementNamed(context, '/watchlist');
-    } else {
-      // 주식 탭은 아직 준비 중
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('주식 화면은 아직 준비 중입니다.'),
-          duration: Duration(milliseconds: 800),
-        ),
-      );
+    } else if (index == 3) {
+      Navigator.pushReplacementNamed(context, '/stock');
     }
   }
 
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF3F4F6),
+      bottomNavigationBar: BottomNavBar(    // ← 콤마 위치 확인
+        initialIndex: 2,
+        onIndexChanged: (i) => _onBottomTap(context, i),
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
@@ -252,11 +250,6 @@ class _NewsScreenState extends State<NewsScreen> {
                 ),
               ),
 
-              // 하단 네비게이션
-              BottomNavBar(
-                initialIndex: 2,
-                onIndexChanged: (i) => _onBottomTap(context, i),
-              ),
             ],
           ),
         ),
