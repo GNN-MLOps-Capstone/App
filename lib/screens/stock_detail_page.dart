@@ -24,17 +24,15 @@ class _StockDetailPageState extends State<StockDetailPage> {
   late final vm = StockDetailViewModel.dummy(widget.stockName);
 
   void _onBottomTap(int index) {
-    if (index == 3) return; // 주식(현재)
+    if (index == 3) return; // 현재 페이지
 
-    const labels = ['홈', '관심', '뉴스', '주식'];
+    const routes = ['/home', '/watchlist', '/news'];
 
-    if (index == 0) {
-      Navigator.pushReplacementNamed(context, '/home');
-    } else if (index == 2) {
-      Navigator.pushReplacementNamed(context, '/news');
-    } else if (index == 1) {
-      Navigator.pushReplacementNamed(context, '/watchlist');
-    }
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      routes[index],
+          (route) => false, // 모든 이전 스택 제거
+    );
   }
 
   @override

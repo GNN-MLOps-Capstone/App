@@ -149,17 +149,20 @@ class _NewsScreenState extends State<NewsScreen> {
 
 
   void _onBottomTap(BuildContext context, int index) {
-    if (index == 2) return; // 이미 뉴스 페이지
+    if (index == 2) return; // 현재 뉴스 페이지
 
-    if (index == 0) {
-      // 홈
-      Navigator.pushReplacementNamed(context, '/home');
-    } else if (index == 1) {
-      // 관심
-      Navigator.pushReplacementNamed(context, '/watchlist');
-    } else if (index == 3) {
-      Navigator.pushReplacementNamed(context, '/stock');
-    }
+    const routes = ['/home', '/watchlist', '/stock'];
+    // index 3 → routes[2] 이므로 매핑 필요
+    final routeMap = {0: '/home', 1: '/watchlist', 3: '/stock'};
+
+    final route = routeMap[index];
+    if (route == null) return;
+
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      route,
+          (route) => false,
+    );
   }
 
   Widget build(BuildContext context) {

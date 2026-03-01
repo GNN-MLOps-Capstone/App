@@ -28,21 +28,13 @@ class StockHomeScreen extends StatelessWidget {
   }
 
   void _onBottomTap(BuildContext context, int index) {
-    if (index == 0) return; // 이미 홈
+    if (index == 0) return; // 현재 홈 페이지
 
-    const labels = ['홈', '관심', '뉴스', '주식'];
+    const routeMap = {1: '/watchlist', 2: '/news', 3: '/stock'};
+    final route = routeMap[index];
+    if (route == null) return;
 
-    if (index == 1) {
-      // 관심
-      Navigator.pushReplacementNamed(context, '/watchlist');
-    } else if (index == 2) {
-      // 뉴스
-      Navigator.pushReplacementNamed(context, '/news');
-      return;
-    } else if (index == 3){
-      Navigator.pushReplacementNamed(context, '/stock');
-      return;
-    }
+    Navigator.pushNamedAndRemoveUntil(context, route, (route) => false);
   }
 
   @override
