@@ -170,28 +170,20 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   void _onBottomTap(int index) {
-    if (index == 0) {
-      // 홈
-      Navigator.pushReplacementNamed(context, '/home');
-      return;
-    }
-    if (index == 1) {
-      // 관심
-      Navigator.pushReplacementNamed(context, '/watchlist');
-      return;
-    }
-    if (index == 2) {
-      // 뉴스
-      Navigator.pushReplacementNamed(context, '/news');
-      return;
-    }
+    const routeMap = {
+      0: '/home',
+      1: '/watchlist',
+      2: '/news',
+      3: '/stock',
+    };
 
-    // 주식 탭은 아직 준비 중
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('주식 화면은 아직 준비 중입니다.'),
-        duration: Duration(milliseconds: 800),
-      ),
+    final route = routeMap[index];
+    if (route == null) return;
+
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      route,
+          (route) => false,
     );
   }
 

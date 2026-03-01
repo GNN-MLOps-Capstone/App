@@ -107,22 +107,13 @@ class _StockPageState extends State<StockPage> {
   }
 
   void _onBottomTap(int index) {
-    if (index == 3) return; // 주식
+    if (index == 3) return; // 현재 주식 페이지
 
-    const labels = ['홈', '관심', '뉴스', '주식'];
+    const routeMap = {0: '/home', 1: '/watchlist', 2: '/news'};
+    final route = routeMap[index];
+    if (route == null) return;
 
-    if (index == 0) {
-      Navigator.pushReplacementNamed(context, '/home');
-    } else if (index == 2) {
-      Navigator.pushReplacementNamed(context, '/news');
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${labels[index]} 화면은 아직 준비 중입니다.'),
-          duration: const Duration(milliseconds: 800),
-        ),
-      );
-    }
+    Navigator.pushNamedAndRemoveUntil(context, route, (route) => false);
   }
 
   @override
@@ -325,22 +316,13 @@ class _StockSearchPageState extends State<StockSearchPage> {
   }
 
   void _onBottomTap(int index) {
-    if (index == 3) return;
+    if (index == 3) return; // 현재 주식 탭
 
-    const labels = ['홈', '관심', '뉴스', '주식'];
+    const routeMap = {0: '/home', 1: '/watchlist', 2: '/news'};
+    final route = routeMap[index];
+    if (route == null) return;
 
-    if (index == 0) {
-      Navigator.pushReplacementNamed(context, '/home');
-    } else if (index == 2) {
-      Navigator.pushReplacementNamed(context, '/news');
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${labels[index]} 화면은 아직 준비 중입니다.'),
-          duration: const Duration(milliseconds: 800),
-        ),
-      );
-    }
+    Navigator.pushNamedAndRemoveUntil(context, route, (route) => false);
   }
 
   @override

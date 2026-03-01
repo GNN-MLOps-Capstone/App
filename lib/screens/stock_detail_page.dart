@@ -17,32 +17,80 @@ class StockDetailPage extends StatefulWidget {
 class _StockDetailPageState extends State<StockDetailPage> {
   ChartRange _range = ChartRange.day;
 
-// ✅ API 연동 시 수정 필요: dummy() → fromApi()로 변경
-// 예시:
-// StockDetailViewModel? vm;
-// @override
-// void initState() {
-//   super.initState();
-//   _loadData();
-// }
-// Future<void> _loadData() async {
-//   try {
-//     final api = await StockApiService.getDetail(widget.stockName);
-//     setState(() => vm = StockDetailViewModel.fromApi(api));
-//   } catch (e) {
-//     setState(() => vm = StockDetailViewModel.dummy(widget.stockName));
-//   }
-// }
+  // ✅ 월간 급변 뉴스 펼침 상태
+  bool _newsExpanded = false;
+
+  // ✅ API 연동 시 수정 필요: dummy() → fromApi()로 변경
   late final vm = StockDetailViewModel.dummy(widget.stockName);
+
+  void _onBottomTap(int index) {
+    if (index == 3) return; // 현재 페이지
+
+    const routes = ['/home', '/watchlist', '/news'];
+
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      routes[index],
+          (route) => false, // 모든 이전 스택 제거
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final data = vm.dataFor(_range);
 
+    // ✅✅ 핵심: 접힘/펼침 레이아웃을 "완전히 다르게" 그려서
+    // 펼쳤을 때 가로(전체폭)로도 커지게 만들기
+    Widget statsAndNewsSection() {
+      // 접힘(ROW): 왼쪽 stats + 오른쪽 뉴스(같은 높이)
+      Widget collapsedRow() {
+        final row = Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              width: 118,
+              child: _StatsCard(stats: data.stats),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _MonthlyNewsCard(
+                items: data.monthlyNews,
+                expanded: false,
+                onExpandedChanged: (v) => setState(() => _newsExpanded = v),
+              ),
+            ),
+          ],
+        );
+        return IntrinsicHeight(child: row); // ✅ 두 카드 높이 맞춤
+      }
+
+      // 펼침(FULL WIDTH): 뉴스 카드가 전체 폭으로 렌더
+      Widget expandedFullWidth() {
+        return _MonthlyNewsCard(
+          items: data.monthlyNews,
+          expanded: true,
+          onExpandedChanged: (v) => setState(() => _newsExpanded = v),
+        );
+      }
+
+      return Column(
+        children: [
+          // ✅ 접힘 상태에서는 Row를 그대로 보여줌
+          if (!_newsExpanded) collapsedRow(),
+
+          // ✅ 펼침 상태에서는 "전체폭 뉴스 카드"를 보여줌
+          if (_newsExpanded) expandedFullWidth(),
+        ],
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFF3F4F6),
       appBar: _buildAppBar(),
-      bottomNavigationBar: _buildBottomNav(),
+      bottomNavigationBar: BottomNavBar(
+        initialIndex: 3,
+        onIndexChanged: _onBottomTap,
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
@@ -66,7 +114,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
               ),
               const SizedBox(height: 12),
 
-// ✅ 차트 카드 (시간대별 동적 점 개수 지원)
+              // ✅ 차트 카드
               Container(
                 padding: const EdgeInsets.fromLTRB(12, 14, 12, 10),
                 decoration: _cardDeco(),
@@ -77,12 +125,18 @@ class _StockDetailPageState extends State<StockDetailPage> {
                     xLabels: data.xLabels,
                     maxLabel: data.maxLabel,
                     minLabel: data.minLabel,
-// ✅ API 연동 시: (idx) => data.tooltipFor(idx) 로 변경
                     tooltipText: (idx) => '72,500원',
                   ),
                 ),
               ),
+
+              // ✅✅ 시가/최고/최저 + 월간 급변 뉴스
+              const SizedBox(height: 14),
+              statsAndNewsSection(),
+
               const SizedBox(height: 18),
+
+              // ✅ AI 요약 카드
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: _cardDeco(),
@@ -127,23 +181,6 @@ class _StockDetailPageState extends State<StockDetailPage> {
       IconButton(icon: const Icon(Icons.settings, color: Colors.black), onPressed: () {}),
     ],
   );
-
-  BottomNavigationBar _buildBottomNav() => BottomNavigationBar(
-    currentIndex: 3,
-    type: BottomNavigationBarType.fixed,
-    onTap: (i) {
-      if (i == 3) return;
-      if (i == 0) Navigator.pushReplacementNamed(context, '/home');
-      else if (i == 2) Navigator.pushReplacementNamed(context, '/news');
-      else ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('아직 구현되지 않았습니다.')));
-    },
-    items: const [
-      BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: '홈'),
-      BottomNavigationBarItem(icon: Icon(Icons.favorite_border), label: '관심'),
-      BottomNavigationBarItem(icon: Icon(Icons.article_outlined), label: '뉴스'),
-      BottomNavigationBarItem(icon: Icon(Icons.show_chart), label: '주식'),
-    ],
-  );
 }
 
 BoxDecoration _cardDeco() => BoxDecoration(
@@ -159,59 +196,117 @@ class StockDetailViewModel {
   StockDetailViewModel(this._data);
   StockDetailData dataFor(ChartRange r) => _data[r]!;
 
-// ✅ 더미 데이터 (개발/테스트용)
   factory StockDetailViewModel.dummy(String name) {
     final now = DateTime.now();
-    final labels = List.generate(min(now.hour, 15) - 8, (i) => '${(i + 9).toString().padLeft(2, '0')}:00');
+    final endHour = min(now.hour, 15);
+    final _ = max(1, endHour - 8);
+
+    final labels = List.generate(7, (i) => '${(i + 9).toString().padLeft(2, '0')}:00');
     final series = List.generate(labels.length, (i) => 74.0 + (i % 3) * 0.5 - 1.0 + (i * 0.2));
 
     return StockDetailViewModel({
-      ChartRange.day: _mk(series, labels, '72,500원', '-1.2%', false, Sentiment.negative, const [
-        'HBM3E 공급 계약 체결로 AI 반도체 시장에서 기대감 상승 중',
-        '엔비디아와의 협력 강화로 2026년 상반기 대규모 납품 예정',
-        '단기 조정에도 불구하고 중장기 펀더멘털은 견고한 상태',
-      ], const ['HBM', '실적', '엔비디아']),
-      ChartRange.week: _mk([74.8, 75.9, 73.2, 75.1, 74.0, 72.9, 72.5], ['월', '화', '수', '목', '금', '토', '일'],
-          '72,500원', '+0.4%', true, Sentiment.positive, const ['(더미)'], const ['더미']),
-      ChartRange.month: _mk([70.0, 72.0, 71.5, 73.0, 72.5], ['1주차', '2주차', '3주차', '4주차', '5주차'], '72,500원',
-          '+8.1%', true, Sentiment.positive, const ['(더미)'], const ['더미']),
+      ChartRange.day: _mk(
+        series,
+        labels,
+        '72,500원',
+        '-1.2%',
+        false,
+        Sentiment.negative,
+        const [
+          'HBM3E 공급 계약 체결로 AI 반도체 시장에서 기대감 상승 중',
+          '엔비디아와의 협력 강화로 2026년 상반기 대규모 납품 예정',
+          '단기 조정에도 불구하고 중장기 펀더멘털은 견고한 상태',
+        ],
+        const ['HBM', '실적', '엔비디아'],
+        const StockStats(open: '72,500', high: '75,980', low: '72,570'),
+        const [
+          MonthlyNewsItem(
+            isUp: false,
+            title: '미 연준의 금리 인상 우려로 인한 글로벌 기술주 약세',
+            source: '(2026.02.19, 경제뉴스)',
+          ),
+          MonthlyNewsItem(
+            isUp: true,
+            title:
+            '글로벌 빅테크 기업의 데이터센터 증설 발표에 급등. 차세대 메모리 공급 확대 기대감 반영, 장 초반 대비 거래량 급증하며 상승 탄력 확대.',
+            source: '(2026.02.21, 파이낸스리포트)',
+          ),
+        ],
+      ),
+      ChartRange.week: _mk(
+        [74.8, 75.9, 73.2, 75.1, 74.0, 72.9, 72.5],
+        ['월', '화', '수', '목', '금', '토', '일'],
+        '72,500원',
+        '+0.4%',
+        true,
+        Sentiment.positive,
+        const ['(더미)'],
+        const ['더미'],
+        const StockStats(open: '72,300', high: '75,900', low: '72,500'),
+        const [],
+      ),
+      ChartRange.month: _mk(
+        [70.0, 72.0, 71.5, 73.0, 72.5],
+        ['1주차', '2주차', '3주차', '4주차', '5주차'],
+        '72,500원',
+        '+8.1%',
+        true,
+        Sentiment.positive,
+        const ['(더미)'],
+        const ['더미'],
+        const StockStats(open: '70,100', high: '75,980', low: '69,800'),
+        const [],
+      ),
     });
   }
 
-// ✅ API 연동 시 아래 함수 추가
-// factory StockDetailViewModel.fromApi(ApiResponse api) {
-//   return StockDetailViewModel({
-//     ChartRange.day: _mk(
-//       api.dayPrices,      // List<double>
-//       api.dayTimes,       // List<String>
-//       api.currentPrice,   // String
-//       api.changePercent,  // String
-//       api.isUp,           // bool
-//       api.sentiment,      // Sentiment
-//       api.aiSummary,      // List<String>
-//       api.tags,           // List<String>
-//     ),
-//     ChartRange.week: _mk(...),  // 주간 데이터
-//     ChartRange.month: _mk(...), // 월간 데이터
-//   });
-// }
-
-  static StockDetailData _mk(List<double> series, List<String> labels, String price, String change, bool isUp,
-      Sentiment sentiment, List<String> summary, List<String> tags) {
+  static StockDetailData _mk(
+      List<double> series,
+      List<String> labels,
+      String price,
+      String change,
+      bool isUp,
+      Sentiment sentiment,
+      List<String> summary,
+      List<String> tags,
+      StockStats stats,
+      List<MonthlyNewsItem> monthlyNews,
+      ) {
     String maxLbl = '', minLbl = '';
-    if (series.length >= 2) {
+    if (series.isNotEmpty) {
       final mx = series.reduce(max), mn = series.reduce(min);
       maxLbl = '최고 ${_won(mx)}원';
       minLbl = '최저 ${_won(mn)}원';
     }
-    return StockDetailData(price, change, isUp, sentiment, labels, series, maxLbl, minLbl, summary, tags);
+
+    return StockDetailData(
+      price,
+      change,
+      isUp,
+      sentiment,
+      labels,
+      series,
+      maxLbl,
+      minLbl,
+      summary,
+      tags,
+      stats,
+      monthlyNews,
+    );
   }
 
   static String _won(double v) {
     final s = (v * 1000).round().toString();
-    return s.split('').reversed.toList().asMap().entries.map((e) {
-      return e.value + (e.key > 0 && e.key % 3 == 0 ? ',' : '');
-    }).toList().reversed.join('');
+    return s
+        .split('')
+        .reversed
+        .toList()
+        .asMap()
+        .entries
+        .map((e) => e.value + (e.key > 0 && e.key % 3 == 0 ? ',' : ''))
+        .toList()
+        .reversed
+        .join('');
   }
 }
 
@@ -222,11 +317,39 @@ class StockDetailData {
   final List<String> xLabels, aiSummary, tags;
   final List<double> series;
 
-  StockDetailData(this.priceText, this.changeText, this.isUp, this.sentiment, this.xLabels, this.series,
-      this.maxLabel, this.minLabel, this.aiSummary, this.tags);
+  final StockStats stats;
+  final List<MonthlyNewsItem> monthlyNews;
 
-// ✅ API 연동 시 사용: 인덱스별 툴팁 텍스트 생성
+  StockDetailData(
+      this.priceText,
+      this.changeText,
+      this.isUp,
+      this.sentiment,
+      this.xLabels,
+      this.series,
+      this.maxLabel,
+      this.minLabel,
+      this.aiSummary,
+      this.tags,
+      this.stats,
+      this.monthlyNews,
+      );
+
   String tooltipFor(int i) => '${(series[i] * 1000).round()}원';
+}
+
+class StockStats {
+  final String open;
+  final String high;
+  final String low;
+  const StockStats({required this.open, required this.high, required this.low});
+}
+
+class MonthlyNewsItem {
+  final bool isUp;
+  final String title;
+  final String source;
+  const MonthlyNewsItem({required this.isUp, required this.title, required this.source});
 }
 
 /* ==================== UI 컴포넌트 ==================== */
@@ -328,7 +451,10 @@ class _RangeSelector extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: sel ? const Color(0xFFCBD5E1) : Colors.transparent),
         ),
-        child: Text(text, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: sel ? Colors.black : Colors.grey)),
+        child: Text(
+          text,
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: sel ? Colors.black : Colors.grey),
+        ),
       ),
     );
   }
@@ -344,6 +470,213 @@ class _TagChip extends StatelessWidget {
     decoration: BoxDecoration(color: const Color(0xFF22C55E), borderRadius: BorderRadius.circular(18)),
     child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
   );
+}
+
+/* ==================== ✅ 추가 UI: 시가/최고/최저 + 월간 급변 뉴스 ==================== */
+
+class _StatsCard extends StatelessWidget {
+  final StockStats stats;
+  const _StatsCard({required this.stats});
+
+  @override
+  Widget build(BuildContext context) {
+    Widget row(String k, String v) => Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(k, style: TextStyle(fontSize: 11, color: Colors.grey.shade600, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 2),
+        Text('$v원', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, height: 1.1)),
+      ],
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: _cardDeco(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          row('시가', stats.open),
+          row('최고', stats.high),
+          row('최저', stats.low),
+        ],
+      ),
+    );
+  }
+}
+
+class _MonthlyNewsCard extends StatelessWidget {
+  final List<MonthlyNewsItem> items;
+  final bool expanded;
+  final ValueChanged<bool> onExpandedChanged;
+
+  const _MonthlyNewsCard({
+    required this.items,
+    required this.expanded,
+    required this.onExpandedChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final downs = items.where((e) => !e.isUp).toList();
+    final ups = items.where((e) => e.isUp).toList();
+
+    MonthlyNewsItem? preview;
+    String previewPrefix = '';
+    if (downs.isNotEmpty) {
+      preview = downs.first;
+      previewPrefix = '하락영향';
+    } else if (ups.isNotEmpty) {
+      preview = ups.first;
+      previewPrefix = '상승영향';
+    }
+
+    // ✅ 펼침은 더 크게(세로)
+    final constraints = expanded ? const BoxConstraints(minHeight: 280) : const BoxConstraints();
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
+      constraints: constraints,
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      decoration: _cardDeco(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('월간 급변 뉴스', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
+              const Spacer(),
+              InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => onExpandedChanged(!expanded),
+                child: Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: Icon(
+                    expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    size: 22,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          if (!expanded) ...[
+            const SizedBox(height: 6),
+            if (preview == null)
+              Text('월간 급변 뉴스가 없습니다.', style: TextStyle(fontSize: 12, color: Colors.grey.shade600))
+            else
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: preview.isUp ? Colors.red : Colors.blue,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '$previewPrefix · ${preview.title}',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12, height: 1.25, fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          preview.source,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+          ],
+
+          if (expanded) ...[
+            const SizedBox(height: 10),
+            if (downs.isNotEmpty) ...[
+              const _GroupTitleInline(label: '하락영향', color: Colors.blue),
+              const SizedBox(height: 6),
+              ...downs.map((e) => _NewsLineExpanded(item: e)),
+              const SizedBox(height: 12),
+            ],
+            if (ups.isNotEmpty) ...[
+              const _GroupTitleInline(label: '상승영향', color: Colors.red),
+              const SizedBox(height: 6),
+              ...ups.map((e) => _NewsLineExpanded(item: e)),
+            ],
+            if (downs.isEmpty && ups.isEmpty)
+              Text('월간 급변 뉴스가 없습니다.', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _GroupTitleInline extends StatelessWidget {
+  final String label;
+  final Color color;
+  const _GroupTitleInline({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(width: 6, height: 6, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        const SizedBox(width: 8),
+        Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: color)),
+      ],
+    );
+  }
+}
+
+class _NewsLineExpanded extends StatelessWidget {
+  final MonthlyNewsItem item;
+  const _NewsLineExpanded({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final dotColor = item.isUp ? Colors.red : Colors.blue;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Container(width: 6, height: 6, decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle)),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(item.title, softWrap: true, style: const TextStyle(fontSize: 12, height: 1.35, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 2),
+                Text(item.source, style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /* ==================== 차트 ==================== */
@@ -510,10 +843,14 @@ class _Painter extends CustomPainter {
     final dot = Paint()..color = const Color(0xFF1D4ED8);
 
     final path = Path()..moveTo(pt(0).dx, pt(0).dy);
-    for (int i = 1; i < points.length; i++) path.lineTo(pt(i).dx, pt(i).dy);
+    for (int i = 1; i < points.length; i++) {
+      path.lineTo(pt(i).dx, pt(i).dy);
+    }
     canvas.drawPath(path, line);
 
-    for (int i = 0; i < points.length; i++) canvas.drawCircle(pt(i), 5, dot);
+    for (int i = 0; i < points.length; i++) {
+      canvas.drawCircle(pt(i), 5, dot);
+    }
   }
 
   @override
@@ -571,4 +908,124 @@ class _TooltipPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_TooltipPainter old) => old.tailX != tailX || old.w != w || old.h != h || old.tail != tail;
+}
+
+/* ==================== ✅ stock_page.dart와 동일한 하단바 ==================== */
+
+class BottomNavBar extends StatefulWidget {
+  final int initialIndex;
+  final ValueChanged<int> onIndexChanged;
+
+  const BottomNavBar({
+    super.key,
+    required this.initialIndex,
+    required this.onIndexChanged,
+  });
+
+  @override
+  State<BottomNavBar> createState() => BottomNavBarState();
+}
+
+class BottomNavBarState extends State<BottomNavBar> {
+  late int selectedIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    selectedIndex = widget.initialIndex;
+  }
+
+  void _onTap(int index) {
+    setState(() => selectedIndex = index);
+    widget.onIndexChanged(index);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final Color activeColor = const Color(0xFF22C55E);
+    final Color inactiveColor = Colors.grey.shade400;
+
+    return Container(
+      height: 80,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _BottomNavItem(
+            icon: Icons.home,
+            label: '홈',
+            isActive: selectedIndex == 0,
+            activeColor: activeColor,
+            inactiveColor: inactiveColor,
+            onTap: () => _onTap(0),
+          ),
+          _BottomNavItem(
+            icon: Icons.favorite_border,
+            label: '관심',
+            isActive: selectedIndex == 1,
+            activeColor: activeColor,
+            inactiveColor: inactiveColor,
+            onTap: () => _onTap(1),
+          ),
+          _BottomNavItem(
+            icon: Icons.article_outlined,
+            label: '뉴스',
+            isActive: selectedIndex == 2,
+            activeColor: activeColor,
+            inactiveColor: inactiveColor,
+            onTap: () => _onTap(2),
+          ),
+          _BottomNavItem(
+            icon: Icons.candlestick_chart,
+            label: '주식',
+            isActive: selectedIndex == 3,
+            activeColor: activeColor,
+            inactiveColor: inactiveColor,
+            onTap: () => _onTap(3),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BottomNavItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool isActive;
+  final Color activeColor;
+  final Color inactiveColor;
+  final VoidCallback onTap;
+
+  const _BottomNavItem({
+    required this.icon,
+    required this.label,
+    required this.isActive,
+    required this.activeColor,
+    required this.inactiveColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 26, color: isActive ? activeColor : inactiveColor),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(fontSize: 11, color: isActive ? activeColor : inactiveColor),
+          ),
+        ],
+      ),
+    );
+  }
 }

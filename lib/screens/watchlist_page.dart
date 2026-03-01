@@ -147,13 +147,8 @@ class _WatchlistPageState extends State<WatchlistPage> {
       Navigator.pushReplacementNamed(context, '/home');
     } else if (index == 2) {
       Navigator.pushReplacementNamed(context, '/news');
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('주식 화면은 아직 준비 중입니다.'),
-          duration: Duration(milliseconds: 800),
-        ),
-      );
+    } else if (index == 3) {
+      Navigator.pushReplacementNamed(context, '/stock');
     }
   }
 
