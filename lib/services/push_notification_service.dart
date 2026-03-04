@@ -76,15 +76,21 @@ class PushNotificationService {
         }
         final String? onesignalId = targetUserId ?? targetUserIds?.first ?? await OneSignalService().getPushToken();
         if (onesignalId != null && onesignalId.isNotEmpty) {
-          await NotificationApiService.createNotification(
-            NotificationCreateRequest(
-              targetOnesignalId: onesignalId,
-              type: data?['type'] ?? 'general',
-              title: title,
-              body: message,
-              stockName: data?['stock_name'],
-            ),
-          );
+          try{
+            await NotificationApiService.createNotification(
+              NotificationCreateRequest(
+                targetOnesignalId: onesignalId,
+                type: data?['type'] ?? 'general',
+                title: title,
+                body: message,
+                stockName: data?['stock_name'],
+              ),
+            );
+          } catch (e) {
+            if (kDebugMode) {
+              print('알림 저장 실패(푸시 발송은 성공: $e)');
+            }
+          }
         }
 
         return true;

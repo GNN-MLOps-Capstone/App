@@ -12,7 +12,10 @@ class NewsApiService {
   // API 서버 주소
   // 개발 환경: localhost
   // 배포 환경: 실제 서버 주소로 변경
-  static const String _baseUrl = 'http://localhost:8000';
+  static String _baseUrl = 
+    Platform.isAndroid 
+      ? "http://10.0.2.2:8000" 
+      : "http://localhost:8000";
   
   /// 뉴스 목록 조회 (앱 메인 화면용)
   /// 

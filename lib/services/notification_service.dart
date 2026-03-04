@@ -1,28 +1,30 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 
 class NotificationApiService {
-  static const String _baseUrl = 'http://localhost:8000';
+  static const String get baseUrl {
+    if (kIsWeb) return "http://localhost:8000";
+    if (Platform.isAndroid) return "http://10.0.2.2:8000";
+    if (Platform.isIOS) return "http://localhost:8000";
+    return "http://192.168.x.x:8000";
+  }
   static const _storage = FlutterSecureStorage();
 
   // 토큰 헤더 가져오기
   static Future<Map<String, String>> _getHeaders() async {
-    // 여기서 로그인하는 페이지가 없으니깐 임의로 알람을 불러오기 위한 코드
-    const String tempToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdHJpbmciLCJleHAiOjE3NzQwODQwOTh9.DSWHY7OlzNVccv4IOZngjMDqBiuDw-QpWdk6WbZt09E';
-
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer $tempToken',
-    };
-
-    /* // 나중에 실제 배포 시 사용할 원래 코드:
-    final token = await _storage.read(key: 'access_token');
+    String? token = await _storage.read(key: 'access_token');
+    if (token == null || token.isEmpty){
+      token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdHJpbmciLCJleHAiOjE3NzUyMjQ5MjB9.LlUBTA2q1aK1cHjZe8qyXtiS6eqU9q2_IavS6UvcmyU';
+      // 나중에 로그인과 합쳤을 때에는 이 코드로 위에 코드는 지우고
+      // throw Exception('Access token is missing');
+    }
     return {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer ${token ?? ""}',
     };
-    */
   }
 
   /// 알림 내역 조회 (무한 스크롤 지원)

@@ -318,6 +318,7 @@ class _AlarmPageState extends State<AlarmPage> {
   Future<void> _initFromApi() async {
     try {
       final result = await NotificationApiService.getNotifications();
+      if (!mounted) return;
       setState(() {
         _items = result.map(AlarmItem.fromResponse).toList();
         _sortByNewest();
@@ -341,6 +342,7 @@ class _AlarmPageState extends State<AlarmPage> {
   Future<void> _toggleStarWithApi(int id) async {
     try {
       final newValue = await NotificationApiService.toggleImportant(id);
+      if (!mounted) return;
       setState(() {
         final idx = _items.indexWhere((e) => e.id == id);
         if (idx >= 0) _items[idx].isStarred = newValue;
@@ -364,7 +366,9 @@ class _AlarmPageState extends State<AlarmPage> {
   void _markAllRead() async {
     try {
       await NotificationApiService.markAsRead(id: null);
+      if (!mounted) return;
       setState(() {
+        _items = _items.map((it) => it.isRead ? it : it.copyWith(isRead: true)).toList();
         for (final it in _items) {
           it.isRead = true;
         }
@@ -373,18 +377,29 @@ class _AlarmPageState extends State<AlarmPage> {
   }
 
   Future<void> _openDetailAndMarkRead(AlarmItem item) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AlarmDetailPage(item: item),
+      ),
+    );
+
+    if (!mounted) return;
+
     if (!item.isRead) {
       try {
         await NotificationApiService.markAsRead(id: item.id);
-        setState(() => item.isRead = true);
-      } catch (_) {}
+        if (!mounted) return;
+        setState(() {
+          final idx = _items.indexWhere((e) => e.id == item.id);
+          if (idx >= 0) {
+            _items[idx] = _items[idx].copyWith(isRead: true);
+          }
+        });
+      } catch (e) {
+        debugPrint('Failed to mark as read: $e');
+      }
     }
-
-    if (!mounted) return;
-    await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => AlarmDetailPage(item: item)),
-    );
   }
 
   /// 탭 순서:

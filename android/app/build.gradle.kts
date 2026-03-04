@@ -40,7 +40,7 @@ android {
     task("generateGoogleServicesJson") {
         doLast {
             // .env.local is in the Frontend directory (use absolute path)
-            val envFile = File("C:\\Users\\tngh8\\Frontend\\.env.local")
+            val envFile = rootProject.projectDir.parentFile.resolve(".env.local")
             val properties = Properties()
 
             if (envFile.exists()) {
