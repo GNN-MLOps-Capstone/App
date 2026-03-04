@@ -7,7 +7,7 @@ import '../services/watchlist_service.dart';
 class StockItem {
   final String displayName; // ✅ 한글명(대표명)만 화면에 표시
   final List<String> aliases; // ✅ 추가명(별칭들)
-  final String code; // ✅ 표준코드
+  final String code; // ✅ 6자리 단축 종목코드
 
   StockItem({
     required this.displayName,
@@ -72,13 +72,13 @@ class _SearchPageState extends State<SearchPage> {
       for (final line in lines) {
         if (line.isEmpty) continue;
 
-        // CSV: 한글명,추가명,표준코드
+        // CSV: 한글명,추가명,종목코드,(표준코드,시장 ...)
         final parts = line.split(',');
         if (parts.isEmpty) continue;
 
         final colA = parts[0].trim(); // 한글명(대표명)
         final colB = (parts.length >= 2) ? parts[1].trim() : ''; // 추가명
-        final colC = (parts.length >= 3) ? parts[2].trim() : ''; // 표준코드
+        final colC = (parts.length >= 3) ? parts[2].trim() : ''; // 종목코드(6자리)
 
         // ✅ 헤더 제거
         if (colA == '한글명') continue;
