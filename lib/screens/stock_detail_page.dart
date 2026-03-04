@@ -814,6 +814,81 @@ BoxDecoration _cardDeco() => BoxDecoration(
   border: Border.all(color: const Color(0xFFE5E7EB)),
 );
 
+/* ==================== 데이터 모델 (API 연동 시 수정 필요) ==================== */
+
+class StockDetailViewModel {
+  final Map<ChartRange, StockDetailData> _data;
+  StockDetailViewModel(this._data);
+  StockDetailData dataFor(ChartRange r) => _data[r]!;
+
+  factory StockDetailViewModel.dummy(String name) {
+    final now = DateTime.now();
+    final endHour = min(now.hour, 15);
+    final _ = max(1, endHour - 8);
+
+    final labels = List.generate(7, (i) => '${(i + 9).toString().padLeft(2, '0')}:00');
+    final series = List.generate(labels.length, (i) => 74.0 + (i % 3) * 0.5 - 1.0 + (i * 0.2));
+
+    return StockDetailViewModel({
+      ChartRange.day: _mk(
+        series, labels, '72,500원', '-1.2%', false, Sentiment.negative,
+        const ['HBM3E 공급 계약 체결로 AI 반도체 시장에서 기대감 상승 중', '엔비디아와의 협력 강화로 2026년 상반기 대규모 납품 예정', '단기 조정에도 불구하고 중장기 펀더멘털은 견고한 상태'],
+        const ['HBM', '실적', '엔비디아'],
+        const StockStats(open: '72,500', high: '75,980', low: '72,570'),
+        const [
+          MonthlyNewsItem(isUp: false, title: '미 연준의 금리 인상 우려로 인한 글로벌 기술주 약세', source: '(2026.02.19, 경제뉴스)'),
+          MonthlyNewsItem(isUp: true, title: '글로벌 빅테크 기업의 데이터센터 증설 발표에 급등. 차세대 메모리 공급 확대 기대감 반영, 장 초반 대비 거래량 급증하며 상승 탄력 확대.', source: '(2026.02.21, 파이낸스리포트)'),
+        ],
+      ),
+      ChartRange.week: _mk([74.8, 75.9, 73.2, 75.1, 74.0, 72.9, 72.5], ['월', '화', '수', '목', '금', '토', '일'], '72,500원', '+0.4%', true, Sentiment.positive, const ['(더미)'], const ['더미'], const StockStats(open: '72,300', high: '75,900', low: '72,500'), const []),
+      ChartRange.month: _mk([70.0, 72.0, 71.5, 73.0, 72.5], ['1주차', '2주차', '3주차', '4주차', '5주차'], '72,500원', '+8.1%', true, Sentiment.positive, const ['(더미)'], const ['더미'], const StockStats(open: '70,100', high: '75,980', low: '69,800'), const []),
+    });
+  }
+
+  static StockDetailData _mk(List<double> series, List<String> labels, String price, String change, bool isUp, Sentiment sentiment, List<String> summary, List<String> tags, StockStats stats, List<MonthlyNewsItem> monthlyNews) {
+    String maxLbl = '', minLbl = '';
+    if (series.isNotEmpty) {
+      final mx = series.reduce(max), mn = series.reduce(min);
+      maxLbl = '최고 ${_won(mx)}원';
+      minLbl = '최저 ${_won(mn)}원';
+    }
+    return StockDetailData(price, change, isUp, sentiment, labels, series, maxLbl, minLbl, summary, tags, stats, monthlyNews);
+  }
+
+  static String _won(double v) {
+    final s = (v * 1000).round().toString();
+    return s.split('').reversed.toList().asMap().entries.map((e) => e.value + (e.key > 0 && e.key % 3 == 0 ? ',' : '')).toList().reversed.join('');
+  }
+}
+
+class StockDetailData {
+  final String priceText, changeText, maxLabel, minLabel;
+  final bool isUp;
+  final Sentiment sentiment;
+  final List<String> xLabels, aiSummary, tags;
+  final List<double> series;
+  final StockStats stats;
+  final List<MonthlyNewsItem> monthlyNews;
+
+  StockDetailData(this.priceText, this.changeText, this.isUp, this.sentiment, this.xLabels, this.series, this.maxLabel, this.minLabel, this.aiSummary, this.tags, this.stats, this.monthlyNews);
+
+  String tooltipFor(int i) => '${(series[i] * 1000).round()}원';
+}
+
+class StockStats {
+  final String open;
+  final String high;
+  final String low;
+  const StockStats({required this.open, required this.high, required this.low});
+}
+
+class MonthlyNewsItem {
+  final bool isUp;
+  final String title;
+  final String source;
+  const MonthlyNewsItem({required this.isUp, required this.title, required this.source});
+}
+
 /* ==================== UI 컴포넌트 ==================== */
 
 class _OverviewItem extends StatelessWidget {
@@ -998,10 +1073,6 @@ class _RangeSelector extends StatelessWidget {
             fontWeight: FontWeight.w700,
             color: sel ? Colors.black : Colors.grey,
           ),
-        ),
-        child: Text(
-          text,
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: sel ? Colors.black : Colors.grey),
         ),
       ),
     );

@@ -70,7 +70,7 @@ class StockApp extends StatelessWidget {
         '/login': (_) => const GoogleLoginPage(),
         '/watchlist': (_) => const WatchlistPage(),
         '/stock': (context) => const StockPage(),
-        '/stock-detail': (_) => const StockDetailPage(stockName: '삼성전자'),
+        '/stock-detail': (_) => const StockDetailPage(stockName: '삼성전자', stockCode: '005930'),
       },
     );
   }
