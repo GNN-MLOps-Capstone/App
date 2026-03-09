@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
 import '../config/api_config.dart';
@@ -9,6 +11,19 @@ class WatchlistService {
   static final WatchlistService _instance = WatchlistService._internal();
   factory WatchlistService() => _instance;
   WatchlistService._internal();
+
+  static const _storage = FlutterSecureStorage();
+
+  Future<Map<String, String>> _getHeaders() async {
+    final token = await _storage.read(key: 'access_token');
+    if (token == null || token.trim().isEmpty) {
+      throw Exception('액세스 토큰이 없습니다. 다시 로그인해주세요.');
+    }
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+  }
 
   /// ISIN 코드(KR7005930003)를 6자리 종목코드(005930)로 변환
   String toStockCode(String code) {
@@ -113,17 +128,14 @@ class WatchlistService {
     final base = _baseUrl;
     if (base == null) return List.from(_localList);
 
-    try {
-      final res = await http.get(Uri.parse('$base/api/watchlist'))
-          .timeout(const Duration(seconds: 10));
-      if (res.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(res.body);
-        return data.map((e) => WatchlistStock.fromJson(e)).toList();
-      }
-    } catch (e) {
-      if (kDebugMode) print('getWatchlist 오류: $e');
+    final res = await http.get(Uri.parse('$base/api/watchlist'),
+        headers: await _getHeaders())
+        .timeout(const Duration(seconds: 10));
+    if (res.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(res.body);
+      return data.map((e) => WatchlistStock.fromJson(e)).toList();
     }
-    return List.from(_localList);
+    throw Exception('관심종목 조회 실패: ${res.statusCode}');
   }
 
   Future<bool> addStock(String code, {String? name}) async {
@@ -146,7 +158,7 @@ class WatchlistService {
     try {
       final res = await http.post(
         Uri.parse('$base/api/watchlist'),
-        headers: {'Content-Type': 'application/json'},
+        headers: await _getHeaders(),
         body: jsonEncode({'code': stockCode}),
       ).timeout(const Duration(seconds: 10));
       return res.statusCode == 200 || res.statusCode == 201;
@@ -165,7 +177,8 @@ class WatchlistService {
     }
 
     try {
-      final res = await http.delete(Uri.parse('$base/api/watchlist/$stockCode'))
+      final res = await http.delete(Uri.parse('$base/api/watchlist/$stockCode'),
+          headers: await _getHeaders())
           .timeout(const Duration(seconds: 10));
       return res.statusCode == 200 || res.statusCode == 204;
     } catch (e) {
@@ -178,16 +191,13 @@ class WatchlistService {
     final base = _baseUrl;
     if (base == null) return _dummyBriefing;
 
-    try {
-      final res = await http.get(Uri.parse('$base/api/watchlist/briefing'))
-          .timeout(const Duration(seconds: 10));
-      if (res.statusCode == 200) {
-        return WatchlistBriefing.fromJson(jsonDecode(res.body));
-      }
-    } catch (e) {
-      if (kDebugMode) print('getBriefing 오류: $e');
+    final res = await http.get(Uri.parse('$base/api/watchlist/briefing'),
+        headers: await _getHeaders())
+        .timeout(const Duration(seconds: 10));
+    if (res.statusCode == 200) {
+      return WatchlistBriefing.fromJson(jsonDecode(res.body));
     }
-    return _dummyBriefing;
+    throw Exception('브리핑 조회 실패: ${res.statusCode}');
   }
 
   Future<WatchlistStock?> getStockDetail(String code) async {
@@ -200,15 +210,12 @@ class WatchlistService {
       }
     }
 
-    try {
-      final res = await http.get(Uri.parse('$base/api/stocks/$code'))
-          .timeout(const Duration(seconds: 10));
-      if (res.statusCode == 200) {
-        return WatchlistStock.fromJson(jsonDecode(res.body));
-      }
-    } catch (e) {
-      if (kDebugMode) print('getStockDetail 오류: $e');
+    final res = await http.get(Uri.parse('$base/api/stocks/$code'),
+        headers: await _getHeaders())
+        .timeout(const Duration(seconds: 10));
+    if (res.statusCode == 200) {
+      return WatchlistStock.fromJson(jsonDecode(res.body));
     }
-    return null;
+    throw Exception('종목 상세 조회 실패: ${res.statusCode}');
   }
 }
