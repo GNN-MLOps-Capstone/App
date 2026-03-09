@@ -1,9 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
+import '../config/api_config.dart';
 import '../models/watchlist_models.dart';
 
 class WatchlistService {
@@ -35,12 +34,10 @@ class WatchlistService {
     return code;
   }
 
+  /// baseUrl(non-nullable) 대신 configuredBaseUrl(nullable)을 사용:
+  /// 서버 URL이 명시 설정되지 않으면 null을 반환하여 더미 데이터/오프라인 모드로 폴백한다.
   String? get _baseUrl {
-    final url = dotenv.env['API_BASE_URL']?.trim();
-    if (url == null || url.isEmpty || url == 'https://placeholder.api.com') {
-      return null;
-    }
-    return url;
+    return ApiConfig.configuredBaseUrl;
   }
 
   // ── 로컬 캐시 (더미 모드에서 추가/삭제 반영) ──

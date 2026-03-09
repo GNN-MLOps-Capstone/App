@@ -1,7 +1,6 @@
 import 'dart:convert';
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../config/api_config.dart';
 
 /// 뉴스 API 서비스
 /// 
@@ -11,14 +10,7 @@ import 'package:http/http.dart' as http;
 ///   - naver_news: title, pub_date (정렬 기준)
 ///   - crawled_news: text (summary로 사용)
 class NewsApiService {
-  // API 서버 주소
-  // 개발 환경: localhost
-  // 배포 환경: 실제 서버 주소로 변경
-  static String get _baseUrl => kIsWeb
-      ? "http://localhost:8000"
-      : Platform.isAndroid
-          ? "http://10.0.2.2:8000"
-          : "http://localhost:8000";
+  static String get _baseUrl => ApiConfig.baseUrl;
   
   /// 뉴스 목록 조회 (앱 메인 화면용)
   /// 
