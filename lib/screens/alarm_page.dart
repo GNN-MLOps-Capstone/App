@@ -1,25 +1,35 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import '../services/notification_service.dart';
 
 enum AlarmTag { highRisk, risk, keyword }
 
+AlarmTag _tagFromType(String type) {
+  switch (type) {
+    case 'high_risk': return AlarmTag.highRisk;
+    case 'risk':      return AlarmTag.risk;
+    case 'keyword':
+    default:          return AlarmTag.keyword;
+  }
+}
+
 class AlarmItem {
-  final String id;
+  final int id;
   final AlarmTag tag;
   final String stockName;
   final double? sentimentScore;
-
+  
   final String title;
   final String body;
 
   /// 알림 발생 시각(정렬/시간표시 핵심)
   final DateTime createdAt;
 
-  final bool isRead;
+  bool isRead;
 
   /// ✅ 즐겨찾기(= 중요 탭에 들어갈지)
-  final bool isStarred;
+  bool isStarred;
 
   AlarmItem({
     required this.id,
@@ -32,6 +42,20 @@ class AlarmItem {
     this.isRead = false,
     this.isStarred = false,
   });
+
+  factory AlarmItem.fromResponse(NotificationResponse r) {
+    return AlarmItem(
+      id: r.id,
+      tag: _tagFromType(r.type),
+      stockName: '',        // TODO: 백엔드에 stockName 필드 생기면 r.stockName으로 교체
+      sentimentScore: null, // TODO: 백엔드에 sentimentScore 필드 생기면 r.sentimentScore로 교체
+      title: r.title,
+      body: r.body ?? '',
+      createdAt: r.createdAt,
+      isRead: r.read,
+      isStarred: r.star,
+    );
+  }
 
   AlarmItem copyWith({
     AlarmTag? tag,
@@ -120,13 +144,13 @@ class _AlarmPageState extends State<AlarmPage> {
     });
   }
 
-  void _deleteItem(String id) {
+  void _deleteItem(int id) {
     setState(() {
       _items.removeWhere((e) => e.id == id);
     });
   }
 
-  void _toggleStar(String id) {
+  void _toggleStar(int id) {
     setState(() {
       final idx = _items.indexWhere((e) => e.id == id);
       if (idx < 0) return;
@@ -199,7 +223,7 @@ class _AlarmPageState extends State<AlarmPage> {
       final stock = d['stock'] as String;
 
       return AlarmItem(
-        id: 'risk_${stock}_${createdAt.millisecondsSinceEpoch}',
+        id: createdAt.millisecondsSinceEpoch,
         tag: _tagBySentiment(s),
         stockName: stock,
         sentimentScore: s,
@@ -244,7 +268,7 @@ class _AlarmPageState extends State<AlarmPage> {
 
       results.add(
         AlarmItem(
-          id: 'kw_${stock}_${createdAt.millisecondsSinceEpoch}',
+          id: createdAt.millisecondsSinceEpoch,
           tag: AlarmTag.keyword,
           stockName: stock,
           title: n['title'] as String,
@@ -265,7 +289,8 @@ class _AlarmPageState extends State<AlarmPage> {
   @override
   void initState() {
     super.initState();
-    _initDummyItems();
+    _initFromApi();
+    //_initDummyItems();
 
     // timeLabel 갱신 (1분마다)
     _ticker = Timer.periodic(const Duration(minutes: 1), (_) {
@@ -291,6 +316,41 @@ class _AlarmPageState extends State<AlarmPage> {
     });
   }
 
+  Future<void> _initFromApi() async {
+    try {
+      final result = await NotificationApiService.getNotifications();
+      if (!mounted) return;
+      setState(() {
+        _items = result.map(AlarmItem.fromResponse).toList();
+        _sortByNewest();
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('알림을 불러오지 못했습니다: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteItemWithApi(int id) async {
+    final ok = await NotificationApiService.deleteNotification(id);
+    if (ok) {
+      _deleteItem(id); // 성공 시 로컬에서도 제거
+    }
+  }
+
+  Future<void> _toggleStarWithApi(int id) async {
+    try {
+      final newValue = await NotificationApiService.toggleImportant(id);
+      if (!mounted) return;
+      setState(() {
+        final idx = _items.indexWhere((e) => e.id == id);
+        if (idx >= 0) _items[idx].isStarred = newValue;
+      });
+    } catch (_) {}
+  }
+
   // ==============================
   // 탭 카운트/필터
   // ==============================
@@ -304,10 +364,17 @@ class _AlarmPageState extends State<AlarmPage> {
 
   int get _keywordTabCount => _items.where((e) => e.tag == AlarmTag.keyword).length;
 
-  void _markAllRead() {
-    setState(() {
-      _items = _items.map((it) => it.isRead ? it : it.copyWith(isRead: true)).toList();
-    });
+  void _markAllRead() async {
+    try {
+      await NotificationApiService.markAsRead(id: null);
+      if (!mounted) return;
+      setState(() {
+        _items = _items.map((it) => it.isRead ? it : it.copyWith(isRead: true)).toList();
+        for (final it in _items) {
+          it.isRead = true;
+        }
+      });
+    } catch (_) {}
   }
 
   Future<void> _openDetailAndMarkRead(AlarmItem item) async {
@@ -319,13 +386,20 @@ class _AlarmPageState extends State<AlarmPage> {
     );
 
     if (!mounted) return;
+
     if (!item.isRead) {
-      setState(() {
-        final idx = _items.indexWhere((e) => e.id == item.id);
-        if (idx >= 0) {
-          _items[idx] = _items[idx].copyWith(isRead: true);
-        }
-      });
+      try {
+        await NotificationApiService.markAsRead(id: item.id);
+        if (!mounted) return;
+        setState(() {
+          final idx = _items.indexWhere((e) => e.id == item.id);
+          if (idx >= 0) {
+            _items[idx] = _items[idx].copyWith(isRead: true);
+          }
+        });
+      } catch (e) {
+        debugPrint('Failed to mark as read: $e');
+      }
     }
   }
 
@@ -423,8 +497,8 @@ class _AlarmPageState extends State<AlarmPage> {
                   child: _AlarmSlidableCard(
                     item: item,
                     onTap: () => _openDetailAndMarkRead(item),
-                    onDelete: () => _deleteItem(item.id),
-                    onToggleStar: () => _toggleStar(item.id),
+                    onDelete: () => _deleteItemWithApi(item.id),
+                    onToggleStar: () => _toggleStarWithApi(item.id),
                   ),
                 );
               },

@@ -17,7 +17,6 @@ import 'screens/setting_page.dart';
 import 'screens/login_page.dart';
 import 'screens/stock_page.dart';
 
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
