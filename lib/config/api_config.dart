@@ -23,15 +23,50 @@ class ApiConfig {
 
   /// 명시적으로 설정된 URL (dart-define 또는 .env.local)
   static String? get configuredBaseUrl {
-    final fromDefine = _normalizeHttpUrl(_defineBaseUrl);
-    if (fromDefine != null) return fromDefine;
-    return _normalizeHttpUrl(dotenv.env['API_BASE_URL']);
+    return _resolveUrl(
+      _defineBaseUrl,
+      dotenv.env['API_BASE_URL'],
+      _normalizeHttpUrl,
+      'API_BASE_URL',
+    );
   }
 
   static String? get configuredWsBaseUrl {
-    final fromDefine = _normalizeWsUrl(_defineWsBaseUrl);
-    if (fromDefine != null) return fromDefine;
-    return _normalizeWsUrl(dotenv.env['API_WS_BASE_URL']);
+    return _resolveUrl(
+      _defineWsBaseUrl,
+      dotenv.env['API_WS_BASE_URL'],
+      _normalizeWsUrl,
+      'API_WS_BASE_URL',
+    );
+  }
+
+  /// dart-define → .env 순서로 URL을 해석하되, 값이 존재하지만
+  /// 유효하지 않은 경우에는 조용히 폴백하지 않고 즉시 오류를 발생시킨다.
+  static String? _resolveUrl(
+    String dartDefineValue,
+    String? envValue,
+    String? Function(String?) normalizer,
+    String configName,
+  ) {
+    final cleanedDefine = _normalizeRaw(dartDefineValue);
+    if (cleanedDefine != null) {
+      final normalized = normalizer(dartDefineValue);
+      if (normalized != null) return normalized;
+      throw ArgumentError(
+        'dart-define $configName 값이 유효하지 않습니다: "$cleanedDefine"',
+      );
+    }
+
+    final cleanedEnv = _normalizeRaw(envValue);
+    if (cleanedEnv != null) {
+      final normalized = normalizer(envValue);
+      if (normalized != null) return normalized;
+      throw ArgumentError(
+        '.env $configName 값이 유효하지 않습니다: "$cleanedEnv"',
+      );
+    }
+
+    return null;
   }
 
   static String get baseUrl => configuredBaseUrl ?? _defaultBaseUrl;
