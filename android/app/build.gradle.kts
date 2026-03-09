@@ -39,7 +39,7 @@ android {
     // Task to generate google-services.json from environment variables
     task("generateGoogleServicesJson") {
         doLast {
-            // .env.local is in the Frontend directory (use absolute path)
+            // .env.local is in the project root directory
             val envFile = File(rootProject.projectDir.parentFile, ".env.local")
             val properties = Properties()
 

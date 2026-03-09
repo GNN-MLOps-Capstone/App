@@ -105,7 +105,7 @@ class AlarmPage extends StatefulWidget {
 
 class _AlarmPageState extends State<AlarmPage> {
   Timer? _ticker;
-  late List<AlarmItem> _items = [];
+  List<AlarmItem> _items = [];
 
   // ==============================
   // 정렬/추가 공통 유틸
@@ -309,6 +309,7 @@ class _AlarmPageState extends State<AlarmPage> {
     final riskItems = _generateRiskAlarmsDummy();
     final userKeywords = await _fetchUserKeywordsFromFavorites();
     final keywordItems = _generateKeywordAlarmsDummy(userKeywords);
+    if (!mounted) return;
 
     setState(() {
       _items = _mergeAndSort(riskItems, keywordItems);
