@@ -3,12 +3,12 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:web_socket_channel/web_socket_channel.dart';
+import '../config/api_config.dart';
 
 /// 주식 API 서비스 (REST + WebSocket)
 class StockApiService {
-  // iOS 시뮬레이터면 localhost OK, 실기기면 컴퓨터 IP로 변경
-  static const String _baseUrl = 'http://localhost:8000';
-  static const String _wsBaseUrl = 'ws://localhost:8000';
+  static String get _baseUrl => ApiConfig.baseUrl;
+  static String get _wsBaseUrl => ApiConfig.wsBaseUrl;
 
   /// 서버 상태 확인
   static Future<bool> checkHealth() async {
