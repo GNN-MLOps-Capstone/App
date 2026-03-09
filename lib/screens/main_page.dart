@@ -28,32 +28,13 @@ class StockHomeScreen extends StatelessWidget {
   }
 
   void _onBottomTap(BuildContext context, int index) {
-    if (index == 0) return; // 이미 홈
+    if (index == 0) return; // 현재 홈 페이지
 
-    const labels = ['홈', '관심', '뉴스', '주식'];
+    const routeMap = {1: '/watchlist', 2: '/news', 3: '/stock'};
+    final route = routeMap[index];
+    if (route == null) return;
 
-    if (index == 2) {
-      // 뉴스
-      Navigator.pushReplacementNamed(context, '/news');
-      return;
-    }
-
-    if (index == 3) {
-      // ✅ 주식
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const StockPage()),
-      );
-      return;
-    }
-
-    // 아직 안 만든 탭은 안내만
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${labels[index]} 화면은 아직 준비 중입니다.'),
-        duration: const Duration(milliseconds: 800),
-      ),
-    );
+    Navigator.pushNamedAndRemoveUntil(context, route, (route) => false);
   }
 
   @override
@@ -90,7 +71,7 @@ class StockHomeScreen extends StatelessWidget {
                   ),
                   IconButton(
                     onPressed: () {
-                      Navigator.pushNamed(context, '/push_test');
+                      Navigator.pushNamed(context, '/alarm');
                     },
                     icon: Stack(
                       clipBehavior: Clip.none,
@@ -104,18 +85,11 @@ class StockHomeScreen extends StatelessWidget {
                           right: -2,
                           top: -2,
                           child: Container(
-                            padding: const EdgeInsets.all(2),
+                            width: 10,
+                            height: 10,
                             decoration: const BoxDecoration(
                               color: Color(0xFF22C55E),
                               shape: BoxShape.circle,
-                            ),
-                            child: const Text(
-                              '2',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
                             ),
                           ),
                         ),
@@ -182,11 +156,7 @@ class StockHomeScreen extends StatelessWidget {
 
               GestureDetector(
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('내 관심종목 화면은 아직 준비 중입니다.'),
-                    ),
-                  );
+                  Navigator.pushReplacementNamed(context, '/watchlist');
                 },
                 child: Container(
                   height: 160,

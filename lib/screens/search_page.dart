@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'dart:convert';
 
+import '../services/watchlist_service.dart';
+
 class StockItem {
   final String displayName; // ✅ 한글명(대표명)만 화면에 표시
   final List<String> aliases; // ✅ 추가명(별칭들)
-  final String code; // ✅ 표준코드
+  final String code; // ✅ 6자리 단축 종목코드
 
   StockItem({
     required this.displayName,
@@ -31,12 +33,16 @@ class _SearchPageState extends State<SearchPage> {
   int _selectedIndex = -1;
   bool _loading = true;
 
+  final WatchlistService _watchlistService = WatchlistService();
+  final Set<String> _favoriteCodes = {};
+
   String _norm(String s) => s.trim().toLowerCase().replaceAll(' ', '');
 
   @override
   void initState() {
     super.initState();
     _loadCsv();
+    _loadFavorites();
 
     _controller.addListener(() {
       _applyFilter(_controller.text);
@@ -66,13 +72,13 @@ class _SearchPageState extends State<SearchPage> {
       for (final line in lines) {
         if (line.isEmpty) continue;
 
-        // CSV: 한글명,추가명,표준코드
+        // CSV: 한글명,추가명,종목코드,(표준코드,시장 ...)
         final parts = line.split(',');
         if (parts.isEmpty) continue;
 
         final colA = parts[0].trim(); // 한글명(대표명)
         final colB = (parts.length >= 2) ? parts[1].trim() : ''; // 추가명
-        final colC = (parts.length >= 3) ? parts[2].trim() : ''; // 표준코드
+        final colC = (parts.length >= 3) ? parts[2].trim() : ''; // 종목코드(6자리)
 
         // ✅ 헤더 제거
         if (colA == '한글명') continue;
@@ -84,13 +90,7 @@ class _SearchPageState extends State<SearchPage> {
         final List<String> aliases = [];
         if (colB.isNotEmpty) aliases.add(colB);
 
-        items.add(
-          StockItem(
-            displayName: colA,
-            aliases: aliases,
-            code: colC,
-          ),
-        );
+        items.add(StockItem(displayName: colA, aliases: aliases, code: colC));
       }
 
       setState(() {
@@ -101,9 +101,40 @@ class _SearchPageState extends State<SearchPage> {
     } catch (e) {
       setState(() => _loading = false);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('CSV 로드 실패: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('CSV 로드 실패: $e')));
+    }
+  }
+
+  Future<void> _loadFavorites() async {
+    try {
+      final stocks = await _watchlistService.getWatchlist();
+      if (!mounted) return;
+      setState(() {
+        _favoriteCodes.addAll(stocks.map((s) => s.code));
+      });
+    } catch (e) {
+      debugPrint('즐겨찾기 로드 실패: $e');
+    }
+  }
+
+  Future<void> _toggleFavorite(StockItem item) async {
+    final code = _watchlistService.toStockCode(item.code);
+    final isFav = _favoriteCodes.contains(code);
+
+    try {
+      if (isFav) {
+        await _watchlistService.deleteStock(code);
+        if (!mounted) return;
+        setState(() => _favoriteCodes.remove(code));
+      } else {
+        await _watchlistService.addStock(code, name: item.displayName);
+        if (!mounted) return;
+        setState(() => _favoriteCodes.add(code));
+      }
+    } catch (e) {
+      debugPrint('즐겨찾기 토글 실패: $e');
     }
   }
 
@@ -118,16 +149,19 @@ class _SearchPageState extends State<SearchPage> {
       return;
     }
 
-    final result = _allStocks.where((s) {
-      // 대표명 매칭
-      if (_norm(s.displayName).contains(query)) return true;
+    final result = _allStocks
+        .where((s) {
+          // 대표명 매칭
+          if (_norm(s.displayName).contains(query)) return true;
 
-      // 추가명(별칭) 매칭
-      for (final a in s.aliases) {
-        if (_norm(a).contains(query)) return true;
-      }
-      return false;
-    }).take(50).toList();
+          // 추가명(별칭) 매칭
+          for (final a in s.aliases) {
+            if (_norm(a).contains(query)) return true;
+          }
+          return false;
+        })
+        .take(50)
+        .toList();
 
     setState(() {
       _filtered = result;
@@ -136,25 +170,20 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   void _onBottomTap(int index) {
-    if (index == 0) {
-      if (Navigator.canPop(context)) {
-        Navigator.pop(context);
-      } else {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/home',
-              (route) => false,
-        );
-      }
-      return;
-    }
+    const routeMap = {
+      0: '/home',
+      1: '/watchlist',
+      2: '/news',
+      3: '/stock',
+    };
 
-    const labels = ['홈', '관심', '뉴스', '주식'];
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${labels[index]} 화면은 아직 준비 중입니다.'),
-        duration: const Duration(milliseconds: 800),
-      ),
+    final route = routeMap[index];
+    if (route == null) return;
+
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      route,
+          (route) => false,
     );
   }
 
@@ -179,10 +208,7 @@ class _SearchPageState extends State<SearchPage> {
                 children: [
                   const Text(
                     '검색',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                   ),
                   const Spacer(),
                   IconButton(
@@ -269,97 +295,129 @@ class _SearchPageState extends State<SearchPage> {
                 child: _loading
                     ? const Center(child: CircularProgressIndicator())
                     : (_controller.text.trim().isEmpty
-                    ? const SizedBox.shrink()
-                    : (_filtered.isEmpty
-                    ? const Center(
-                  child: Text(
-                    '검색 결과가 없습니다.',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                )
-                    : ListView.builder(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  itemCount: _filtered.length,
-                  itemBuilder: (context, index) {
-                    final item = _filtered[index];
-                    final isSelected = index == _selectedIndex;
-
-                    return GestureDetector(
-                      onTap: () => setState(() => _selectedIndex = index),
-                      child: Container(
-                        margin: const EdgeInsets.only(bottom: 14),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(
-                            color: isSelected ? const Color(0xFF3B82F6) : Colors.transparent,
-                            width: 2,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.04),
-                              blurRadius: 14,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // ✅ 화면에는 대표명(한글명)만 표시
-                                  Text(
-                                    item.displayName,
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
+                          ? const SizedBox.shrink()
+                          : (_filtered.isEmpty
+                                ? const Center(
+                                    child: Text(
+                                      '검색 결과가 없습니다.',
+                                      style: TextStyle(color: Colors.grey),
                                     ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      _pill('HBM'),
-                                      const SizedBox(width: 8),
-                                      _pill('실적'),
-                                    ],
-                                  ),
+                                  )
+                                : ListView.builder(
+                                    padding: const EdgeInsets.only(bottom: 16),
+                                    itemCount: _filtered.length,
+                                    itemBuilder: (context, index) {
+                                      final item = _filtered[index];
+                                      final isSelected =
+                                          index == _selectedIndex;
 
-                                  // (선택) 별칭도 참고로 보여주고 싶으면 주석 해제
-                                  // if (item.aliases.isNotEmpty) ...[
-                                  //   const SizedBox(height: 6),
-                                  //   Text(
-                                  //     item.aliases.join(' · '),
-                                  //     style: const TextStyle(fontSize: 12, color: Colors.grey),
-                                  //   ),
-                                  // ],
+                                      return GestureDetector(
+                                        onTap: () => setState(
+                                          () => _selectedIndex = index,
+                                        ),
+                                        child: Container(
+                                          margin: const EdgeInsets.only(
+                                            bottom: 14,
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 14,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(
+                                              18,
+                                            ),
+                                            border: Border.all(
+                                              color: isSelected
+                                                  ? const Color(0xFF3B82F6)
+                                                  : Colors.transparent,
+                                              width: 2,
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black.withOpacity(
+                                                  0.04,
+                                                ),
+                                                blurRadius: 14,
+                                                offset: const Offset(0, 8),
+                                              ),
+                                            ],
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    // ✅ 화면에는 대표명(한글명)만 표시
+                                                    Text(
+                                                      item.displayName,
+                                                      style: const TextStyle(
+                                                        fontSize: 16,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 8),
+                                                    Row(
+                                                      children: [
+                                                        _pill('HBM'),
+                                                        const SizedBox(
+                                                          width: 8,
+                                                        ),
+                                                        _pill('실적'),
+                                                      ],
+                                                    ),
 
-                                  if (item.code.isNotEmpty) ...[
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      item.code,
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                            const Icon(
-                              Icons.star_border,
-                              color: Colors.grey,
-                              size: 28,
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ))),
+                                                    // (선택) 별칭도 참고로 보여주고 싶으면 주석 해제
+                                                    // if (item.aliases.isNotEmpty) ...[
+                                                    //   const SizedBox(height: 6),
+                                                    //   Text(
+                                                    //     item.aliases.join(' · '),
+                                                    //     style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                                    //   ),
+                                                    // ],
+                                                    if (item
+                                                        .code
+                                                        .isNotEmpty) ...[
+                                                      const SizedBox(height: 8),
+                                                      Text(
+                                                        item.code,
+                                                        style: const TextStyle(
+                                                          fontSize: 12,
+                                                          color: Colors.grey,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ],
+                                                ),
+                                              ),
+                                              GestureDetector(
+                                                onTap: () =>
+                                                    _toggleFavorite(item),
+                                                child: Icon(
+                                                  _favoriteCodes.contains(
+                                                        _watchlistService.toStockCode(item.code),
+                                                      )
+                                                      ? Icons.favorite
+                                                      : Icons.favorite_border,
+                                                  color:
+                                                      _favoriteCodes.contains(
+                                                        _watchlistService.toStockCode(item.code),
+                                                      )
+                                                      ? const Color(0xFF22C55E)
+                                                      : Colors.grey,
+                                                  size: 28,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ))),
               ),
             ],
           ),
@@ -497,7 +555,10 @@ class _BottomNavItem extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             label,
-            style: TextStyle(fontSize: 11, color: isActive ? activeColor : inactiveColor),
+            style: TextStyle(
+              fontSize: 11,
+              color: isActive ? activeColor : inactiveColor,
+            ),
           ),
         ],
       ),

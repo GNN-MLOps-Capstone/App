@@ -46,7 +46,7 @@ app.*.map.json
 
 # Environment variables and sensitive files
 .env
-.env.local
+**/.env.local
 *.jks
 /android/app/google-services.json
 android/app/src/google-services.json

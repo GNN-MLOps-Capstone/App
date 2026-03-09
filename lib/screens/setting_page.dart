@@ -172,7 +172,7 @@ class _SettingPageState extends State<SettingPage> {
           ],
         ),
         content: const Text(
-          '서비스를 탈퇴하면\n모든 관심 종목과 알림 설정이\n영구적으로 삭제되며 복구할 수 없습니다.\n정말 탈퇴하시겠습니까?',
+          '설정을 초기화하면\n알림 설정이 기본값으로 돌아갑니다.\n이 작업은 되돌릴 수 없습니다.\n초기화하시겠습니까?',
           textAlign: TextAlign.center,
           style: TextStyle(height: 1.35),
         ),
@@ -203,7 +203,7 @@ class _SettingPageState extends State<SettingPage> {
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 elevation: 0,
               ),
-              child: const Text('탈퇴하기'),
+              child: const Text('초기화하기'),
             ),
           ),
         ],
@@ -316,7 +316,7 @@ class _SettingPageState extends State<SettingPage> {
 
                                   _teamRow('이수호', 'Product Manager', '백혜경', 'Frontend'),
                                   const SizedBox(height: 8),
-                                  _teamRow('신동빈', 'Backend', '이상진', 'Backend'),
+                                  _teamRow('신동빈', 'Data engineer', '이상진', 'Backend'),
                                   const SizedBox(height: 8),
                                   _teamRow('최윤형', 'Data/Design', '하성우', 'Data'),
 
@@ -540,6 +540,9 @@ class _SettingPageState extends State<SettingPage> {
                       backgroundColor: Colors.white,
                       backgroundImage: (_photoUrl != null && _photoUrl!.isNotEmpty)
                           ? NetworkImage(_photoUrl!)
+                          : null,
+                      onBackgroundImageError: (_photoUrl != null && _photoUrl!.isNotEmpty)
+                          ? (_, __) => setState(() => _photoUrl = null)
                           : null,
                       child: (_photoUrl == null || _photoUrl!.isEmpty)
                           ? const Text(

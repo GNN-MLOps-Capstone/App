@@ -147,29 +147,31 @@ class _NewsScreenState extends State<NewsScreen> {
     return items;
   }
 
-  @override
+
   void _onBottomTap(BuildContext context, int index) {
-    if (index == 2) return; // 이미 뉴스 페이지
+    if (index == 2) return; // 현재 뉴스 페이지
 
-    const labels = ['홈', '관심', '뉴스', '주식'];
+    const routes = ['/home', '/watchlist', '/stock'];
+    // index 3 → routes[2] 이므로 매핑 필요
+    final routeMap = {0: '/home', 1: '/watchlist', 3: '/stock'};
 
-    if (index == 0) {
-      // 홈
-      Navigator.pushReplacementNamed(context, '/home');
-    } else {
-      // 아직 안 만든 탭은 안내만
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${labels[index]} 화면은 아직 준비 중입니다.'),
-          duration: const Duration(milliseconds: 800),
-        ),
-      );
-    }
+    final route = routeMap[index];
+    if (route == null) return;
+
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      route,
+          (route) => false,
+    );
   }
 
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF3F4F6),
+      bottomNavigationBar: BottomNavBar(    // ← 콤마 위치 확인
+        initialIndex: 2,
+        onIndexChanged: (i) => _onBottomTap(context, i),
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
@@ -251,11 +253,6 @@ class _NewsScreenState extends State<NewsScreen> {
                 ),
               ),
 
-              // 하단 네비게이션
-              BottomNavBar(
-                initialIndex: 2,
-                onIndexChanged: (i) => _onBottomTap(context, i),
-              ),
             ],
           ),
         ),
