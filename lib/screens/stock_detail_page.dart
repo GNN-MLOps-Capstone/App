@@ -132,7 +132,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
                     xLabels: data.xLabels,
                     maxLabel: data.maxLabel,
                     minLabel: data.minLabel,
-                    tooltipText: (idx) => '72,500원',
+                    tooltipText: data.tooltipFor,
                   ),
                 ),
               ),
@@ -204,10 +204,6 @@ class StockDetailViewModel {
   StockDetailData dataFor(ChartRange r) => _data[r]!;
 
   factory StockDetailViewModel.dummy(String name) {
-    final now = DateTime.now();
-    final endHour = min(now.hour, 15);
-    final _ = max(1, endHour - 8);
-
     final labels = List.generate(7, (i) => '${(i + 9).toString().padLeft(2, '0')}:00');
     final series = List.generate(labels.length, (i) => 74.0 + (i % 3) * 0.5 - 1.0 + (i * 0.2));
 

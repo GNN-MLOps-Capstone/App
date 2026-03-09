@@ -8,31 +8,27 @@ import 'screens/main_page.dart';
 import 'screens/push_test_screen.dart';
 import 'screens/news_page.dart';
 import 'screens/search_page.dart';
-import 'screens/stock_detail_page.dart';  // ✅ 추가
+import 'screens/stock_detail_page.dart';
 import 'services/onesignal_service.dart';
 import 'screens/stock_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // .env 파일 로드
   await dotenv.load(fileName: ".env.local");
 
   try {
-    // Firebase 기본 앱 초기화
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
   } on FirebaseException catch (e) {
-    // 이미 [DEFAULT] 앱이 초기화되어 있으면, 그냥 무시하고 넘어감
     if (e.code == 'duplicate-app') {
-      // 이미 만들어진 앱을 그냥 사용하면 됨
+      // 이미 초기화된 경우 무시
     } else {
-      rethrow; // 다른 에러면 그대로 터뜨리기
+      rethrow;
     }
   }
 
-  // OneSignal 초기화
   await OneSignalService().initializeOneSignal();
 
   runApp(const StockApp());
@@ -52,7 +48,16 @@ class StockApp extends StatelessWidget {
         '/news': (_) => const NewsScreen(),
         '/search': (_) => const SearchPage(),
         '/stock': (_) => const StockPage(),
-        '/stock-detail': (_) => const StockDetailPage(stockName: '삼성전자'),
+      },
+      // ✅ API 연결 전 임시: arguments로 stockName 받기
+      onGenerateRoute: (settings) {
+        if (settings.name == '/stock-detail') {
+          final stockName = settings.arguments as String? ?? '삼성전자';
+          return MaterialPageRoute(
+            builder: (_) => StockDetailPage(stockName: stockName),
+          );
+        }
+        return null;
       },
     );
   }
