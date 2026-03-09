@@ -76,6 +76,8 @@ class ApiConfig {
   static String? _normalizeRaw(String? raw) {
     if (raw == null) return null;
     final value = _stripTrailingSlash(raw.trim());
+    // .env.example / 설정 템플릿의 기본 센티넬 값으로, 실제 URL이 설정되지
+    // 않은 상태를 의미하므로 null로 처리한다.
     if (value.isEmpty || value == 'https://placeholder.api.com') return null;
     return value;
   }

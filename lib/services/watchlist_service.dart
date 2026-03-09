@@ -21,6 +21,8 @@ class WatchlistService {
     return code;
   }
 
+  /// baseUrl(non-nullable) 대신 configuredBaseUrl(nullable)을 사용:
+  /// 서버 URL이 명시 설정되지 않으면 null을 반환하여 더미 데이터/오프라인 모드로 폴백한다.
   String? get _baseUrl {
     return ApiConfig.configuredBaseUrl;
   }
