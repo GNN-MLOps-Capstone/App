@@ -10,7 +10,6 @@ import 'screens/push_test_screen.dart';
 import 'screens/news_page.dart';
 import 'screens/search_page.dart';
 import 'screens/watchlist_page.dart';
-import 'screens/stock_detail_page.dart';
 import 'services/onesignal_service.dart';
 import 'screens/alarm_page.dart';
 import 'screens/setting_page.dart';
@@ -69,7 +68,6 @@ class StockApp extends StatelessWidget {
         '/login': (_) => const GoogleLoginPage(),
         '/watchlist': (_) => const WatchlistPage(),
         '/stock': (context) => const StockPage(),
-        '/stock-detail': (_) => const StockDetailPage(stockName: '삼성전자', stockCode: '005930'),
       },
     );
   }
