@@ -8,9 +8,12 @@ import 'screens/main_page.dart';
 import 'screens/push_test_screen.dart';
 import 'screens/news_page.dart';
 import 'screens/search_page.dart';
-import 'screens/stock_detail_page.dart';  // ✅ 추가
+import 'screens/stock_detail_page.dart';
 import 'services/onesignal_service.dart';
 import 'screens/alarm_page.dart';
+import 'screens/setting_page.dart';
+import 'screens/login_page.dart';
+import 'screens/stock_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,7 +55,11 @@ class StockApp extends StatelessWidget {
         '/news': (_) => const NewsScreen(),
         '/search': (_) => const SearchPage(),
         '/alarm': (_) => const AlarmPage(),
-        '/stock-detail': (_) => const StockDetailPage(stockName: '삼성전자'),  // ✅ 추가
+        '/settings': (_) => const SettingPage(),
+        '/login': (_) => const GoogleLoginPage(),
+        '/watchlist': (_) => const WatchlistPage(),
+        '/stock': (context) => const StockPage(),
+        '/stock-detail': (_) => const StockDetailPage(stockName: '삼성전자', stockCode: '005930'),
       },
     );
   }

@@ -19,7 +19,7 @@ class AlarmItem {
   final AlarmTag tag;
   final String stockName;
   final double? sentimentScore;
-
+  
   final String title;
   final String body;
 
