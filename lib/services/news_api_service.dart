@@ -83,6 +83,33 @@ class NewsApiService {
       throw NewsApiException('Network error: $e', 0);
     }
   }
+  static Future<StockSummary> getStockSummary(String stockName) async {
+    try {
+      // 종목명은 URL 경로에 포함되므로 인코딩 처리
+      final encodedStockName = Uri.encodeComponent(stockName);
+      final uri = Uri.parse('$_baseUrl/api/news/summary/$encodedStockName');
+
+      final response = await http.get(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 15)); // AI 생성 시간이 걸릴 수 있으므로 15초 설정
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonData = json.decode(utf8.decode(response.bodyBytes));
+        return StockSummary.fromJson(jsonData);
+      } else if (response.statusCode == 404) {
+        throw NewsApiException('존재하지 않는 종목입니다.', 404);
+      } else {
+        throw NewsApiException(
+          '요약 정보를 가져오는데 실패했습니다: ${response.statusCode}',
+          response.statusCode,
+        );
+      }
+    } catch (e) {
+      if (e is NewsApiException) rethrow;
+      throw NewsApiException('네트워크 오류가 발생했습니다: $e', 0);
+    }
+  }
   
   /// 서버 상태 확인
   static Future<bool> checkHealth() async {
@@ -94,7 +121,9 @@ class NewsApiService {
       return false;
     }
   }
+  
 }
+
 
 /// 뉴스 API 예외
 class NewsApiException implements Exception {
@@ -137,6 +166,29 @@ class NewsItem {
       pubDate: json['pub_date'] != null 
           ? DateTime.tryParse(json['pub_date'] as String)
           : null,
+    );
+  }
+}
+
+class StockSummary {
+  final String stockName;
+  final String summary;
+  final DateTime lastUpdated;
+  final String message;
+
+  StockSummary({
+    required this.stockName,
+    required this.summary,
+    required this.lastUpdated,
+    required this.message,
+  });
+
+  factory StockSummary.fromJson(Map<String, dynamic> json) {
+    return StockSummary(
+      stockName: json['stock_name'] as String,
+      summary: json['summary'] as String,
+      lastUpdated: DateTime.parse(json['last_updated'] as String),
+      message: json['message'] as String,
     );
   }
 }
