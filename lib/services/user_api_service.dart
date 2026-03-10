@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
+import '../config/api_config.dart';
 
 /// 유저 API 서비스
 /// 
@@ -10,10 +11,7 @@ import 'package:onesignal_flutter/onesignal_flutter.dart';
 /// 사용하는 테이블:
 ///   - users
 class UserApiService {
-  // API 서버 주소
-  // 개발 환경: localhost
-  // 배포 환경: 실제 서버 주소로 변경
-  static const String _baseUrl = 'http://10.0.2.2:8000';
+  static String get _baseUrl => ApiConfig.baseUrl;
   static const _storage = FlutterSecureStorage();
 
   static Future<Map<String, String>> _getHeaders() async {
