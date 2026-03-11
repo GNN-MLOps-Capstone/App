@@ -4,6 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:csv/csv.dart';
 
+import 'widgets/bottom_nav_bar.dart';
+// import 'stock_page.dart'; // 주식 탭 이동용
+
+// CSV 한 줄을 담는 모델
 import 'main_page.dart'; // BottomNavBar 사용
 import '../services/news_api_service.dart' as api;
 

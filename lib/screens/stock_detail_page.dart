@@ -7,6 +7,8 @@ import 'package:intl/intl.dart';
 
 import '../services/stock_api_service.dart';
 
+import 'widgets/bottom_nav_bar.dart';
+
 enum ChartRange { day, week, month }
 enum Sentiment { positive, neutral, negative }
 
@@ -400,6 +402,51 @@ class _StockDetailPageState extends State<StockDetailPage> {
         ? '최저 ${_wonFormat.format(finitePoints.reduce(min).round())}원'
         : '';
 
+    final stats = StockStats(
+      open: '${_wonFormat.format(_currentOpen)}원',
+      high: '${_wonFormat.format(_currentHigh)}원',
+      low: '${_wonFormat.format(_currentLow)}원',
+    );
+    const monthlyNews = <MonthlyNewsItem>[];
+
+    Widget statsAndNewsSection() {
+      Widget collapsedRow() {
+        final row = Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              width: 118,
+              child: _StatsCard(stats: stats),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _MonthlyNewsCard(
+                items: monthlyNews,
+                expanded: false,
+                onExpandedChanged: (v) => setState(() => _newsExpanded = v),
+              ),
+            ),
+          ],
+        );
+        return IntrinsicHeight(child: row);
+      }
+
+      Widget expandedFullWidth() {
+        return _MonthlyNewsCard(
+          items: monthlyNews,
+          expanded: true,
+          onExpandedChanged: (v) => setState(() => _newsExpanded = v),
+        );
+      }
+
+      return Column(
+        children: [
+          if (!_newsExpanded) collapsedRow(),
+          if (_newsExpanded) expandedFullWidth(),
+        ],
+      );
+    }
+
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
       child: Column(
@@ -499,7 +546,10 @@ class _StockDetailPageState extends State<StockDetailPage> {
                           ),
                   ),
           ),
-
+          
+              const SizedBox(height: 14),
+              statsAndNewsSection(),
+          
           const SizedBox(height: 18),
 
           // ── AI 요약 (추후 API 연동 가능) ──
@@ -757,29 +807,6 @@ class _StockDetailPageState extends State<StockDetailPage> {
       ),
     ],
   );
-
-  BottomNavigationBar _buildBottomNav() => BottomNavigationBar(
-    currentIndex: 3,
-    type: BottomNavigationBarType.fixed,
-    onTap: (i) {
-      if (i == 3) return;
-      if (i == 0) {
-        Navigator.pushReplacementNamed(context, '/home');
-      } else if (i == 2) {
-        Navigator.pushReplacementNamed(context, '/news');
-      } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('아직 구현되지 않았습니다.')));
-      }
-    },
-    items: const [
-      BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: '홈'),
-      BottomNavigationBarItem(icon: Icon(Icons.favorite_border), label: '관심'),
-      BottomNavigationBarItem(icon: Icon(Icons.article_outlined), label: '뉴스'),
-      BottomNavigationBarItem(icon: Icon(Icons.show_chart), label: '주식'),
-    ],
-  );
 }
 
 class _PreparedChartData {
@@ -831,33 +858,107 @@ class StockDetailViewModel {
 
     return StockDetailViewModel({
       ChartRange.day: _mk(
-        series, labels, '72,500원', '-1.2%', false, Sentiment.negative,
-        const ['HBM3E 공급 계약 체결로 AI 반도체 시장에서 기대감 상승 중', '엔비디아와의 협력 강화로 2026년 상반기 대규모 납품 예정', '단기 조정에도 불구하고 중장기 펀더멘털은 견고한 상태'],
+        series,
+        labels,
+        '72,500원',
+        '-1.2%',
+        false,
+        Sentiment.negative,
+        const [
+          'HBM3E 공급 계약 체결로 AI 반도체 시장에서 기대감 상승 중',
+          '엔비디아와의 협력 강화로 2026년 상반기 대규모 납품 예정',
+          '단기 조정에도 불구하고 중장기 펀더멘털은 견고한 상태',
+        ],
         const ['HBM', '실적', '엔비디아'],
         const StockStats(open: '72,500', high: '75,980', low: '72,570'),
         const [
-          MonthlyNewsItem(isUp: false, title: '미 연준의 금리 인상 우려로 인한 글로벌 기술주 약세', source: '(2026.02.19, 경제뉴스)'),
-          MonthlyNewsItem(isUp: true, title: '글로벌 빅테크 기업의 데이터센터 증설 발표에 급등. 차세대 메모리 공급 확대 기대감 반영, 장 초반 대비 거래량 급증하며 상승 탄력 확대.', source: '(2026.02.21, 파이낸스리포트)'),
+          MonthlyNewsItem(
+            isUp: false,
+            title: '미 연준의 금리 인상 우려로 인한 글로벌 기술주 약세',
+            source: '(2026.02.19, 경제뉴스)',
+          ),
+          MonthlyNewsItem(
+            isUp: true,
+            title:
+            '글로벌 빅테크 기업의 데이터센터 증설 발표에 급등. 차세대 메모리 공급 확대 기대감 반영, 장 초반 대비 거래량 급증하며 상승 탄력 확대.',
+            source: '(2026.02.21, 파이낸스리포트)',
+          ),
         ],
       ),
-      ChartRange.week: _mk([74.8, 75.9, 73.2, 75.1, 74.0, 72.9, 72.5], ['월', '화', '수', '목', '금', '토', '일'], '72,500원', '+0.4%', true, Sentiment.positive, const ['(더미)'], const ['더미'], const StockStats(open: '72,300', high: '75,900', low: '72,500'), const []),
-      ChartRange.month: _mk([70.0, 72.0, 71.5, 73.0, 72.5], ['1주차', '2주차', '3주차', '4주차', '5주차'], '72,500원', '+8.1%', true, Sentiment.positive, const ['(더미)'], const ['더미'], const StockStats(open: '70,100', high: '75,980', low: '69,800'), const []),
+      ChartRange.week: _mk(
+        [74.8, 75.9, 73.2, 75.1, 74.0, 72.9, 72.5],
+        ['월', '화', '수', '목', '금', '토', '일'],
+        '72,500원',
+        '+0.4%',
+        true,
+        Sentiment.positive,
+        const ['(더미)'],
+        const ['더미'],
+        const StockStats(open: '72,300', high: '75,900', low: '72,500'),
+        const [],
+      ),
+      ChartRange.month: _mk(
+        [70.0, 72.0, 71.5, 73.0, 72.5],
+        ['1주차', '2주차', '3주차', '4주차', '5주차'],
+        '72,500원',
+        '+8.1%',
+        true,
+        Sentiment.positive,
+        const ['(더미)'],
+        const ['더미'],
+        const StockStats(open: '70,100', high: '75,980', low: '69,800'),
+        const [],
+      ),
     });
   }
 
-  static StockDetailData _mk(List<double> series, List<String> labels, String price, String change, bool isUp, Sentiment sentiment, List<String> summary, List<String> tags, StockStats stats, List<MonthlyNewsItem> monthlyNews) {
+  static StockDetailData _mk(
+      List<double> series,
+      List<String> labels,
+      String price,
+      String change,
+      bool isUp,
+      Sentiment sentiment,
+      List<String> summary,
+      List<String> tags,
+      StockStats stats,
+      List<MonthlyNewsItem> monthlyNews,
+      ) {
     String maxLbl = '', minLbl = '';
     if (series.isNotEmpty) {
       final mx = series.reduce(max), mn = series.reduce(min);
       maxLbl = '최고 ${_won(mx)}원';
       minLbl = '최저 ${_won(mn)}원';
     }
-    return StockDetailData(price, change, isUp, sentiment, labels, series, maxLbl, minLbl, summary, tags, stats, monthlyNews);
+
+    return StockDetailData(
+      price,
+      change,
+      isUp,
+      sentiment,
+      labels,
+      series,
+      maxLbl,
+      minLbl,
+      summary,
+      tags,
+      stats,
+      monthlyNews,
+    );
   }
 
   static String _won(double v) {
     final s = (v * 1000).round().toString();
-    return s.split('').reversed.toList().asMap().entries.map((e) => e.value + (e.key > 0 && e.key % 3 == 0 ? ',' : '')).toList().reversed.join('');
+    return s
+        .split('')
+        .reversed
+        .toList()
+        .asMap()
+        .entries
+        .map((e) => e.value + (e.key > 0 && e.key % 3 == 0 ? ',' : ''))
+        .toList()
+        .reversed
+        .join('');
   }
 }
 
@@ -870,7 +971,23 @@ class StockDetailData {
   final StockStats stats;
   final List<MonthlyNewsItem> monthlyNews;
 
-  StockDetailData(this.priceText, this.changeText, this.isUp, this.sentiment, this.xLabels, this.series, this.maxLabel, this.minLabel, this.aiSummary, this.tags, this.stats, this.monthlyNews);
+  final StockStats stats;
+  final List<MonthlyNewsItem> monthlyNews;
+
+  StockDetailData(
+      this.priceText,
+      this.changeText,
+      this.isUp,
+      this.sentiment,
+      this.xLabels,
+      this.series,
+      this.maxLabel,
+      this.minLabel,
+      this.aiSummary,
+      this.tags,
+      this.stats,
+      this.monthlyNews,
+      );
 
   String tooltipFor(int i) => '${(series[i] * 1000).round()}원';
 }
@@ -1073,6 +1190,10 @@ class _RangeSelector extends StatelessWidget {
             fontWeight: FontWeight.w700,
             color: sel ? Colors.black : Colors.grey,
           ),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: sel ? Colors.black : Colors.grey),
         ),
       ),
     );
@@ -1919,122 +2040,3 @@ class _ChartGeometry {
   }
 }
 
-/* ==================== ✅ stock_page.dart와 동일한 하단바 ==================== */
-
-class BottomNavBar extends StatefulWidget {
-  final int initialIndex;
-  final ValueChanged<int> onIndexChanged;
-
-  const BottomNavBar({
-    super.key,
-    required this.initialIndex,
-    required this.onIndexChanged,
-  });
-
-  @override
-  State<BottomNavBar> createState() => BottomNavBarState();
-}
-
-class BottomNavBarState extends State<BottomNavBar> {
-  late int selectedIndex;
-
-  @override
-  void initState() {
-    super.initState();
-    selectedIndex = widget.initialIndex;
-  }
-
-  void _onTap(int index) {
-    setState(() => selectedIndex = index);
-    widget.onIndexChanged(index);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final Color activeColor = const Color(0xFF22C55E);
-    final Color inactiveColor = Colors.grey.shade400;
-
-    return Container(
-      height: 80,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _BottomNavItem(
-            icon: Icons.home,
-            label: '홈',
-            isActive: selectedIndex == 0,
-            activeColor: activeColor,
-            inactiveColor: inactiveColor,
-            onTap: () => _onTap(0),
-          ),
-          _BottomNavItem(
-            icon: Icons.favorite_border,
-            label: '관심',
-            isActive: selectedIndex == 1,
-            activeColor: activeColor,
-            inactiveColor: inactiveColor,
-            onTap: () => _onTap(1),
-          ),
-          _BottomNavItem(
-            icon: Icons.article_outlined,
-            label: '뉴스',
-            isActive: selectedIndex == 2,
-            activeColor: activeColor,
-            inactiveColor: inactiveColor,
-            onTap: () => _onTap(2),
-          ),
-          _BottomNavItem(
-            icon: Icons.candlestick_chart,
-            label: '주식',
-            isActive: selectedIndex == 3,
-            activeColor: activeColor,
-            inactiveColor: inactiveColor,
-            onTap: () => _onTap(3),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BottomNavItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool isActive;
-  final Color activeColor;
-  final Color inactiveColor;
-  final VoidCallback onTap;
-
-  const _BottomNavItem({
-    required this.icon,
-    required this.label,
-    required this.isActive,
-    required this.activeColor,
-    required this.inactiveColor,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 26, color: isActive ? activeColor : inactiveColor),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(fontSize: 11, color: isActive ? activeColor : inactiveColor),
-          ),
-        ],
-      ),
-    );
-  }
-}
