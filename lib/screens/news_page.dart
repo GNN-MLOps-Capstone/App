@@ -151,7 +151,6 @@ class _NewsScreenState extends State<NewsScreen> {
     return items;
   }
 
-  @override
 
   void _onBottomTap(BuildContext context, int index) {
     if (index == 2) return; // 현재 뉴스 페이지

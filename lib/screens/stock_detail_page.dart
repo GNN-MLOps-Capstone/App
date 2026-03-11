@@ -307,51 +307,6 @@ class _StockDetailPageState extends State<StockDetailPage> {
     }
   }
 
-    // ✅✅ 핵심: 접힘/펼침 레이아웃을 "완전히 다르게" 그려서
-    // 펼쳤을 때 가로(전체폭)로도 커지게 만들기
-    Widget statsAndNewsSection() {
-      // 접힘(ROW): 왼쪽 stats + 오른쪽 뉴스(같은 높이)
-      Widget collapsedRow() {
-        final row = Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SizedBox(
-              width: 118,
-              child: _StatsCard(stats: data.stats),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _MonthlyNewsCard(
-                items: data.monthlyNews,
-                expanded: false,
-                onExpandedChanged: (v) => setState(() => _newsExpanded = v),
-              ),
-            ),
-          ],
-        );
-        return IntrinsicHeight(child: row); // ✅ 두 카드 높이 맞춤
-      }
-
-      // 펼침(FULL WIDTH): 뉴스 카드가 전체 폭으로 렌더
-      Widget expandedFullWidth() {
-        return _MonthlyNewsCard(
-          items: data.monthlyNews,
-          expanded: true,
-          onExpandedChanged: (v) => setState(() => _newsExpanded = v),
-        );
-      }
-
-      return Column(
-        children: [
-          // ✅ 접힘 상태에서는 Row를 그대로 보여줌
-          if (!_newsExpanded) collapsedRow(),
-
-          // ✅ 펼침 상태에서는 "전체폭 뉴스 카드"를 보여줌
-          if (_newsExpanded) expandedFullWidth(),
-        ],
-      );
-    }
-
   // ─── 현재가 표시용 헬퍼 (실시간 > overview 우선) ───
   bool get _isStockCodeValid => _stockCodePattern.hasMatch(widget.stockCode);
 
@@ -446,6 +401,51 @@ class _StockDetailPageState extends State<StockDetailPage> {
     final minLabel = finitePoints.length >= 2
         ? '최저 ${_wonFormat.format(finitePoints.reduce(min).round())}원'
         : '';
+
+    final stats = StockStats(
+      open: '${_wonFormat.format(_currentOpen)}원',
+      high: '${_wonFormat.format(_currentHigh)}원',
+      low: '${_wonFormat.format(_currentLow)}원',
+    );
+    const monthlyNews = <MonthlyNewsItem>[];
+
+    Widget statsAndNewsSection() {
+      Widget collapsedRow() {
+        final row = Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              width: 118,
+              child: _StatsCard(stats: stats),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _MonthlyNewsCard(
+                items: monthlyNews,
+                expanded: false,
+                onExpandedChanged: (v) => setState(() => _newsExpanded = v),
+              ),
+            ),
+          ],
+        );
+        return IntrinsicHeight(child: row);
+      }
+
+      Widget expandedFullWidth() {
+        return _MonthlyNewsCard(
+          items: monthlyNews,
+          expanded: true,
+          onExpandedChanged: (v) => setState(() => _newsExpanded = v),
+        );
+      }
+
+      return Column(
+        children: [
+          if (!_newsExpanded) collapsedRow(),
+          if (_newsExpanded) expandedFullWidth(),
+        ],
+      );
+    }
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
@@ -2040,122 +2040,3 @@ class _ChartGeometry {
   }
 }
 
-/* ==================== ✅ stock_page.dart와 동일한 하단바 ==================== */
-
-class BottomNavBar extends StatefulWidget {
-  final int initialIndex;
-  final ValueChanged<int> onIndexChanged;
-
-  const BottomNavBar({
-    super.key,
-    required this.initialIndex,
-    required this.onIndexChanged,
-  });
-
-  @override
-  State<BottomNavBar> createState() => BottomNavBarState();
-}
-
-class BottomNavBarState extends State<BottomNavBar> {
-  late int selectedIndex;
-
-  @override
-  void initState() {
-    super.initState();
-    selectedIndex = widget.initialIndex;
-  }
-
-  void _onTap(int index) {
-    setState(() => selectedIndex = index);
-    widget.onIndexChanged(index);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final Color activeColor = const Color(0xFF22C55E);
-    final Color inactiveColor = Colors.grey.shade400;
-
-    return Container(
-      height: 80,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _BottomNavItem(
-            icon: Icons.home,
-            label: '홈',
-            isActive: selectedIndex == 0,
-            activeColor: activeColor,
-            inactiveColor: inactiveColor,
-            onTap: () => _onTap(0),
-          ),
-          _BottomNavItem(
-            icon: Icons.favorite_border,
-            label: '관심',
-            isActive: selectedIndex == 1,
-            activeColor: activeColor,
-            inactiveColor: inactiveColor,
-            onTap: () => _onTap(1),
-          ),
-          _BottomNavItem(
-            icon: Icons.article_outlined,
-            label: '뉴스',
-            isActive: selectedIndex == 2,
-            activeColor: activeColor,
-            inactiveColor: inactiveColor,
-            onTap: () => _onTap(2),
-          ),
-          _BottomNavItem(
-            icon: Icons.candlestick_chart,
-            label: '주식',
-            isActive: selectedIndex == 3,
-            activeColor: activeColor,
-            inactiveColor: inactiveColor,
-            onTap: () => _onTap(3),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BottomNavItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool isActive;
-  final Color activeColor;
-  final Color inactiveColor;
-  final VoidCallback onTap;
-
-  const _BottomNavItem({
-    required this.icon,
-    required this.label,
-    required this.isActive,
-    required this.activeColor,
-    required this.inactiveColor,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 26, color: isActive ? activeColor : inactiveColor),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(fontSize: 11, color: isActive ? activeColor : inactiveColor),
-          ),
-        ],
-      ),
-    );
-  }
-}
