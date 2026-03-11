@@ -27,6 +27,7 @@ class StockDetailPage extends StatefulWidget {
 }
 
 class _StockDetailPageState extends State<StockDetailPage> {
+  static const Duration _kstOffset = Duration(hours: 9);
   ChartRange _range = ChartRange.day;
   static final RegExp _stockCodePattern = RegExp(r'^[A-Za-z0-9]{6}$');
 
@@ -632,9 +633,26 @@ class _StockDetailPageState extends State<StockDetailPage> {
       points: series.points.map((p) => p.c.toDouble()).toList(),
       xAxisLabels: _buildXAxisLabels(series),
       pointTimes: series.points
-          .map((p) => DateTime.fromMillisecondsSinceEpoch(p.t))
+          .map((p) => _dateTimeForSeries(series, p.t))
           .toList(),
     );
+  }
+
+  DateTime _dateTimeForSeries(StockSeries series, int epochMs) {
+    if (series.tz == 'Asia/Seoul') {
+      return DateTime.fromMillisecondsSinceEpoch(
+        epochMs,
+        isUtc: true,
+      ).add(_kstOffset);
+    }
+    return DateTime.fromMillisecondsSinceEpoch(epochMs);
+  }
+
+  DateTime _nowForSeries(StockSeries series) {
+    if (series.tz == 'Asia/Seoul') {
+      return DateTime.now().toUtc().add(_kstOffset);
+    }
+    return DateTime.now();
   }
 
   _PreparedChartData _buildDayTimelineChart(StockSeries series) {
@@ -653,7 +671,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
     const slotCount = (totalMinutes ~/ intervalMinutes) + 1; // 08:00~20:00
 
     final sorted = [...series.points]..sort((a, b) => a.t.compareTo(b.t));
-    final anchorDt = DateTime.fromMillisecondsSinceEpoch(sorted.last.t);
+    final anchorDt = _dateTimeForSeries(series, sorted.last.t);
     final dayStart = DateTime(
       anchorDt.year,
       anchorDt.month,
@@ -674,7 +692,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
     );
 
     for (final p in sorted) {
-      final dt = DateTime.fromMillisecondsSinceEpoch(p.t);
+      final dt = _dateTimeForSeries(series, p.t);
       if (dt.year != dayStart.year ||
           dt.month != dayStart.month ||
           dt.day != dayStart.day) {
@@ -691,7 +709,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
     }
 
     // 현재 시각 이후 구간은 NaN으로 유지하여 축만 보이고 라인은 미표시
-    final now = DateTime.now();
+    final now = _nowForSeries(series);
     if (now.year == dayStart.year &&
         now.month == dayStart.month &&
         now.day == dayStart.day) {
@@ -736,7 +754,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
     // 표시할 라벨 수 (최대 7개)
     final labelCount = min(7, n);
     if (labelCount <= 1) {
-      final dt = DateTime.fromMillisecondsSinceEpoch(points[0].t);
+      final dt = _dateTimeForSeries(series, points[0].t);
       return [XAxisLabelSpec(text: _formatTime(dt), pointIndex: 0)];
     }
 
@@ -744,7 +762,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
     for (int i = 0; i < labelCount; i++) {
       // 균등 분할 인덱스
       final idx = (i * (n - 1)) ~/ (labelCount - 1);
-      final dt = DateTime.fromMillisecondsSinceEpoch(points[idx].t);
+      final dt = _dateTimeForSeries(series, points[idx].t);
       labels.add(XAxisLabelSpec(text: _formatTime(dt), pointIndex: idx));
     }
     return labels;
@@ -2032,4 +2050,3 @@ class _ChartGeometry {
     return nearest;
   }
 }
-
