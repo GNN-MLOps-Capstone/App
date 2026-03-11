@@ -31,6 +31,14 @@
    # OneSignal Configuration
    ONESIGNAL_APP_ID=your_onesignal_app_id_here
    ONESIGNAL_REST_API_KEY=your_onesignal_rest_api_key_here
+
+   # API Configuration
+   # Android 에뮬레이터: http://10.0.2.2:8000
+   # iOS 시뮬레이터/데스크톱: http://localhost:8000
+   # 실기기: http://<개발PC의로컬IP>:8000
+   API_BASE_URL=http://10.0.2.2:8000
+   # 선택값 (미설정 시 API_BASE_URL로부터 자동 변환)
+   # API_WS_BASE_URL=ws://10.0.2.2:8000
    ```
 
 **⚠️ 중요:** `.env.local` 파일에는 실제 자격 증명 값을 입력하세요. 이 파일은 .gitignore에 포함되어 Git에 커밋되지 않습니다.
@@ -52,21 +60,35 @@ scripts\setup-firebase.bat
 
 ### 3. 빌드 실행
 
-Firebase 설정 후 정상적으로 빌드를 진행할 수 있습니다:
+#### 개발 (로컬 서버 자동 연결)
 
-```bash
-flutter build apk --release
-flutter build ios --release
-```
-
-## 개발 환경 설정
-
-개발 시에는 스크립트를 실행한 후 Flutter를 실행합니다:
+`.env.local`에 `API_BASE_URL`을 설정하지 않아도 플랫폼별로 자동 선택됩니다:
 
 ```bash
 ./scripts/setup-firebase.sh
 flutter run
 ```
+
+#### 배포 빌드 (서버 주소 지정)
+
+`--dart-define=API_BASE_URL`로 API 서버 주소를 앱에 내장합니다.
+사용자는 아무 설정 없이 앱을 실행하면 해당 서버로 자동 연결됩니다:
+
+```bash
+# 로컬 네트워크 서버 (같은 Wi-Fi 내 시연 등)
+flutter build apk --release --dart-define=API_BASE_URL=http://192.168.0.10:8000
+
+# 클라우드 배포 서버
+flutter build apk --release --dart-define=API_BASE_URL=https://your-domain.com
+```
+
+#### API URL 우선순위
+
+| 순위 | 소스 | 용도 |
+|------|------|------|
+| 1 | `--dart-define=API_BASE_URL=...` | 배포 빌드 시 서버 주소 내장 |
+| 2 | `.env.local`의 `API_BASE_URL` | 개발 시 개인 설정 |
+| 3 | 플랫폼별 localhost | 개발 기본값 (Android: 10.0.2.2, 그 외: localhost) |
 
 ## CI/CD 환경에서의 사용
 
@@ -79,8 +101,6 @@ CI/CD 파이프라인에서는 다음 순서로 실행하세요:
 ## 보안 주의사항
 
 - ⚠️ `.env.local` 파일은 절대 Git에 커밋하지 마세요 (이미 .gitignore에 포함되어 있습니다)
-- 🔑 **현재 노출된 Firebase 키를 즉시 교체하세요!** - 실제 자격 증명이 이미 커밋되었습니다
-- 🛡️ CI/CD 환경에서는 시스템 환경 변수나 보안 저장소를 사용하세요
 
 ## 파일 구조
 
