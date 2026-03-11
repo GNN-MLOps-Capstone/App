@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../services/stock_api_service.dart';
+import '../services/news_api_service.dart';
 
 import 'widgets/bottom_nav_bar.dart';
 
@@ -67,6 +68,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
       return;
     }
     _loadData();
+    _loadSummary();
     _connectWebSocket();
     _startSeriesAutoRefresh();
   }
@@ -75,6 +77,30 @@ class _StockDetailPageState extends State<StockDetailPage> {
 
   // ✅ API 연동 시 수정 필요: dummy() → fromApi()로 변경
   late final vm = StockDetailViewModel.dummy(widget.stockName);
+
+  List<String> _aiSummaryLines = ['최신 뉴스를 요약하고 있습니다... '];
+
+
+  Future<void> _loadSummary() async {
+    try {
+      final data = await NewsApiService.getStockSummary(widget.stockName);
+      // 데이터가 도착하면, 줄바꿈 단위로 잘라서 변수에 쏙 넣고 화면 새로고침!
+      setState(() {
+        _aiSummaryLines = data.summary
+            .split('\n')
+            .where((line) => line.trim().isNotEmpty)
+            .map((line) {
+              return line.trim().replaceFirst(RegExp(r'^-?\s*'), '');
+            })
+            .toList();
+      });
+    } catch (e) {
+      // 에러 나면 에러 메시지 넣기
+      setState(() {
+        _aiSummaryLines = ['요약 정보를 불러오지 못했습니다. 다시 시도해주세요.'];
+      });
+    }
+  }
 
   void _onBottomTap(int index) {
     if (index == 3) return; // 현재 페이지
@@ -565,7 +591,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 12),
-                ..._buildAiSummary().map(
+                ..._aiSummaryLines.map(
                   (line) => Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Row(
