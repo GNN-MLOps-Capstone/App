@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/watchlist_models.dart';
 import '../services/watchlist_service.dart';
-import 'main_page.dart'; // BottomNavBar
+import 'widgets/bottom_nav_bar.dart';
 import 'search_page.dart';
 
 // ── 정렬 옵션 ──────────────────────────────────────────

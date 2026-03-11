@@ -971,9 +971,6 @@ class StockDetailData {
   final StockStats stats;
   final List<MonthlyNewsItem> monthlyNews;
 
-  final StockStats stats;
-  final List<MonthlyNewsItem> monthlyNews;
-
   StockDetailData(
       this.priceText,
       this.changeText,
@@ -1190,10 +1187,6 @@ class _RangeSelector extends StatelessWidget {
             fontWeight: FontWeight.w700,
             color: sel ? Colors.black : Colors.grey,
           ),
-        ),
-        child: Text(
-          text,
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: sel ? Colors.black : Colors.grey),
         ),
       ),
     );

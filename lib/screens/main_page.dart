@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import 'search_page.dart';
+import 'widgets/bottom_nav_bar.dart';
 
 class StockHomeScreen extends StatelessWidget {
   final String? userName;
