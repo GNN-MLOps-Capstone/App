@@ -128,6 +128,29 @@ class StockApiService {
       },
     );
   }
+  
+  /// AI 트렌드 종목 조회
+  static Future<List<AiTrend>> getAiTrends({int topN = 3}) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/api/stocks/trends?top_n=$topN');
+      final res = await http.get(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 10));
+
+      if (res.statusCode == 200) {
+        final list = jsonDecode(res.body) as List;
+        return list
+            .cast<Map<String, dynamic>>()
+            .map((e) => AiTrend.fromJson(e))
+            .toList();
+      }
+      throw StockApiException('Failed to load AI trends: ${res.statusCode}', res.statusCode);
+    } catch (e) {
+      if (e is StockApiException) rethrow;
+      throw StockApiException('Network error: $e', 0);
+    }
+  }
 }
 
 class StockApiException implements Exception {
@@ -289,4 +312,37 @@ class StockRealtimeConnection {
   final VoidCallback close;
 
   StockRealtimeConnection({required this.stream, required this.close});
+}
+
+/// AI 트렌드 종목 모델
+class AiTrend {
+  final int rank;
+  final String code;
+  final String name;
+  final String weather;
+  final int score;
+  final int? lastPrice;       // 추가
+  final double? changeRate;   // 추가
+
+  AiTrend({
+    required this.rank,
+    required this.code,
+    required this.name,
+    required this.weather,
+    required this.score,
+    this.lastPrice,
+    this.changeRate,
+  });
+
+  factory AiTrend.fromJson(Map<String, dynamic> json) {
+    return AiTrend(
+      rank: (json['rank'] as num).toInt(),
+      code: json['code'] as String,
+      name: json['name'] as String,
+      weather: json['weather'] as String,
+      score: (json['score'] as num).toInt(),
+      lastPrice: (json['last_price'] as num?)?.toInt(),
+      changeRate: (json['change_rate'] as num?)?.toDouble(),
+    );
+  }
 }
