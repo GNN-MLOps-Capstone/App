@@ -274,13 +274,12 @@ class _SettingPageState extends State<SettingPage> {
                         ],
                       ),
                     ),
-                    Container(
-                      width: double.infinity,
-                      color: Colors.white,
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                         children: [
                           const Text('Our Team',
                               style: TextStyle(
