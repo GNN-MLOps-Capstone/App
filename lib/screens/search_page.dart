@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'dart:convert';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../services/watchlist_service.dart';
 
@@ -475,21 +476,20 @@ class _BottomNavBarState extends State<_BottomNavBar> {
 
   @override
   Widget build(BuildContext context) {
-    final Color activeColor = const Color(0xFF22C55E);
+    final Color activeColor = const Color(0xFF0EC272);
     final Color inactiveColor = Colors.grey.shade400;
 
     return Container(
       height: 80,
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _BottomNavItem(
-            icon: Icons.home,
+            svgPath: 'assets/images/home.svg',
             label: '홈',
             isActive: selectedIndex == 0,
             activeColor: activeColor,
@@ -497,7 +497,7 @@ class _BottomNavBarState extends State<_BottomNavBar> {
             onTap: () => onTap(0),
           ),
           _BottomNavItem(
-            icon: Icons.favorite_border,
+            svgPath: 'assets/images/watchlist.svg',
             label: '관심',
             isActive: selectedIndex == 1,
             activeColor: activeColor,
@@ -505,7 +505,7 @@ class _BottomNavBarState extends State<_BottomNavBar> {
             onTap: () => onTap(1),
           ),
           _BottomNavItem(
-            icon: Icons.article_outlined,
+            svgPath: 'assets/images/news.svg',
             label: '뉴스',
             isActive: selectedIndex == 2,
             activeColor: activeColor,
@@ -513,7 +513,7 @@ class _BottomNavBarState extends State<_BottomNavBar> {
             onTap: () => onTap(2),
           ),
           _BottomNavItem(
-            icon: Icons.candlestick_chart,
+            svgPath: 'assets/images/stock.svg',
             label: '주식',
             isActive: selectedIndex == 3,
             activeColor: activeColor,
@@ -527,7 +527,7 @@ class _BottomNavBarState extends State<_BottomNavBar> {
 }
 
 class _BottomNavItem extends StatelessWidget {
-  final IconData icon;
+  final String svgPath;
   final String label;
   final bool isActive;
   final Color activeColor;
@@ -535,7 +535,7 @@ class _BottomNavItem extends StatelessWidget {
   final VoidCallback onTap;
 
   const _BottomNavItem({
-    required this.icon,
+    required this.svgPath,
     required this.label,
     required this.isActive,
     required this.activeColor,
@@ -551,13 +551,13 @@ class _BottomNavItem extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 26, color: isActive ? activeColor : inactiveColor),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              color: isActive ? activeColor : inactiveColor,
+          SvgPicture.asset(
+            svgPath,
+            width: 45,
+            height: 45,
+            colorFilter: ColorFilter.mode(
+              isActive ? activeColor : inactiveColor,
+              BlendMode.srcIn,
             ),
           ),
         ],
