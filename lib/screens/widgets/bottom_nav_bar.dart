@@ -45,7 +45,6 @@ class BottomNavBarState extends State<BottomNavBar> {
         children: [
           _BottomNavItem(
             svgPath: 'assets/images/home.svg',
-            label: '홈',
             isActive: selectedIndex == 0,
             activeColor: activeColor,
             inactiveColor: inactiveColor,
@@ -53,7 +52,6 @@ class BottomNavBarState extends State<BottomNavBar> {
           ),
           _BottomNavItem(
             svgPath: 'assets/images/watchlist.svg',
-            label: '관심',
             isActive: selectedIndex == 1,
             activeColor: activeColor,
             inactiveColor: inactiveColor,
@@ -61,7 +59,6 @@ class BottomNavBarState extends State<BottomNavBar> {
           ),
           _BottomNavItem(
             svgPath: 'assets/images/news.svg',
-            label: '뉴스',
             isActive: selectedIndex == 2,
             activeColor: activeColor,
             inactiveColor: inactiveColor,
@@ -69,7 +66,6 @@ class BottomNavBarState extends State<BottomNavBar> {
           ),
           _BottomNavItem(
             svgPath: 'assets/images/stock.svg',
-            label: '주식',
             isActive: selectedIndex == 3,
             activeColor: activeColor,
             inactiveColor: inactiveColor,
@@ -83,7 +79,6 @@ class BottomNavBarState extends State<BottomNavBar> {
 
 class _BottomNavItem extends StatelessWidget {
   final String svgPath;
-  final String label;
   final bool isActive;
   final Color activeColor;
   final Color inactiveColor;
@@ -91,7 +86,6 @@ class _BottomNavItem extends StatelessWidget {
 
   const _BottomNavItem({
     required this.svgPath,
-    required this.label,
     required this.isActive,
     required this.activeColor,
     required this.inactiveColor,
