@@ -224,6 +224,7 @@ class _SettingPageState extends State<SettingPage> {
     await showDialog(
       context: context,
       barrierDismissible: true,
+      barrierColor: Colors.white.withOpacity(0.5),
       builder: (_) {
         final maxH = MediaQuery.of(context).size.height * 0.95;
         return Dialog(
@@ -231,9 +232,13 @@ class _SettingPageState extends State<SettingPage> {
           insetPadding:
           const EdgeInsets.only(left: 18, right: 18, top: 20, bottom: 8),
           child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: maxH),
+            constraints: BoxConstraints(
+              maxHeight: maxH,
+              maxWidth: double.infinity,
+            ),
             child: Container(
               decoration: BoxDecoration(
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
@@ -257,7 +262,7 @@ class _SettingPageState extends State<SettingPage> {
                         children: [
                           Image.asset(
                             'assets/images/Capston.png',
-                            height: 75,
+                            height: 78,
                             fit: BoxFit.contain,
                             errorBuilder: (_, __, ___) =>
                             const SizedBox(height: 75),
@@ -349,6 +354,7 @@ class _SettingPageState extends State<SettingPage> {
                         ],
                       ),
                     ),
+                  ),
                   ],
                 ),
               ),
