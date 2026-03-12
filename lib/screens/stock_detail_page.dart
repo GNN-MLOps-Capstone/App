@@ -84,17 +84,22 @@ class _StockDetailPageState extends State<StockDetailPage> {
   Future<void> _loadSummary() async {
     try {
       final data = await NewsApiService.getStockSummary(widget.stockName);
+      if(!mounted) return;
       // 데이터가 도착하면, 줄바꿈 단위로 잘라서 변수에 쏙 넣고 화면 새로고침!
+      final lines = data.summary
+        .split('\n')
+        .where((line) => line.trim().isNotEmpty)
+        .map((line) {
+          return line.trim().replaceFirst(RegExp(r'^-?\s*'), '');
+        })
+        .toList();
       setState(() {
-        _aiSummaryLines = data.summary
-            .split('\n')
-            .where((line) => line.trim().isNotEmpty)
-            .map((line) {
-              return line.trim().replaceFirst(RegExp(r'^-?\s*'), '');
-            })
-            .toList();
+        _aiSummaryLines = lines.isNotEmpty
+          ? lines
+          : ['요약 정보가 없습니다.'];
       });
     } catch (e) {
+      if (!mounted) return;
       // 에러 나면 에러 메시지 넣기
       setState(() {
         _aiSummaryLines = ['요약 정보를 불러오지 못했습니다. 다시 시도해주세요.'];
