@@ -61,12 +61,10 @@ class _SettingPageState extends State<SettingPage> {
         _riskAlert = settings.riskOnly;
         _goodNewsAlert = settings.positiveOnly;
         _favoriteAlert = settings.interestOnly;
-        final start = (settings.dndStart ?? '23:00:00').length >= 5
-            ? settings.dndStart!.substring(0, 5)
-            : '23:00';
-        final finish = (settings.dndFinish ?? '07:00:00').length >= 5
-            ? settings.dndFinish!.substring(0, 5)
-            : '07:00';
+        final rawStart = settings.dndStart ?? '23:00:00';
+        final rawFinish = settings.dndFinish ?? '07:00:00';
+        final start = rawStart.length >= 5 ? rawStart.substring(0, 5) : '23:00';
+        final finish = rawFinish.length >= 5 ? rawFinish.substring(0, 5) : '07:00';
         _dndTimeRangeLabel = '$start ~ $finish';
       });
     } catch (e) {
@@ -204,7 +202,8 @@ class _SettingPageState extends State<SettingPage> {
     if (!mounted) return;
 
     if (confirmed == true) {
-      await UserApiService.deleteUser();
+      // TODO: API 연결 후 실제 초기화 API 호출로 교체
+      // await UserApiService.deleteUser();
       if (!mounted) return;
       setState(() {
         _riskAlert = false;
