@@ -151,6 +151,32 @@ class StockApiService {
       throw StockApiException('Network error: $e', 0);
     }
   }
+  
+  /// 종목 날씨 조회
+  static Future<String> getStockWeather({String? stockId, String? stockName}) async {
+    assert(stockId != null || stockName != null, 'stockId 또는 stockName 중 하나는 필수입니다.');
+    
+    try {
+      final params = <String, String>{};
+      if (stockId != null) params['stock_id'] = stockId;
+      if (stockName != null) params['stock_name'] = stockName;
+
+      final uri = Uri.parse('$_baseUrl/api/stocks/weather').replace(queryParameters: params);
+      final res = await http.get(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 10));
+
+      if (res.statusCode == 200) {
+        final json = jsonDecode(res.body) as Map<String, dynamic>;
+        return json['weather'] as String;
+      }
+      throw StockApiException('Failed to load stock weather: ${res.statusCode}', res.statusCode);
+    } catch (e) {
+      if (e is StockApiException) rethrow;
+      throw StockApiException('Network error: $e', 0);
+    }
+  }
 }
 
 class StockApiException implements Exception {

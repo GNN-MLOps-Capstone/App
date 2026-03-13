@@ -97,6 +97,7 @@ class _StockPageState extends State<StockPage> {
           rank: t.rank,
           name: t.name,
           code: t.code ?? '',
+          weather: t.weather,
           priceText: t.lastPrice != null
               ? '${t.lastPrice!.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]},')}원'
               : '-',
@@ -515,6 +516,7 @@ class _TrendItem {
   final String changeText;
   final bool isUp;
   final String code;
+  final String weather;
 
   const _TrendItem({
     required this.rank,
@@ -523,6 +525,7 @@ class _TrendItem {
     required this.changeText,
     required this.isUp,
     required this.code,
+    required this.weather,
   });
 }
 
