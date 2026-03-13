@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../services/user_api_service.dart';
+import 'widgets/bottom_nav_bar.dart';
 
 class SettingPage extends StatefulWidget {
   const SettingPage({super.key});
@@ -406,6 +407,15 @@ class _SettingPageState extends State<SettingPage> {
 
     return Scaffold(
       backgroundColor: bg,
+      bottomNavigationBar: BottomNavBar(       // ← 추가
+        initialIndex: -1,                      // 설정 페이지는 탭 선택 없음
+        onIndexChanged: (index) {
+          const routeMap = {0: '/home', 1: '/watchlist', 2: '/news', 3: '/stock'};
+          final route = routeMap[index];
+          if (route == null) return;
+          Navigator.pushNamedAndRemoveUntil(context, route, (r) => false);
+        },
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
