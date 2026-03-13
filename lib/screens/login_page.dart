@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'main_page.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class GoogleLoginPage extends StatefulWidget {
   const GoogleLoginPage({super.key});
@@ -10,25 +11,27 @@ class GoogleLoginPage extends StatefulWidget {
 }
 
 class _GoogleLoginPageState extends State<GoogleLoginPage> {
-  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email']);
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: ['email', 'profile'], // ✅ profile scope 추가 (displayName 사용 위해)
+  );
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
   final List<Map<String, String>> _pages = [
     {
-      'image': 'assets/images/login_image1.png',
+      'image': 'assets/images/login_image1.svg',
       'text': '뉴스가 보이니\n마음 놓고 투자!',
     },
     {
-      'image': 'assets/images/login_image2.png',
+      'image': 'assets/images/login_image2.svg',
       'text': '내 종목 소식\n알아서 챙겨줄게요',
     },
     {
-      'image': 'assets/images/login_image3.png',
+      'image': 'assets/images/login_image3.svg',
       'text': '호재? 악재?\n한눈에 파악!',
     },
     {
-      'image': 'assets/images/login_image4.png',
+      'image': 'assets/images/login_image4.svg',
       'text': '지금 관심 종목\n선택하고 시작하기',
     },
   ];
@@ -47,7 +50,9 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => StockHomeScreen(userName: account.displayName),
+          builder: (_) => StockHomeScreen(
+            userName: account.displayName ?? '사용자', // ✅ null 안전 처리
+          ),
         ),
       );
     } catch (e) {
@@ -86,26 +91,13 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
                       return Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
+                          // ✅ 잘못된 return Container 블록 제거, SvgPicture만 남김
                           SizedBox(
                             height: 200,
-                            child: Image.asset(
+                            child: SvgPicture.asset(
                               _pages[index]['image']!,
                               fit: BoxFit.contain,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  width: 200,
-                                  height: 200,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFE0E0E0),
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: const Icon(
-                                    Icons.image_outlined,
-                                    size: 60,
-                                    color: Color(0xFFBDBDBD),
-                                  ),
-                                );
-                              },
+                              height: 200,
                             ),
                           ),
                           const SizedBox(height: 40),
@@ -124,7 +116,7 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
                       );
                     },
                   ),
-                  // 인디케이터 - 텍스트 바로 아래 고정
+                  // 인디케이터
                   Positioned(
                     bottom: 110,
                     left: 0,
@@ -152,9 +144,7 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
               ),
             ),
 
-            const SizedBox(height: 0),
-
-            // 버튼
+            // 구글 로그인 버튼
             OutlinedButton.icon(
               onPressed: _handleSignIn,
               icon: Image.asset(
@@ -177,7 +167,8 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
               style: OutlinedButton.styleFrom(
                 backgroundColor: Colors.white,
                 side: const BorderSide(color: Color(0xFF747775), width: 1),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                padding:
+                const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
                 ),
