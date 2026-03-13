@@ -54,7 +54,7 @@ class StockApiService {
       final res = await http.get(
         uri,
         headers: {'Content-Type': 'application/json'},
-      ).timeout(const Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 60));
 
       if (res.statusCode == 200) {
         return StockSeries.fromJson(jsonDecode(res.body));

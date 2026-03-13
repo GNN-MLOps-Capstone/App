@@ -303,7 +303,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
           !dt.isAfter(dayEnd);
     }).toList();
 
-    final src = filtered.isNotEmpty ? filtered : sorted;
+    final src = filtered.length >= 2 ? filtered : sorted;
     return _PreparedChartData(
       points:     src.map((p) => p.c.toDouble()).toList(),
       pointTimes: src.map((p) => DateTime.fromMillisecondsSinceEpoch(p.t)).toList(),
@@ -744,8 +744,8 @@ class _SmoothChartState extends State<_SmoothChart> {
       onHorizontalDragCancel: ()  => _clearWithDelay(),
       child: Stack(children: [
         Positioned.fill(child: CustomPaint(painter: _CurvePainter(pts, _idx))),
-        Positioned.fill(child: _greenTag(sz, maxI, widget.maxLabel, above: true)),
-        Positioned.fill(child: _greenTag(sz, minI, widget.minLabel, above: false)),
+        _greenTag(sz, maxI, widget.maxLabel, above: true),
+        _greenTag(sz, minI, widget.minLabel, above: false),
         Positioned(left: _pad.left, right: _pad.right, bottom: 0,
             child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: widget.xLabels.map((t) =>
