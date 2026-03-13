@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'main_page.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../services/user_api_service.dart';
 
 class GoogleLoginPage extends StatefulWidget {
   const GoogleLoginPage({super.key});
@@ -47,11 +48,22 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
 
       if (!mounted) return;
 
+      final loginRequest = UserLoginRequest(
+        googleId: account.id,
+        email: account.email,
+        nickname: account.displayName ?? '사용자',
+        imgUrl: account.photoUrl,
+      );
+
+      final authResponse = await UserApiService.login(loginRequest);
+
+      if (!mounted) return;
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (_) => StockHomeScreen(
-            userName: account.displayName ?? '사용자', // ✅ null 안전 처리
+            userName: authResponse.user.nickname, // ✅ 서버 응답값 사용
           ),
         ),
       );
