@@ -8,6 +8,7 @@ import 'widgets/bottom_nav_bar.dart';
 import 'stock_page.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'dart:convert';
+import '../services/news_api_service.dart';
 
 import '../services/stock_api_service.dart';
 
@@ -19,12 +20,12 @@ Widget _svgIcon(String name, {double size = 28, IconData fallback = Icons.image_
   );
 }
 
-enum ChartRange { realtime, day, week, month }
+enum ChartRange { day, week, month }
 enum Sentiment  { veryGood, good, neutral, bad, veryBad }
 
 const _kGreen = Color(0xFF45C99C);
-const _kRed   = Color(0xFFE63E3E); // ✅ 수정 2: 빨강 색상
-const _kBlue  = Color(0xFF1E3CD6); // ✅ 수정 2: 파랑 색상
+const _kRed   = Color(0xFFE63E3E);
+const _kBlue  = Color(0xFF1E3CD6);
 const _kBg    = Color(0xFFF2F5F6);
 const _kTabBg = Color(0xFFE9ECF2);
 const _kGrid  = Color(0xFFD3D3D3);
@@ -45,20 +46,6 @@ Widget _sentimentIcon(Sentiment s, {double size = 52}) {
   );
 }
 
-List<String> _realtimeXLabels() {
-  final now    = TimeOfDay.now();
-  final labels = <String>[];
-  for (int h = 9; h <= 15; h += 2) {
-    if (h < now.hour || (h == now.hour && now.minute > 0)) {
-      labels.add('${h.toString().padLeft(2, '0')}:00');
-    } else if (h == now.hour) {
-      labels.add('${h.toString().padLeft(2, '0')}:00');
-      break;
-    }
-  }
-  return labels.isEmpty ? ['09:00'] : labels;
-}
-
 // ════════════════════════════════════════════════
 //  페이지
 // ════════════════════════════════════════════════
@@ -72,7 +59,32 @@ class StockDetailPage extends StatefulWidget {
 }
 
 class _StockDetailPageState extends State<StockDetailPage> {
-  ChartRange _range = ChartRange.realtime;
+  List<String> _aiSummaryLines = ['최신 뉴스를 요약하고 있습니다...'];
+  Future<void> _loadSummary() async {
+    try {
+      final data = await NewsApiService.getStockSummary(widget.stockName);
+      if (!mounted) return;
+
+      final lines = data.summary
+          .split('\n')
+          .where((line) => line.trim().isNotEmpty)
+          .map((line) => line.trim().replaceFirst(RegExp(r'^-?\s*'), ''))
+          .toList();
+
+      setState(() {
+        _aiSummaryLines = lines.isNotEmpty
+            ? lines
+            : ['요약 정보가 없습니다.'];
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _aiSummaryLines = ['요약 정보를 불러오지 못했습니다. 다시 시도해주세요.'];
+      });
+    }
+  }
+
+  ChartRange _range = ChartRange.day;
   static final RegExp _stockCodePattern = RegExp(r'^[A-Za-z0-9]{6}$');
 
   bool _newsExpanded = false;
@@ -82,8 +94,6 @@ class _StockDetailPageState extends State<StockDetailPage> {
 
   StockOverview?                             _overview;
   final Map<ChartRange, StockSeries>         _seriesCache    = {};
-  StockRealtimeConnection?                   _wsConnection;
-  StockRealtimePrice?                        _realtimePrice;
   Timer?                                     _seriesRefreshTimer;
   final Map<ChartRange, Future<StockSeries>> _seriesInFlight = {};
   int _rangeChangeSeq = 0;
@@ -109,14 +119,13 @@ class _StockDetailPageState extends State<StockDetailPage> {
       return;
     }
     _loadData();
-    _connectWebSocket();
+    _loadSummary();
     _startSeriesAutoRefresh();
   }
 
   @override
   void dispose() {
     _stopSeriesAutoRefresh();
-    _wsConnection?.close();
     super.dispose();
   }
 
@@ -197,18 +206,9 @@ class _StockDetailPageState extends State<StockDetailPage> {
     unawaited(_refreshRange(newRange));
   }
 
-  void _connectWebSocket() {
-    if (!_isStockCodeValid) return;
-    _wsConnection = StockApiService.connectRealtime(widget.stockCode);
-    _wsConnection!.stream.listen(
-          (price) { if (price.price <= 0) return; if (mounted) setState(() => _realtimePrice = price); },
-      onError: (e) => debugPrint('[상세] WS 에러: $e'),
-    );
-  }
-
   void _startSeriesAutoRefresh() {
     _seriesRefreshTimer?.cancel();
-    final interval = (_range == ChartRange.realtime || _range == ChartRange.day)
+    final interval = _range == ChartRange.day
         ? _daySeriesRefreshInterval : _otherSeriesRefreshInterval;
     _seriesRefreshTimer = Timer.periodic(interval, (_) => unawaited(_refreshRange(_range)));
   }
@@ -250,22 +250,21 @@ class _StockDetailPageState extends State<StockDetailPage> {
 
   String _rangeToString(ChartRange r) {
     switch (r) {
-      case ChartRange.realtime: return '1d';
-      case ChartRange.day:      return '1d';
-      case ChartRange.week:     return '1w';
-      case ChartRange.month:    return '1m';
+      case ChartRange.day:   return '1d';
+      case ChartRange.week:  return '1w';
+      case ChartRange.month: return '1m';
     }
   }
 
   bool   get _isStockCodeValid  => _stockCodePattern.hasMatch(widget.stockCode);
-  int    get _currentPrice      => _realtimePrice?.price      ?? _overview?.lastPrice  ?? 0;
-  double get _currentChange     => _realtimePrice?.change     ?? _overview?.change     ?? 0;
-  double get _currentChangeRate => _realtimePrice?.changeRate ?? _overview?.changeRate ?? 0;
+  int    get _currentPrice      => _overview?.lastPrice  ?? 0;
+  double get _currentChange     => _overview?.change     ?? 0;
+  double get _currentChangeRate => _overview?.changeRate ?? 0;
   bool   get _isUp   => _currentChange > 0;
   bool   get _isFlat => _currentChange == 0;
-  int    get _currentOpen  => _realtimePrice?.open  ?? _overview?.open  ?? 0;
-  int    get _currentHigh  => _realtimePrice?.high  ?? _overview?.high  ?? 0;
-  int    get _currentLow   => _realtimePrice?.low   ?? _overview?.low   ?? 0;
+  int    get _currentOpen  => _overview?.open  ?? 0;
+  int    get _currentHigh  => _overview?.high  ?? 0;
+  int    get _currentLow   => _overview?.low   ?? 0;
 
   Sentiment get _sentiment {
     final r = _currentChangeRate;
@@ -277,7 +276,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
   }
 
   _PreparedChartData _prepareChartData(StockSeries series) {
-    if (_range == ChartRange.realtime || _range == ChartRange.day) {
+    if (_range == ChartRange.day) {
       return _buildDayTimelineChart(series);
     }
     return _PreparedChartData(
@@ -303,7 +302,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
           !dt.isAfter(dayEnd);
     }).toList();
 
-    final src = filtered.length >= 2 ? filtered : sorted;
+    final src = filtered.isNotEmpty ? filtered : sorted;
     return _PreparedChartData(
       points:     src.map((p) => p.c.toDouble()).toList(),
       pointTimes: src.map((p) => DateTime.fromMillisecondsSinceEpoch(p.t)).toList(),
@@ -316,6 +315,29 @@ class _StockDetailPageState extends State<StockDetailPage> {
 
   List<String> _xLabelsFor(ChartRange r, List<DateTime?> times) {
     if (times.isEmpty) return [];
+
+    if (r == ChartRange.week) {
+      final labels = <String>[];
+      var date = DateTime.now();
+      while (labels.length < 5) {
+        if (date.weekday != DateTime.saturday && date.weekday != DateTime.sunday) {
+          labels.insert(0, '${date.month}/${date.day}');
+        }
+        date = date.subtract(const Duration(days: 1));
+      }
+      return labels;
+    }
+
+    if (r == ChartRange.month) {
+      final labels = <String>[];
+      final now = DateTime.now();
+      for (int i = 4; i >= 0; i--) {
+        final date = now.subtract(Duration(days: i * 7));
+        labels.add('${date.month}/${date.day}');
+      }
+      return labels;
+    }
+
     final n = times.length;
     final count = n < 4 ? n : 4;
     if (count <= 1) {
@@ -332,7 +354,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
   }
 
   String _fmtAxisTime(ChartRange r, DateTime dt) {
-    if (r == ChartRange.realtime || r == ChartRange.day) {
+    if (r == ChartRange.day) {
       return '${dt.hour.toString().padLeft(2,"0")}:${dt.minute.toString().padLeft(2,"0")}';
     }
     return '${dt.month}/${dt.day}';
@@ -366,9 +388,16 @@ class _StockDetailPageState extends State<StockDetailPage> {
               constraints: const BoxConstraints(),
               icon: const Icon(Icons.settings, color: Colors.black),
               onPressed: () {
-                if (!_isStockCodeValid) { Navigator.maybePop(context); return; }
-                _seriesCache.clear(); _seriesInFlight.clear(); _rangeChangeSeq++;
-                _loadData(); _startSeriesAutoRefresh();
+                if (!_isStockCodeValid) {
+                  Navigator.maybePop(context);
+                  return;
+                }
+                _seriesCache.clear();
+                _seriesInFlight.clear();
+                _rangeChangeSeq++;
+                _loadData();
+                _loadSummary();
+                _startSeriesAutoRefresh();
               },
             ),
           ),
@@ -422,7 +451,6 @@ class _StockDetailPageState extends State<StockDetailPage> {
     final maxLabel = finite.length >= 2 ? '최고 ${_wonFormat.format(finite.reduce(max).round())}원' : '';
     final minLabel = finite.length >= 2 ? '최저 ${_wonFormat.format(finite.reduce(min).round())}원' : '';
 
-    // ✅ 수정 1,2,3: 주식명/가격/변동 글씨 크기 및 색상, SVG 화살표 적용
     final changeColor = _isFlat ? Colors.grey : (_isUp ? _kRed : _kBlue);
     final changeAmountText = '${_isUp ? "+" : "-"}${_wonFormat.format(_currentChange.abs().round())}원';
     final changeRateText   = '${_isUp ? "+" : ""}${_currentChangeRate.toStringAsFixed(1)}%  ($changeAmountText)';
@@ -434,20 +462,16 @@ class _StockDetailPageState extends State<StockDetailPage> {
         const SizedBox(height: 12),
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            // ✅ 수정 1: 주식명 fontSize 25
             Text(widget.stockName,
                 style: const TextStyle(fontSize: 25, fontWeight: FontWeight.w600)),
             const SizedBox(height: 2),
-            // ✅ 수정 1: 가격 fontSize 35
             Text('${_wonFormat.format(_currentPrice)}원',
                 style: const TextStyle(fontSize: 35, letterSpacing: -0.5)),
             const SizedBox(height: 4),
-            // ✅ 수정 1,2,3: 변동 fontSize 15, 색상 변경, SVG 화살표
             if (_isFlat)
               Text('보합', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: Colors.grey))
             else
               Row(children: [
-                // ✅ 수정 3: 상승/하락 SVG 화살표
                 SvgPicture.asset(
                   _isUp
                       ? 'assets/images/up_arrow.svg'
@@ -493,10 +517,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
           low:  _wonFormat.format(_currentLow),
         ),
         const SizedBox(height: 12),
-        _AiSummaryCard(lines: const [
-          'HBM3E 공급 계약 체결로 인해 AI 반도체 시장 내 기대감이 높아지고 있으며, 특히 엔비디아와의 협력이 강화되면서 2026년 상반기 대규모 납품이 예정되어 있다.',
-          '이에 따라 단기적인 주가 조정 가능성은 존재하지만, 중장기적으로는 견고한 펀더멘털을 바탕으로 안정적인 성장 흐름이 이어질 것으로 전망된다.',
-        ]),
+        _AiSummaryCard(lines: _aiSummaryLines),
         const SizedBox(height: 12),
         _BreakingNewsCard(
           items: const [
@@ -627,8 +648,9 @@ class _RangeTab extends StatelessWidget {
   final ChartRange range; final ValueChanged<ChartRange> onChanged;
   const _RangeTab({required this.range, required this.onChanged});
   static const _items = [
-    (ChartRange.realtime,'실시간'),(ChartRange.day,'1일'),
-    (ChartRange.week,'1주'),(ChartRange.month,'1개월'),
+    (ChartRange.day,'1일'),
+    (ChartRange.week,'1주'),
+    (ChartRange.month,'1개월'),
   ];
   @override
   Widget build(BuildContext context) => Container(
@@ -744,8 +766,8 @@ class _SmoothChartState extends State<_SmoothChart> {
       onHorizontalDragCancel: ()  => _clearWithDelay(),
       child: Stack(children: [
         Positioned.fill(child: CustomPaint(painter: _CurvePainter(pts, _idx))),
-        _greenTag(sz, maxI, widget.maxLabel, above: true),
-        _greenTag(sz, minI, widget.minLabel, above: false),
+        Positioned.fill(child: _greenTag(sz, maxI, widget.maxLabel, above: true)),
+        Positioned.fill(child: _greenTag(sz, minI, widget.minLabel, above: false)),
         Positioned(left: _pad.left, right: _pad.right, bottom: 0,
             child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: widget.xLabels.map((t) =>
@@ -909,7 +931,9 @@ class _AiSummaryCardState extends State<_AiSummaryCard> {
   bool _expanded = false;
   @override
   Widget build(BuildContext context) {
-    final text = _expanded ? widget.lines.join(' ') : widget.lines[0];
+    final text = widget.lines.isEmpty
+        ? '요약 정보가 없습니다.'
+        : (_expanded ? widget.lines.join(' ') : widget.lines.first);
     return Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
       GestureDetector(onTap: () => setState(() => _expanded = !_expanded),
           child: Text(_expanded ? '접기' : '더보기', style: const TextStyle(fontSize: 12, color: Colors.grey))),
@@ -1072,4 +1096,3 @@ class _RelatedSection extends StatelessWidget {
     ))).toList()),
   ]);
 }
-
