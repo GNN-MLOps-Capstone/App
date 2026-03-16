@@ -146,10 +146,14 @@ class _StockSearchPageState extends State<StockSearchPage> {
                 Expanded(
                   child: ListView.separated(
                     itemCount: _filtered.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    separatorBuilder: (context, index) => const SizedBox(height: 12),
                     itemBuilder: (context, i) {
                       final s = _filtered[i];
-                      return SearchResultCard(stock: s, onTap: () => _onTapStock(s));
+                      return SearchResultCard(
+                        key: ValueKey(s.code), // ✅ 종목코드 기준 stable key
+                        stock: s,
+                        onTap: () => _onTapStock(s),
+                      );
                     },
                   ),
                 ),
@@ -200,12 +204,18 @@ class _SearchResultCardState extends State<SearchResultCard> {
 
   Future<void> _toggleWatchlist() async {
     try {
+      bool success;
       if (_isWatchlisted) {
-        await _watchlistService.deleteStock(widget.stock.code);
+        success = await _watchlistService.deleteStock(widget.stock.code);  // ✅
       } else {
-        await _watchlistService.addStock(widget.stock.code, name: widget.stock.name);
+        success = await _watchlistService.addStock(widget.stock.code, name: widget.stock.name);  // ✅
       }
-      setState(() => _isWatchlisted = !_isWatchlisted);
+      if (!mounted) return;
+      if (success) {
+        setState(() => _isWatchlisted = !_isWatchlisted);
+      } else {
+        debugPrint('관심종목 처리 실패: 서버 응답 false');
+      }
     } catch (e) {
       debugPrint('관심종목 처리 실패: $e');
     }
@@ -263,7 +273,7 @@ class _SearchResultCardState extends State<SearchResultCard> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 6))],
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 6))],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

@@ -89,6 +89,12 @@ class _StockPageState extends State<StockPage> {
   }
 
   void _openSearch() {
+    if (_loading) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('종목 데이터를 불러오는 중입니다. 잠시 후 다시 시도해주세요.')),
+      );
+      return;
+    }
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -279,12 +285,18 @@ class _TrendCardState extends State<_TrendCard> {
 
   Future<void> _toggleWatchlist() async {
     try {
+      bool success;
       if (_isWatchlisted) {
-        await _watchlistService.deleteStock(widget.item.code);
+        success = await _watchlistService.deleteStock(widget.item.code);
       } else {
-        await _watchlistService.addStock(widget.item.code, name: widget.item.name);
+        success = await _watchlistService.addStock(widget.item.code, name: widget.item.name);
       }
-      setState(() => _isWatchlisted = !_isWatchlisted);
+      if (!mounted) return;
+      if (success) {
+        setState(() => _isWatchlisted = !_isWatchlisted);
+      } else {
+        debugPrint('관심종목 처리 실패: 서버 응답 false');
+      }
     } catch (e) {
       debugPrint('관심종목 처리 실패: $e');
     }
@@ -409,6 +421,11 @@ class StockLogo extends StatelessWidget {
           width: 36, height: 36,
           fit: BoxFit.cover,
           placeholderBuilder: (_) => Container(
+            width: 36, height: 36,
+            decoration: const BoxDecoration(color: Color(0xFFD1D5DB), shape: BoxShape.circle),
+          ),
+          // ✅ 파일 없을 때 fallback
+          errorBuilder: (_, __, ___) => Container(
             width: 36, height: 36,
             decoration: const BoxDecoration(color: Color(0xFFD1D5DB), shape: BoxShape.circle),
           ),
