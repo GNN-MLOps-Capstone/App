@@ -424,7 +424,6 @@ class StockLogo extends StatelessWidget {
             width: 36, height: 36,
             decoration: const BoxDecoration(color: Color(0xFFD1D5DB), shape: BoxShape.circle),
           ),
-          // ✅ 파일 없을 때 fallback
           errorBuilder: (_, __, ___) => Container(
             width: 36, height: 36,
             decoration: const BoxDecoration(color: Color(0xFFD1D5DB), shape: BoxShape.circle),
