@@ -148,7 +148,7 @@ class _AlarmPageState extends State<AlarmPage> {
   AlarmTag _tagBySentiment(double sentimentScore) {
     if (sentimentScore <= 35) return AlarmTag.highRisk;
     if (sentimentScore <= 55) return AlarmTag.risk;
-    return AlarmTag.risk;
+    return AlarmTag.keyword;
   }
 
   Future<List<String>> _fetchFavoriteStocks() async {
@@ -255,8 +255,8 @@ class _AlarmPageState extends State<AlarmPage> {
   @override
   void initState() {
     super.initState();
-    //_initDummyItems(); // 더미데이터 사용 시 이걸로 교체
-    _initFromApi(); // API 연결 시 이걸로 교체
+    _initDummyItems(); // 더미데이터 사용 시 이걸로 교체
+    //_initFromApi(); // API 연결 시 이걸로 교체
 
     _ticker = Timer.periodic(const Duration(minutes: 1), (_) {
       if (!mounted) return;
@@ -298,20 +298,30 @@ class _AlarmPageState extends State<AlarmPage> {
   }
 
   // ===== 더미 모드 사용 시 =====
-  /*
+  // /*
   Future<void> _deleteItemWithApi(int id) async {
     _deleteItem(id); // 더미: 바로 로컬에서 삭제
   }
-   */
+   // */
 
 // ===== API 연결 시 아래 주석 해제 =====
+  /*
 Future<void> _deleteItemWithApi(int id) async {
-  final ok = await NotificationApiService.deleteNotification(id);
-  if (ok) _deleteItem(id);
+  try {
+    final ok = await NotificationApiService.deleteNotification(id);
+    if (ok) {
+      _deleteItem(id);
+    } else {
+      debugPrint('Delete failed: server returned false');
+    }
+  } catch (e) {
+    debugPrint('Delete error: $e');
+  }
 }
+  */
 
 // ===== 더미 모드 사용 시 =====
-  /*
+  // /*
   Future<void> _toggleStarWithApi(int id) async {
     setState(() {
       final idx = _items.indexWhere((e) => e.id == id);
@@ -320,9 +330,10 @@ Future<void> _deleteItemWithApi(int id) async {
       }
     });
   }
-  */
+  // */
 
 // ===== API 연결 시 아래 주석 해제 =====
+  /*
 Future<void> _toggleStarWithApi(int id) async {
   try {
     final newValue = await NotificationApiService.toggleImportant(id);
@@ -333,6 +344,7 @@ Future<void> _toggleStarWithApi(int id) async {
     });
   } catch (_) {}
 }
+*/
 
   int get _totalCount => _items.length;
   int get _starCount => _items.where((e) => e.isStarred).length;
@@ -341,15 +353,16 @@ Future<void> _toggleStarWithApi(int id) async {
       _items.where((e) => e.tag == AlarmTag.highRisk || e.tag == AlarmTag.risk).length;
 
   // ===== 더미 모드 사용 시 =====
-  /*
+  // /*
   void _markAllRead() {
     setState(() {
       _items = _items.map((it) => it.copyWith(isRead: true)).toList();
     });
   }
-   */
+  // */
 
 // ===== API 연결 시 아래 주석 해제 =====
+  /*
   void _markAllRead() async {
     try {
       await NotificationApiService.markAsRead(id: null);
@@ -358,7 +371,7 @@ Future<void> _toggleStarWithApi(int id) async {
         _items = _items.map((it) => it.copyWith(isRead: true)).toList();
       });
     } catch (_) {}
-  }
+  } */
 
   // ✅ 1번 수정: 상세 페이지 다녀온 후 _items 리스트에서 id로 찾아 isRead 갱신
   Future<void> _openDetailAndMarkRead(AlarmItem item) async {
@@ -373,13 +386,14 @@ Future<void> _toggleStarWithApi(int id) async {
     if (idx < 0 || _items[idx].isRead) return;
 
     // ===== 더미 모드 사용 시 =====
-    /*
+    // /*
     setState(() {
       _items[idx] = _items[idx].copyWith(isRead: true);
     });
-     */
+     // */
 
     // ===== API 연결 시 아래 주석 해제 =====
+    /*
     try {
       await NotificationApiService.markAsRead(id: item.id);
       if (!mounted) return;
@@ -388,7 +402,7 @@ Future<void> _toggleStarWithApi(int id) async {
       });
     } catch (e) {
       debugPrint('Failed to mark as read: $e');
-    }
+    }*/
   }
 
 
