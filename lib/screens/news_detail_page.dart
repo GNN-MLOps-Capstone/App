@@ -155,7 +155,9 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
                   // 3. 날짜
                   if (item.pubDate != null)
                     Text(
-                      item.pubDate!.replaceAll('T', ' ').substring(0, 16),
+                      item.pubDate!.length >= 16
+                          ? item.pubDate!.replaceAll('T', ' ').substring(0, 16)
+                          : item.pubDate!.replaceAll('T', ' '),
                       style: const TextStyle(fontSize: 12, color: Color(0xFF606060)),
                     ),
                   const SizedBox(height: 14),

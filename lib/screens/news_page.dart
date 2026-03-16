@@ -222,8 +222,10 @@ class _NewsScreenState extends State<NewsScreen> {
     if (_loadingMore || !_hasMore) return;
     setState(() => _loadingMore = true);
 
-    final double scrollDepth = _scrollController.position.pixels /
-        _scrollController.position.maxScrollExtent * 100;
+    final maxExtent = _scrollController.position.maxScrollExtent;
+    final double scrollDepth = maxExtent > 0
+        ? (_scrollController.position.pixels / maxExtent * 100)
+        : 100.0;
     _page++;
     final newRequestId = _EventLogger.newId();
 
