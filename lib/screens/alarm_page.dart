@@ -255,8 +255,8 @@ class _AlarmPageState extends State<AlarmPage> {
   @override
   void initState() {
     super.initState();
-    _initDummyItems(); // 더미데이터 사용 시 이걸로 교체
-    //_initFromApi(); // API 연결 시 이걸로 교체
+    //_initDummyItems(); // 더미데이터 사용 시 이걸로 교체
+    _initFromApi(); // API 연결 시 이걸로 교체
 
     _ticker = Timer.periodic(const Duration(minutes: 1), (_) {
       if (!mounted) return;
@@ -298,30 +298,37 @@ class _AlarmPageState extends State<AlarmPage> {
   }
 
   // ===== 더미 모드 사용 시 =====
-  // /*
+  /*
   Future<void> _deleteItemWithApi(int id) async {
     _deleteItem(id); // 더미: 바로 로컬에서 삭제
   }
-   // */
+   */
 
 // ===== API 연결 시 아래 주석 해제 =====
-  /*
+  // /*
 Future<void> _deleteItemWithApi(int id) async {
   try {
     final ok = await NotificationApiService.deleteNotification(id);
+    if (!mounted) return;
     if (ok) {
       _deleteItem(id);
     } else {
-      debugPrint('Delete failed: server returned false');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('알림 삭제에 실패했습니다.')),
+      );
     }
   } catch (e) {
-    debugPrint('Delete error: $e');
+    if (!mounted) return;
+    debugPrint('deleteNotification failed: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('알림 삭제 중 오류가 발생했습니다.')),
+    );
   }
 }
-  */
+  // */
 
 // ===== 더미 모드 사용 시 =====
-  // /*
+  /*
   Future<void> _toggleStarWithApi(int id) async {
     setState(() {
       final idx = _items.indexWhere((e) => e.id == id);
@@ -330,10 +337,10 @@ Future<void> _deleteItemWithApi(int id) async {
       }
     });
   }
-  // */
+  */
 
 // ===== API 연결 시 아래 주석 해제 =====
-  /*
+  // /*
 Future<void> _toggleStarWithApi(int id) async {
   try {
     final newValue = await NotificationApiService.toggleImportant(id);
@@ -342,9 +349,15 @@ Future<void> _toggleStarWithApi(int id) async {
       final idx = _items.indexWhere((e) => e.id == id);
       if (idx >= 0) _items[idx].isStarred = newValue;
     });
-  } catch (_) {}
+  } catch (e) {
+    if (!mounted) return;
+    debugPrint('toggleImportant failed: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('중요 표시 변경에 실패했습니다.')),
+    );
+  }
 }
-*/
+// */
 
   int get _totalCount => _items.length;
   int get _starCount => _items.where((e) => e.isStarred).length;
@@ -353,16 +366,16 @@ Future<void> _toggleStarWithApi(int id) async {
       _items.where((e) => e.tag == AlarmTag.highRisk || e.tag == AlarmTag.risk).length;
 
   // ===== 더미 모드 사용 시 =====
-  // /*
+  /*
   void _markAllRead() {
     setState(() {
       _items = _items.map((it) => it.copyWith(isRead: true)).toList();
     });
   }
-  // */
+  */
 
 // ===== API 연결 시 아래 주석 해제 =====
-  /*
+  // /*
   void _markAllRead() async {
     try {
       await NotificationApiService.markAsRead(id: null);
@@ -370,8 +383,14 @@ Future<void> _toggleStarWithApi(int id) async {
       setState(() {
         _items = _items.map((it) => it.copyWith(isRead: true)).toList();
       });
-    } catch (_) {}
-  } */
+    } catch (e) {
+      if (!mounted) return;
+      debugPrint('markAsRead(all) failed: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('모두 읽음 처리에 실패했습니다.')),
+      );
+    }
+  } // */
 
   // ✅ 1번 수정: 상세 페이지 다녀온 후 _items 리스트에서 id로 찾아 isRead 갱신
   Future<void> _openDetailAndMarkRead(AlarmItem item) async {
@@ -386,14 +405,14 @@ Future<void> _toggleStarWithApi(int id) async {
     if (idx < 0 || _items[idx].isRead) return;
 
     // ===== 더미 모드 사용 시 =====
-    // /*
+    /*
     setState(() {
       _items[idx] = _items[idx].copyWith(isRead: true);
     });
-     // */
+     */
 
     // ===== API 연결 시 아래 주석 해제 =====
-    /*
+    // /*
     try {
       await NotificationApiService.markAsRead(id: item.id);
       if (!mounted) return;
@@ -402,7 +421,7 @@ Future<void> _toggleStarWithApi(int id) async {
       });
     } catch (e) {
       debugPrint('Failed to mark as read: $e');
-    }*/
+    } // */
   }
 
 
