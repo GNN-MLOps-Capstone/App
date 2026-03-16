@@ -203,22 +203,11 @@ class _SearchResultCardState extends State<SearchResultCard> {
   }
 
   Future<void> _toggleWatchlist() async {
-    try {
-      bool success;
-      if (_isWatchlisted) {
-        success = await _watchlistService.deleteStock(widget.stock.code);
-      } else {
-        success = await _watchlistService.addStock(widget.stock.code, name: widget.stock.name);
-      }
-      if (!mounted) return;
-      if (success) {
-        setState(() => _isWatchlisted = !_isWatchlisted);
-      } else {
-        debugPrint('관심종목 처리 실패: 서버 응답 false');
-      }
-    } catch (e) {
-      debugPrint('관심종목 처리 실패: $e');
-    }
+    final ok = _isWatchlisted
+        ? await _watchlistService.deleteStock(widget.stock.code)
+        : await _watchlistService.addStock(widget.stock.code, name: widget.stock.name);
+    if (!mounted || !ok) return;
+    setState(() => _isWatchlisted = !_isWatchlisted);
   }
 
   Future<void> _loadSummary() async {
