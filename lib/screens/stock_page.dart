@@ -2,9 +2,13 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter_svg/flutter_svg.dart';
 
-import 'stock_detail_page.dart'; // ✅ 추가
+import 'stock_detail_page.dart';
+import 'stock_search_page.dart'; // ✅ 검색 페이지 import (새 파일)
 import 'widgets/bottom_nav_bar.dart';
+import '../services/watchlist_service.dart';
+import '../services/news_api_service.dart';
 
 class StockItem {
   final String name;
@@ -26,13 +30,12 @@ class _StockPageState extends State<StockPage> {
   static final RegExp _shortCodePattern = RegExp(r'^[0-9A-Z]{6}$');
   static final RegExp _isuCdPattern = RegExp(r'^KR[0-9A-Z]{10}$');
 
-  // (1번 화면) Top5는 지금은 더미
   final List<_TrendItem> _top5 = const [
-    _TrendItem(rank: 1, name: '삼성전자', priceText: '72,500원', changeText: '-1.2%', isUp: false),
-    _TrendItem(rank: 2, name: 'SK하이닉스', priceText: '186,000원', changeText: '+2.3%', isUp: true),
-    _TrendItem(rank: 3, name: 'SK하이닉스', priceText: '186,000원', changeText: '+2.3%', isUp: true),
-    _TrendItem(rank: 4, name: 'SK하이닉스', priceText: '186,000원', changeText: '+2.3%', isUp: true),
-    _TrendItem(rank: 5, name: 'SK하이닉스', priceText: '186,000원', changeText: '+2.3%', isUp: true),
+    _TrendItem(rank: 1, name: '삼성전자', code: '005930', priceText: '72,500원', changeText: '-1.2%', isUp: false, sentiment: '하락'),
+    _TrendItem(rank: 2, name: 'SK하이닉스', code: '000660', priceText: '186,000원', changeText: '+2.3%', isUp: true, sentiment: '상승'),
+    _TrendItem(rank: 3, name: 'SK하이닉스', code: '000660', priceText: '186,000원', changeText: '+2.3%', isUp: true, sentiment: '급등'),
+    _TrendItem(rank: 4, name: 'SK하이닉스', code: '000660', priceText: '186,000원', changeText: '+2.3%', isUp: true, sentiment: '보합'),
+    _TrendItem(rank: 5, name: 'SK하이닉스', code: '000660', priceText: '186,000원', changeText: '+2.3%', isUp: true, sentiment: '상승'),
   ];
 
   @override
@@ -43,12 +46,10 @@ class _StockPageState extends State<StockPage> {
 
   Future<void> _loadNameCsv() async {
     setState(() => _loading = true);
-
     try {
       final raw = await rootBundle.loadString('lib/screens/name.csv');
       final normalizedRaw = raw.replaceFirst('\uFEFF', '');
       final lines = const LineSplitter().convert(normalizedRaw);
-
       final parsed = <StockItem>[];
       int invalidCount = 0;
 
@@ -56,28 +57,17 @@ class _StockPageState extends State<StockPage> {
         final line = lines[i];
         final t = line.trim();
         if (t.isEmpty) continue;
-
-        // 헤더 스킵 (Name,Market,ISU_CD[,SHORT_CODE])
         final lower = t.toLowerCase();
         if (i == 0 && lower.contains('name') && lower.contains('isu_cd')) continue;
-
         final cols = t.split(',');
-        if (cols.length < 3) {
-          invalidCount++;
-          continue;
-        }
-
+        if (cols.length < 3) { invalidCount++; continue; }
         final name = cols[0].trim();
         final isuCd = cols[2].trim();
         final explicitCode = cols.length >= 4 ? cols[3].trim().toUpperCase() : '';
         final code = _shortCodePattern.hasMatch(explicitCode)
             ? explicitCode
             : _toShortCode(isuCd);
-
-        if (name.isEmpty || code == null) {
-          invalidCount++;
-          continue;
-        }
+        if (name.isEmpty || code == null) { invalidCount++; continue; }
         parsed.add(StockItem(name: name, code: code));
       }
 
@@ -87,7 +77,6 @@ class _StockPageState extends State<StockPage> {
       debugPrint('name.csv 로드 실패: $e');
       _allStocks = [];
     }
-
     if (!mounted) return;
     setState(() => _loading = false);
   }
@@ -95,10 +84,7 @@ class _StockPageState extends State<StockPage> {
   String? _toShortCode(String isuCd) {
     final normalized = isuCd.trim().toUpperCase();
     if (_shortCodePattern.hasMatch(normalized)) return normalized;
-    if (_isuCdPattern.hasMatch(normalized)) {
-      // KR + [시장1자리] + [단축코드6자리] + [체크3자리]
-      return normalized.substring(3, 9);
-    }
+    if (_isuCdPattern.hasMatch(normalized)) return normalized.substring(3, 9);
     return null;
   }
 
@@ -115,12 +101,10 @@ class _StockPageState extends State<StockPage> {
   }
 
   void _onBottomTap(int index) {
-    if (index == 3) return; // 현재 주식 페이지
-
+    if (index == 3) return;
     const routeMap = {0: '/home', 1: '/watchlist', 2: '/news'};
     final route = routeMap[index];
     if (route == null) return;
-
     Navigator.pushNamedAndRemoveUntil(context, route, (route) => false);
   }
 
@@ -138,7 +122,6 @@ class _StockPageState extends State<StockPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 상단
               Row(
                 children: [
                   IconButton(
@@ -146,10 +129,7 @@ class _StockPageState extends State<StockPage> {
                     icon: const Icon(Icons.arrow_back, color: Colors.black87),
                   ),
                   const SizedBox(width: 4),
-                  const Text(
-                    '주식',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
+                  const Text('주식', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                   const Spacer(),
                   IconButton(
                     onPressed: () {
@@ -162,22 +142,11 @@ class _StockPageState extends State<StockPage> {
                       children: [
                         const Icon(Icons.notifications_none_outlined, size: 26),
                         Positioned(
-                          right: -2,
-                          top: -2,
+                          right: -2, top: -2,
                           child: Container(
                             padding: const EdgeInsets.all(2),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF22C55E),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Text(
-                              '2',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                            decoration: const BoxDecoration(color: Color(0xFF22C55E), shape: BoxShape.circle),
+                            child: const Text('2', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                           ),
                         ),
                       ],
@@ -196,7 +165,6 @@ class _StockPageState extends State<StockPage> {
 
               const SizedBox(height: 10),
 
-              // 검색바
               GestureDetector(
                 onTap: _openSearch,
                 child: Container(
@@ -210,10 +178,7 @@ class _StockPageState extends State<StockPage> {
                     children: const [
                       Icon(Icons.search, color: Colors.grey),
                       SizedBox(width: 8),
-                      Text(
-                        '종목을 검색하세요',
-                        style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600),
-                      ),
+                      Text('종목을 검색하세요', style: TextStyle(color: Colors.black, fontWeight: FontWeight.w500)),
                     ],
                   ),
                 ),
@@ -221,14 +186,26 @@ class _StockPageState extends State<StockPage> {
 
               const SizedBox(height: 18),
 
-              const Text(
-                '오늘의 AI 트렌드 TOP 5',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              RichText(
+                text: const TextSpan(
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black),
+                  children: [
+                    TextSpan(text: '오늘의 '),
+                    TextSpan(text: 'AI', style: TextStyle(color: Color(0xFF0EC272))),
+                    TextSpan(text: '픽 '),
+                    TextSpan(text: 'TOP 5', style: TextStyle(color: Color(0xFF0EC272))),
+                  ],
+                ),
               ),
-              const SizedBox(height: 6),
-              const Text(
-                'AI가 뉴스와 이슈를 분석해 긍정 신호가 많은 종목을 골랐어요',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+              const SizedBox(height: 4),
+              RichText(
+                text: const TextSpan(
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
+                  children: [
+                    TextSpan(text: 'AI', style: TextStyle(color: Color(0xFF0EC272))),
+                    TextSpan(text: '가 뉴스를 분석해 선정했어요'),
+                  ],
+                ),
               ),
 
               const SizedBox(height: 14),
@@ -238,14 +215,9 @@ class _StockPageState extends State<StockPage> {
                   padding: const EdgeInsets.only(bottom: 12),
                   itemCount: _top5.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (context, i) {
-                    final t = _top5[i];
-                    return _TrendCard(item: t);
-                  },
+                  itemBuilder: (context, i) => _TrendCard(item: _top5[i]),
                 ),
               ),
-
-              // TODO(나중에): API 연결 후 Top5를 실제 데이터로 대체
             ],
           ),
         ),
@@ -254,367 +226,167 @@ class _StockPageState extends State<StockPage> {
   }
 }
 
-/// ----------------------
-/// (2번 화면) 검색 페이지
-/// ----------------------
-class StockSearchPage extends StatefulWidget {
-  final List<StockItem> allStocks;
-  final bool loading;
-
-  const StockSearchPage({
-    super.key,
-    required this.allStocks,
-    required this.loading,
-  });
-
-  @override
-  State<StockSearchPage> createState() => _StockSearchPageState();
-}
-
-class _StockSearchPageState extends State<StockSearchPage> {
-  final TextEditingController _controller = TextEditingController();
-  final FocusNode _focusNode = FocusNode();
-  static final RegExp _shortCodePattern = RegExp(r'^[0-9A-Z]{6}$');
-
-  List<StockItem> _filtered = [];
-
-  @override
-  void initState() {
-    super.initState();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _focusNode.requestFocus();
-    });
-
-    _controller.addListener(() {
-      _applyFilter(_controller.text);
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    _focusNode.dispose();
-    super.dispose();
-  }
-
-  void _applyFilter(String q) {
-    final query = q.trim();
-    if (query.isEmpty) {
-      setState(() => _filtered = []);
-      return;
-    }
-
-    final lower = query.toLowerCase();
-    final results = widget.allStocks.where((s) {
-      return s.name.toLowerCase().contains(lower) ||
-          s.code.toLowerCase().contains(lower);
-    }).take(30).toList();
-
-    setState(() => _filtered = results);
-  }
-
-  // ✅ 여기서 종목 탭 시 상세 화면으로 이동
-  void _onTapStock(StockItem item) {
-    if (!_shortCodePattern.hasMatch(item.code.toUpperCase())) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('유효하지 않은 종목코드입니다.')),
-      );
-      return;
-    }
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => StockDetailPage(
-          stockName: item.name,
-          stockCode: item.code.toUpperCase(),
-        ),
-      ),
-    );
-  }
-
-  void _onBottomTap(int index) {
-    if (index == 3) return; // 현재 주식 탭
-
-    const routeMap = {0: '/home', 1: '/watchlist', 2: '/news'};
-    final route = routeMap[index];
-    if (route == null) return;
-
-    Navigator.pushNamedAndRemoveUntil(context, route, (route) => false);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final loading = widget.loading;
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFF3F4F6),
-      bottomNavigationBar: BottomNavBar(
-        initialIndex: 3,
-        onIndexChanged: _onBottomTap,
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  IconButton(
-                    onPressed: () => Navigator.pop(context), // ✅ 뒤로가기 → 주식 메인 복귀
-                    icon: const Icon(Icons.arrow_back, color: Colors.black87),
-                  ),
-                  const SizedBox(width: 4),
-                  const Text(
-                    '검색',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () {},
-                    icon: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        const Icon(Icons.notifications_none_outlined, size: 26),
-                        Positioned(
-                          right: -2,
-                          top: -2,
-                          child: Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF22C55E),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Text(
-                              '2',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.settings, size: 26),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 10),
-
-              // 검색 입력바
-              Container(
-                height: 44,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE9EDF3),
-                  borderRadius: BorderRadius.circular(22),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.search, color: Colors.grey),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TextField(
-                        controller: _controller,
-                        focusNode: _focusNode,
-                        decoration: const InputDecoration(
-                          hintText: '종목명을 검색하세요',
-                          border: InputBorder.none,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 14),
-
-              if (loading)
-                const Expanded(
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              else if (_controller.text.trim().isEmpty)
-                const Expanded(
-                  child: Center(
-                    child: Text(
-                      '종목명을 입력하면 자동완성 리스트가 나와요',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  ),
-                )
-              else
-                Expanded(
-                  child: ListView.separated(
-                    itemCount: _filtered.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, i) {
-                      final s = _filtered[i];
-                      return _SearchResultCard(
-                        name: s.name,
-                        onTap: () => _onTapStock(s), // ✅ 탭하면 상세 화면으로
-                      );
-                    },
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// ----------------------
-/// UI 컴포넌트들
-/// ----------------------
 class _TrendItem {
   final int rank;
   final String name;
+  final String code;
   final String priceText;
   final String changeText;
   final bool isUp;
+  final String sentiment;
 
   const _TrendItem({
     required this.rank,
     required this.name,
+    required this.code,
     required this.priceText,
     required this.changeText,
     required this.isUp,
+    required this.sentiment,
   });
 }
 
-class _TrendCard extends StatelessWidget {
+class _TrendCard extends StatefulWidget {
   final _TrendItem item;
-
   const _TrendCard({required this.item});
 
   @override
-  Widget build(BuildContext context) {
-    final changeColor = item.isUp ? Colors.red : Colors.blue;
-    final arrow = item.isUp ? '↗' : '↘';
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: const BoxDecoration(
-              color: Color(0xFF22C55E),
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              '${item.rank}',
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-            ),
-          ),
-          const SizedBox(width: 12),
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(item.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Text(item.priceText, style: const TextStyle(fontSize: 12, color: Colors.black87)),
-                    const SizedBox(width: 8),
-                    Text(
-                      '$arrow ${item.changeText}',
-                      style: TextStyle(fontSize: 12, color: changeColor, fontWeight: FontWeight.w700),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(width: 10),
-
-          Column(
-            children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF22C55E).withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(17),
-                ),
-                child: const Icon(Icons.wb_sunny, color: Color(0xFF22C55E)),
-              ),
-              const SizedBox(height: 4),
-              const Text('AI 긍정', style: TextStyle(fontSize: 10, color: Colors.grey)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+  State<_TrendCard> createState() => _TrendCardState();
 }
 
-class _SearchResultCard extends StatelessWidget {
-  final String name;
-  final VoidCallback onTap;
+class _TrendCardState extends State<_TrendCard> {
+  bool _isWatchlisted = false;
+  bool _isExpanded = false;
+  final WatchlistService _watchlistService = WatchlistService();
+  String _aiSummary = '';
+  bool _summaryLoading = false;
 
-  const _SearchResultCard({required this.name, required this.onTap});
+  @override
+  void initState() {
+    super.initState();
+    _checkWatchlistStatus();
+  }
+
+  Future<void> _checkWatchlistStatus() async {
+    try {
+      final list = await _watchlistService.getWatchlist();
+      if (!mounted) return;
+      setState(() => _isWatchlisted = list.any((s) => s.code == widget.item.code));
+    } catch (e) {
+      debugPrint('관심 여부 확인 실패: $e');
+    }
+  }
+
+  Future<void> _toggleWatchlist() async {
+    try {
+      if (_isWatchlisted) {
+        await _watchlistService.deleteStock(widget.item.code);
+      } else {
+        await _watchlistService.addStock(widget.item.code, name: widget.item.name);
+      }
+      setState(() => _isWatchlisted = !_isWatchlisted);
+    } catch (e) {
+      debugPrint('관심종목 처리 실패: $e');
+    }
+  }
+
+  Future<void> _loadSummary() async {
+    if (_aiSummary.isNotEmpty) return;
+    setState(() => _summaryLoading = true);
+    try {
+      final data = await NewsApiService.getStockSummary(widget.item.name);
+      if (!mounted) return;
+      setState(() { _aiSummary = data.summary.trim(); _summaryLoading = false; });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { _aiSummary = '요약 정보를 불러오지 못했습니다.'; _summaryLoading = false; });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
+    final changeColor = widget.item.isUp ? Colors.red : Colors.blue;
+
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
+      alignment: Alignment.topCenter,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 10,
-              offset: const Offset(0, 6),
-            ),
-          ],
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 6))],
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: const [
-                      _TagChip(text: 'HBM'),
-                      SizedBox(width: 8),
-                      _TagChip(text: '실적'),
+            Row(
+              children: [
+                StockLogo(code: widget.item.code),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(widget.item.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Text(widget.item.priceText, style: const TextStyle(fontSize: 13, color: Colors.black87)),
+                          const SizedBox(width: 8),
+                          SvgPicture.asset(
+                            widget.item.isUp ? 'assets/images/up_arrow.svg' : 'assets/images/down_arrow.svg',
+                            width: 8, height: 8,
+                            colorFilter: ColorFilter.mode(changeColor, BlendMode.srcIn),
+                          ),
+                          const SizedBox(width: 2),
+                          Text(widget.item.changeText, style: TextStyle(fontSize: 13, color: changeColor, fontWeight: FontWeight.w700)),
+                        ],
+                      ),
                     ],
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 8),
+                SvgPicture.asset('assets/images/${widget.item.sentiment}.svg', width: 34, height: 34),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: _toggleWatchlist,
+                  child: Icon(Icons.favorite, color: _isWatchlisted ? const Color(0xFF0EC272) : const Color(0xFFD3D3D3), size: 22),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () {
+                    if (!_isExpanded) _loadSummary();
+                    setState(() => _isExpanded = !_isExpanded);
+                  },
+                  child: Icon(
+                    _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    color: const Color(0xFFBEC4CC), size: 22,
+                  ),
+                ),
+              ],
             ),
-            const Icon(Icons.star_border, color: Colors.grey),
+            if (_isExpanded) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(12)),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SvgPicture.asset('assets/images/AI요약.svg', width: 20, height: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _summaryLoading
+                          ? const SizedBox(height: 20, child: Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0EC272)))))
+                          : Text(_aiSummary.isEmpty ? '요약 정보가 없습니다.' : _aiSummary, style: const TextStyle(fontSize: 13, color: Colors.black87, height: 1.6)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -622,21 +394,25 @@ class _SearchResultCard extends StatelessWidget {
   }
 }
 
-class _TagChip extends StatelessWidget {
-  final String text;
-  const _TagChip({required this.text});
+// ✅ public으로 변경 (search_page.dart에서도 사용)
+class StockLogo extends StatelessWidget {
+  final String code;
+  const StockLogo({super.key, required this.code});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFF22C55E),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
+    return SizedBox(
+      width: 36, height: 36,
+      child: ClipOval(
+        child: SvgPicture.asset(
+          'assets/images/logo/$code.svg',
+          width: 36, height: 36,
+          fit: BoxFit.cover,
+          placeholderBuilder: (_) => Container(
+            width: 36, height: 36,
+            decoration: const BoxDecoration(color: Color(0xFFD1D5DB), shape: BoxShape.circle),
+          ),
+        ),
       ),
     );
   }
