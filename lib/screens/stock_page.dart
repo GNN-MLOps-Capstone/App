@@ -102,7 +102,7 @@ class _StockPageState extends State<StockPage> {
         _top5 = trends.map((t) => _TrendItem(
           rank: t.rank,
           name: t.name,
-          code: t.code ?? '',
+          code: t.code,
           weather: t.weather,
           priceText: t.lastPrice != null
               ? '${t.lastPrice!.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]},')}원'
