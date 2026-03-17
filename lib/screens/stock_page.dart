@@ -30,6 +30,7 @@ class _StockPageState extends State<StockPage> {
 
   // (1번 화면) Top5는 지금은 더미
   List<_TrendItem> _top5 = const [];
+  bool _trendsLoading = false;
 
   @override
   void initState() {
@@ -89,7 +90,12 @@ class _StockPageState extends State<StockPage> {
     setState(() => _loading = false);
   }
 
-  Future<void> _loadTrends() async {
+  Future<void> _loadTrends({int retryCount = 0}) async {
+    if (retryCount == 0) {
+      setState(() {
+        _trendsLoading = true;
+      });
+    }
     try {
       final trends = await StockApiService.getAiTrends(topN: 5);
       setState(() {
@@ -104,11 +110,24 @@ class _StockPageState extends State<StockPage> {
           changeText: t.changeRate != null
               ? '${t.changeRate! >= 0 ? '+' : ''}${t.changeRate!.toStringAsFixed(1)}%'
               : '-',
-          isUp: (t.changeRate ?? 0) >= 0,
+          isUp: t.changeRate == null ? null : t.changeRate! >= 0,
         )).toList();
+
+        _trendsLoading = false;
       });
     } catch (e) {
       debugPrint('트렌드 로드 실패: $e');
+
+      if (retryCount < 2) { // 최대 3번 시도 (0, 1, 2)
+        // 서버가 깨어날 시간을 주기 위해 2초 대기
+        await Future.delayed(const Duration(seconds: 2));
+        return _loadTrends(retryCount: retryCount + 1);
+      } else {
+        // 3번 다 실패했을 때만 로딩을 끄고 종료
+        setState(() {
+          _trendsLoading = false;
+        });
+      }
     }
   }
 
@@ -253,9 +272,11 @@ class _StockPageState extends State<StockPage> {
 
               const SizedBox(height: 14),
 
-              _top5.isEmpty
+              _trendsLoading
                 ? const Expanded(child: Center(child: CircularProgressIndicator()))
-                : Expanded(
+                : _top5.isEmpty
+                    ? const Expanded(child: Center(child: Text('표시할 트렌드가 없습니다.')))
+                    : Expanded(
                     child: ListView.separated(
                       padding: const EdgeInsets.only(bottom: 12),
                       itemCount: _top5.length,
@@ -514,7 +535,7 @@ class _TrendItem {
   final String name;
   final String priceText;
   final String changeText;
-  final bool isUp;
+  final bool? isUp;
   final String code;
   final String weather;
 
@@ -537,8 +558,12 @@ class _TrendCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final changeColor = item.isUp ? Colors.red : Colors.blue;
-    final arrow = item.isUp ? '↗' : '↘';
+    final changeColor = item.isUp == null 
+      ? Colors.grey 
+      : (item.isUp! ? Colors.red : Colors.blue);
+    final arrow = item.isUp == null 
+      ? '' 
+      : (item.isUp! ? '↗' : '↘');
     return GestureDetector(
       onTap: onTap,
       child: Container(

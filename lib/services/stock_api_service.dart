@@ -154,12 +154,21 @@ class StockApiService {
   
   /// 종목 날씨 조회
   static Future<String> getStockWeather({String? stockId, String? stockName}) async {
-    assert(stockId != null || stockName != null, 'stockId 또는 stockName 중 하나는 필수입니다.');
+    final normalizedStockId = stockId?.trim();
+    final normalizedStockName = stockName?.trim();
+    if ((normalizedStockId == null || normalizedStockId.isEmpty) &&
+        (normalizedStockName == null || normalizedStockName.isEmpty)) {
+      throw StockApiException('stockId 또는 stockName 중 하나는 필수입니다.', 400);
+    }
     
     try {
       final params = <String, String>{};
-      if (stockId != null) params['stock_id'] = stockId;
-      if (stockName != null) params['stock_name'] = stockName;
+      if (normalizedStockId != null && normalizedStockId.isNotEmpty) {
+        params['stock_id'] = normalizedStockId;
+      }
+      if (normalizedStockName != null && normalizedStockName.isNotEmpty) {
+        params['stock_name'] = normalizedStockName;
+      }
 
       final uri = Uri.parse('$_baseUrl/api/stocks/weather').replace(queryParameters: params);
       final res = await http.get(
