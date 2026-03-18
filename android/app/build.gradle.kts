@@ -134,12 +134,17 @@ android {
         dependsOn("generateGoogleServicesJson")
     }
 
+    val localProps = Properties().apply {
+        val f = rootProject.file("local.properties")
+        if (f.exists()) FileInputStream(f).use { load(it) }
+    }
+
     signingConfigs {
         getByName("debug") {
-            keyAlias = "upload"
-            keyPassword = "android"
+            keyAlias = localProps.getProperty("debug.keyAlias", "upload")
+            keyPassword = localProps.getProperty("debug.keyPassword", "")
             storeFile = file("../../debug-keystore.jks")
-            storePassword = "android"
+            storePassword = localProps.getProperty("debug.storePassword", "")
         }
     }
 
