@@ -6,6 +6,8 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'stock_detail_page.dart'; // ✅ 추가
 import 'widgets/bottom_nav_bar.dart';
 
+import '../services/stock_api_service.dart';
+
 class StockItem {
   final String name;
   final String code;
@@ -27,18 +29,14 @@ class _StockPageState extends State<StockPage> {
   static final RegExp _isuCdPattern = RegExp(r'^KR[0-9A-Z]{10}$');
 
   // (1번 화면) Top5는 지금은 더미
-  final List<_TrendItem> _top5 = const [
-    _TrendItem(rank: 1, name: '삼성전자', priceText: '72,500원', changeText: '-1.2%', isUp: false),
-    _TrendItem(rank: 2, name: 'SK하이닉스', priceText: '186,000원', changeText: '+2.3%', isUp: true),
-    _TrendItem(rank: 3, name: 'SK하이닉스', priceText: '186,000원', changeText: '+2.3%', isUp: true),
-    _TrendItem(rank: 4, name: 'SK하이닉스', priceText: '186,000원', changeText: '+2.3%', isUp: true),
-    _TrendItem(rank: 5, name: 'SK하이닉스', priceText: '186,000원', changeText: '+2.3%', isUp: true),
-  ];
+  List<_TrendItem> _top5 = const [];
+  bool _trendsLoading = false;
 
   @override
   void initState() {
     super.initState();
     _loadNameCsv();
+    _loadTrends();
   }
 
   Future<void> _loadNameCsv() async {
@@ -90,6 +88,47 @@ class _StockPageState extends State<StockPage> {
 
     if (!mounted) return;
     setState(() => _loading = false);
+  }
+
+  Future<void> _loadTrends({int retryCount = 0}) async {
+    if (retryCount == 0) {
+      setState(() {
+        _trendsLoading = true;
+      });
+    }
+    try {
+      final trends = await StockApiService.getAiTrends(topN: 5);
+      setState(() {
+        _top5 = trends.map((t) => _TrendItem(
+          rank: t.rank,
+          name: t.name,
+          code: t.code,
+          weather: t.weather,
+          priceText: t.lastPrice != null
+              ? '${t.lastPrice!.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]},')}원'
+              : '-',
+          changeText: t.changeRate != null
+              ? '${t.changeRate! >= 0 ? '+' : ''}${t.changeRate!.toStringAsFixed(1)}%'
+              : '-',
+          isUp: t.changeRate == null ? null : t.changeRate! >= 0,
+        )).toList();
+
+        _trendsLoading = false;
+      });
+    } catch (e) {
+      debugPrint('트렌드 로드 실패: $e');
+
+      if (retryCount < 2) { // 최대 3번 시도 (0, 1, 2)
+        // 서버가 깨어날 시간을 주기 위해 2초 대기
+        await Future.delayed(const Duration(seconds: 2));
+        return _loadTrends(retryCount: retryCount + 1);
+      } else {
+        // 3번 다 실패했을 때만 로딩을 끄고 종료
+        setState(() {
+          _trendsLoading = false;
+        });
+      }
+    }
   }
 
   String? _toShortCode(String isuCd) {
@@ -233,19 +272,36 @@ class _StockPageState extends State<StockPage> {
 
               const SizedBox(height: 14),
 
-              Expanded(
-                child: ListView.separated(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  itemCount: _top5.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (context, i) {
-                    final t = _top5[i];
-                    return _TrendCard(item: t);
-                  },
-                ),
-              ),
+              _trendsLoading
+                ? const Expanded(child: Center(child: CircularProgressIndicator()))
+                : _top5.isEmpty
+                    ? const Expanded(child: Center(child: Text('표시할 트렌드가 없습니다.')))
+                    : Expanded(
+                    child: ListView.separated(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      itemCount: _top5.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (context, i) {
+                        final t = _top5[i];
+                        return _TrendCard(
+                          item: t,
+                          onTap: () {
+                            if (t.code.isEmpty) return;
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => StockDetailPage(
+                                  stockName: t.name,
+                                  stockCode: t.code.toUpperCase(),
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
 
-              // TODO(나중에): API 연결 후 Top5를 실제 데이터로 대체
             ],
           ),
         ),
@@ -479,7 +535,9 @@ class _TrendItem {
   final String name;
   final String priceText;
   final String changeText;
-  final bool isUp;
+  final bool? isUp;
+  final String code;
+  final String weather;
 
   const _TrendItem({
     required this.rank,
@@ -487,87 +545,96 @@ class _TrendItem {
     required this.priceText,
     required this.changeText,
     required this.isUp,
+    required this.code,
+    required this.weather,
   });
 }
 
 class _TrendCard extends StatelessWidget {
   final _TrendItem item;
+  final VoidCallback? onTap;
 
-  const _TrendCard({required this.item});
+  const _TrendCard({required this.item, this.onTap}); 
 
   @override
   Widget build(BuildContext context) {
-    final changeColor = item.isUp ? Colors.red : Colors.blue;
-    final arrow = item.isUp ? '↗' : '↘';
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: const BoxDecoration(
-              color: Color(0xFF22C55E),
-              shape: BoxShape.circle,
+    final changeColor = item.isUp == null 
+      ? Colors.grey 
+      : (item.isUp! ? Colors.red : Colors.blue);
+    final arrow = item.isUp == null 
+      ? '' 
+      : (item.isUp! ? '↗' : '↘');
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 6),
             ),
-            alignment: Alignment.center,
-            child: Text(
-              '${item.rank}',
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: const BoxDecoration(
+                color: Color(0xFF22C55E),
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                '${item.rank}',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
+            const SizedBox(width: 12),
 
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(item.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Text(item.priceText, style: const TextStyle(fontSize: 12, color: Colors.black87)),
+                      const SizedBox(width: 8),
+                      Text(
+                        '$arrow ${item.changeText}',
+                        style: TextStyle(fontSize: 12, color: changeColor, fontWeight: FontWeight.w700),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(width: 10),
+
+            Column(
               children: [
-                Text(item.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Text(item.priceText, style: const TextStyle(fontSize: 12, color: Colors.black87)),
-                    const SizedBox(width: 8),
-                    Text(
-                      '$arrow ${item.changeText}',
-                      style: TextStyle(fontSize: 12, color: changeColor, fontWeight: FontWeight.w700),
-                    ),
-                  ],
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF22C55E).withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(17),
+                  ),
+                  child: const Icon(Icons.wb_sunny, color: Color(0xFF22C55E)),
                 ),
+                const SizedBox(height: 4),
+                const Text('AI 긍정', style: TextStyle(fontSize: 10, color: Colors.grey)),
               ],
             ),
-          ),
-
-          const SizedBox(width: 10),
-
-          Column(
-            children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF22C55E).withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(17),
-                ),
-                child: const Icon(Icons.wb_sunny, color: Color(0xFF22C55E)),
-              ),
-              const SizedBox(height: 4),
-              const Text('AI 긍정', style: TextStyle(fontSize: 10, color: Colors.grey)),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
