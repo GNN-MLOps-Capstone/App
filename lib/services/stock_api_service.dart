@@ -78,7 +78,8 @@ class StockApiService {
 
   /// 실시간 현재가 WebSocket 스트림
   /// 종목코드(6자리)를 넘기면 실시간 가격 이벤트를 Stream으로 반환합니다.
-  static StockRealtimeConnection connectRealtime(String code) {
+  static Future<StockRealtimeConnection> connectRealtime(String code) async {
+    final token = await _storage.read(key: 'access_token');
     final controller = StreamController<StockRealtimePrice>.broadcast();
     WebSocketChannel? channel;
 
@@ -89,7 +90,10 @@ class StockApiService {
     }
 
     try {
-      final uri = Uri.parse('$_wsBaseUrl/api/stocks/ws/current?code=$code');
+      final query = token != null
+          ? 'code=$code&access_token=$token'
+          : 'code=$code';
+      final uri = Uri.parse('$_wsBaseUrl/api/stocks/ws/current?$query');
       channel = WebSocketChannel.connect(uri);
     } catch (e) {
       debugPrint('[WS] 초기 연결 실패(code=$code): $e');
