@@ -3,12 +3,22 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../config/api_config.dart';
 
 /// 주식 API 서비스 (REST + WebSocket)
 class StockApiService {
   static String get _baseUrl => ApiConfig.baseUrl;
   static String get _wsBaseUrl => ApiConfig.wsBaseUrl;
+  static const _storage = FlutterSecureStorage();
+
+  static Future<Map<String, String>> _getHeaders() async {
+    final token = await _storage.read(key: 'access_token');
+    return {
+      'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
+  }
 
   /// 서버 상태 확인
   static Future<bool> checkHealth() async {
@@ -27,7 +37,7 @@ class StockApiService {
       final uri = Uri.parse('$_baseUrl/api/stocks/$code/overview');
       final res = await http.get(
         uri,
-        headers: {'Content-Type': 'application/json'},
+        headers: await _getHeaders(),
       ).timeout(const Duration(seconds: 10));
 
       if (res.statusCode == 200) {
@@ -53,7 +63,7 @@ class StockApiService {
       final uri = Uri.parse('$_baseUrl/api/stocks/$code/series?range=$range$forceQuery');
       final res = await http.get(
         uri,
-        headers: {'Content-Type': 'application/json'},
+        headers: await _getHeaders(),
       ).timeout(const Duration(seconds: 60));
 
       if (res.statusCode == 200) {

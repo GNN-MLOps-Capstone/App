@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../config/api_config.dart';
 
 /// 뉴스 API 서비스
@@ -11,6 +12,15 @@ import '../config/api_config.dart';
 ///   - crawled_news: text (summary로 사용)
 class NewsApiService {
   static String get _baseUrl => ApiConfig.baseUrl;
+  static const _storage = FlutterSecureStorage();
+
+  static Future<Map<String, String>> _getHeaders() async {
+    final token = await _storage.read(key: 'access_token');
+    return {
+      'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
+  }
   
   /// 뉴스 목록 조회 (앱 메인 화면용)
   /// 
@@ -40,7 +50,7 @@ class NewsApiService {
       
       final response = await http.get(
         uri,
-        headers: {'Content-Type': 'application/json'},
+        headers: await _getHeaders(),
       ).timeout(const Duration(seconds: 10));
       
       if (response.statusCode == 200) {
@@ -65,7 +75,7 @@ class NewsApiService {
       
       final response = await http.get(
         uri,
-        headers: {'Content-Type': 'application/json'},
+        headers: await _getHeaders(),
       ).timeout(const Duration(seconds: 10));
       
       if (response.statusCode == 200) {
@@ -91,7 +101,7 @@ class NewsApiService {
 
       final response = await http.get(
         uri,
-        headers: {'Content-Type': 'application/json'},
+        headers: await _getHeaders(),
       ).timeout(const Duration(seconds: 15)); // AI 생성 시간이 걸릴 수 있으므로 15초 설정
 
       if (response.statusCode == 200) {
