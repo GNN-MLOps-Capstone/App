@@ -13,7 +13,8 @@ class GoogleLoginPage extends StatefulWidget {
 
 class _GoogleLoginPageState extends State<GoogleLoginPage> {
   final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: ['email', 'profile'], // ✅ profile scope 추가 (displayName 사용 위해)
+    scopes: ['email', 'profile'],
+    serverClientId: '39483935865-5o9jog8bv601kgebr6acvtov8tsvfjg0.apps.googleusercontent.com',
   );
   final PageController _pageController = PageController();
   int _currentPage = 0;
@@ -46,13 +47,16 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
       final account = await _googleSignIn.signIn();
       if (account == null) return;
 
+      final auth = await account.authentication;
+      final idToken = auth.idToken;
+      if (idToken == null) {
+        throw Exception('Google ID 토큰을 가져올 수 없습니다.');
+      }
+
       if (!mounted) return;
 
       final loginRequest = UserLoginRequest(
-        googleId: account.id,
-        email: account.email,
-        nickname: account.displayName ?? '사용자',
-        imgUrl: account.photoUrl,
+        idToken: idToken,
       );
 
       final authResponse = await UserApiService.login(loginRequest);
