@@ -26,22 +26,16 @@ class UserApiService {
   static Future<AuthResponse> login(UserLoginRequest request) async {
     try {
       String? onesignalId = OneSignal.User.pushSubscription.id;
-    
-      // 2. 기존 request에 onesignalId를 포함한 새로운 request 생성 (혹은 필드 할당)
-      final updatedRequest = UserLoginRequest(
-        googleId: request.googleId,
-        email: request.email,
-        nickname: request.nickname,
-        imgUrl: request.imgUrl,
-        onesignalId: onesignalId, // 추출한 ID 주입
-      );
 
       final uri = Uri.parse('$_baseUrl/api/users/login');
-      
+
       final response = await http.post(
         uri,
         headers: {'Content-Type': 'application/json'},
-        body: json.encode(updatedRequest.toJson()),
+        body: json.encode({
+          'id_token': request.idToken,
+          if (onesignalId != null) 'onesignal_id': onesignalId,
+        }),
       ).timeout(const Duration(seconds: 10));
       
       if (response.statusCode == 200) {
@@ -259,25 +253,9 @@ class SettingResponse {
 }
 
 class UserLoginRequest {
-  final String googleId;
-  final String email;
-  final String nickname;
-  final String? imgUrl;
-  final String? onesignalId;
+  final String idToken;
 
   UserLoginRequest({
-    required this.googleId,
-    required this.email,
-    required this.nickname,
-    required this.imgUrl,
-    this.onesignalId,
+    required this.idToken,
   });
-
-  Map<String, dynamic> toJson() => {
-    'google_id': googleId,
-    'email': email,
-    'nickname': nickname,
-    'img_url': imgUrl,
-    'onesignal_id': onesignalId,
-  };
 }

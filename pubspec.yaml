@@ -41,7 +41,7 @@ dependencies:
   csv: ^5.0.2
   intl: ^0.20.2
   web_socket_channel: ^3.0.3
-
+  uuid: ^4.0.0
 
 
   # The following adds the Cupertino Icons font to your application.

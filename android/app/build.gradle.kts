@@ -134,10 +134,22 @@ android {
         dependsOn("generateGoogleServicesJson")
     }
 
+    val localProps = Properties().apply {
+        val f = rootProject.file("local.properties")
+        if (f.exists()) FileInputStream(f).use { load(it) }
+    }
+
+    signingConfigs {
+        getByName("debug") {
+            keyAlias = localProps.getProperty("debug.keyAlias", "upload")
+            keyPassword = localProps.getProperty("debug.keyPassword", "")
+            storeFile = file("../../debug-keystore.jks")
+            storePassword = localProps.getProperty("debug.storePassword", "")
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
         }
     }

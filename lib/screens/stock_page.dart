@@ -78,9 +78,10 @@ class _StockPageState extends State<StockPage> {
     setState(() => _loading = false);
   }
 
+  // 더미데이터 사용
+  /*
   Future<void> _loadTrends({int retryCount = 0}) async {
     setState(() => _trendsLoading = true);
-    // TODO: API 연결 후 실제 데이터로 교체
     await Future.delayed(const Duration(milliseconds: 100));
     if (!mounted) return;
     setState(() {
@@ -93,6 +94,39 @@ class _StockPageState extends State<StockPage> {
       ];
       _trendsLoading = false;
     });
+  }
+   */
+  Future<void> _loadTrends({int retryCount = 0}) async {
+    if (retryCount == 0) setState(() => _trendsLoading = true);
+    try {
+      final trends = await StockApiService.getAiTrends(topN: 5);
+      if (!mounted) return;
+      setState(() {
+        _top5 = trends.map((t) => _TrendItem(
+          rank: t.rank,
+          name: t.name,
+          code: t.code,
+          weather: t.weather,
+          priceText: t.lastPrice != null
+              ? '${t.lastPrice!.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]},')}원'
+              : '-',
+          changeText: t.changeRate != null
+              ? '${t.changeRate! >= 0 ? '+' : ''}${t.changeRate!.toStringAsFixed(1)}%'
+              : '-',
+          isUp: t.changeRate == null ? null : t.changeRate! >= 0,
+        )).toList();
+        _trendsLoading = false;
+      });
+    } catch (e) {
+      debugPrint('트렌드 로드 실패: $e');
+      if (retryCount < 2) {
+        await Future.delayed(const Duration(seconds: 2));
+        return _loadTrends(retryCount: retryCount + 1);
+      } else {
+        if (!mounted) return;
+        setState(() => _trendsLoading = false);
+      }
+    }
   }
 
   String? _toShortCode(String isuCd) {

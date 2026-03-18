@@ -69,6 +69,16 @@ class ApiConfig {
     return null;
   }
 
+  static const String _defineGoogleClientId = String.fromEnvironment('GOOGLE_CLIENT_ID');
+
+  static String get googleClientId {
+    final fromDefine = _defineGoogleClientId.trim();
+    if (fromDefine.isNotEmpty) return fromDefine;
+    final fromEnv = dotenv.env['GOOGLE_CLIENT_ID']?.trim();
+    if (fromEnv != null && fromEnv.isNotEmpty) return fromEnv;
+    throw StateError('GOOGLE_CLIENT_ID가 설정되지 않았습니다. .env.local 또는 dart-define으로 설정하세요.');
+  }
+
   static String get baseUrl => configuredBaseUrl ?? _defaultBaseUrl;
 
   static String get wsBaseUrl {

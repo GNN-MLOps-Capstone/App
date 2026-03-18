@@ -128,6 +128,64 @@ class StockApiService {
       },
     );
   }
+  
+  /// AI 트렌드 종목 조회
+  static Future<List<AiTrend>> getAiTrends({int topN = 3}) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/api/stocks/trends?top_n=$topN');
+      final res = await http.get(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 10));
+
+      if (res.statusCode == 200) {
+        final list = jsonDecode(res.body) as List;
+        return list
+            .cast<Map<String, dynamic>>()
+            .map((e) => AiTrend.fromJson(e))
+            .toList();
+      }
+      throw StockApiException('Failed to load AI trends: ${res.statusCode}', res.statusCode);
+    } catch (e) {
+      if (e is StockApiException) rethrow;
+      throw StockApiException('Network error: $e', 0);
+    }
+  }
+  
+  /// 종목 날씨 조회
+  static Future<String> getStockWeather({String? stockId, String? stockName}) async {
+    final normalizedStockId = stockId?.trim();
+    final normalizedStockName = stockName?.trim();
+    if ((normalizedStockId == null || normalizedStockId.isEmpty) &&
+        (normalizedStockName == null || normalizedStockName.isEmpty)) {
+      throw StockApiException('stockId 또는 stockName 중 하나는 필수입니다.', 400);
+    }
+    
+    try {
+      final params = <String, String>{};
+      if (normalizedStockId != null && normalizedStockId.isNotEmpty) {
+        params['stock_id'] = normalizedStockId;
+      }
+      if (normalizedStockName != null && normalizedStockName.isNotEmpty) {
+        params['stock_name'] = normalizedStockName;
+      }
+
+      final uri = Uri.parse('$_baseUrl/api/stocks/weather').replace(queryParameters: params);
+      final res = await http.get(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 10));
+
+      if (res.statusCode == 200) {
+        final json = jsonDecode(res.body) as Map<String, dynamic>;
+        return json['weather'] as String;
+      }
+      throw StockApiException('Failed to load stock weather: ${res.statusCode}', res.statusCode);
+    } catch (e) {
+      if (e is StockApiException) rethrow;
+      throw StockApiException('Network error: $e', 0);
+    }
+  }
 }
 
 class StockApiException implements Exception {
@@ -289,4 +347,37 @@ class StockRealtimeConnection {
   final VoidCallback close;
 
   StockRealtimeConnection({required this.stream, required this.close});
+}
+
+/// AI 트렌드 종목 모델
+class AiTrend {
+  final int rank;
+  final String code;
+  final String name;
+  final String weather;
+  final int score;
+  final int? lastPrice;       // 추가
+  final double? changeRate;   // 추가
+
+  AiTrend({
+    required this.rank,
+    required this.code,
+    required this.name,
+    required this.weather,
+    required this.score,
+    this.lastPrice,
+    this.changeRate,
+  });
+
+  factory AiTrend.fromJson(Map<String, dynamic> json) {
+    return AiTrend(
+      rank: (json['rank'] as num).toInt(),
+      code: json['code'] as String,
+      name: json['name'] as String,
+      weather: json['weather'] as String,
+      score: (json['score'] as num).toInt(),
+      lastPrice: (json['last_price'] as num?)?.toInt(),
+      changeRate: (json['change_rate'] as num?)?.toDouble(),
+    );
+  }
 }
