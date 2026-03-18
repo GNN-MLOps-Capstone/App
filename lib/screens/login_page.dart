@@ -3,6 +3,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'main_page.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../services/user_api_service.dart';
+import '../config/api_config.dart';
 
 class GoogleLoginPage extends StatefulWidget {
   const GoogleLoginPage({super.key});
@@ -14,7 +15,7 @@ class GoogleLoginPage extends StatefulWidget {
 class _GoogleLoginPageState extends State<GoogleLoginPage> {
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
-    serverClientId: '39483935865-5o9jog8bv601kgebr6acvtov8tsvfjg0.apps.googleusercontent.com',
+    serverClientId: ApiConfig.googleClientId,
   );
   final PageController _pageController = PageController();
   int _currentPage = 0;
