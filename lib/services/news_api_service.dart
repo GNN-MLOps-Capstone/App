@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
+import 'api_auth_headers.dart';
 
 /// 뉴스 API 서비스
 /// 
@@ -40,7 +41,7 @@ class NewsApiService {
       
       final response = await http.get(
         uri,
-        headers: {'Content-Type': 'application/json'},
+        headers: await getAuthHeaders(),
       ).timeout(const Duration(seconds: 10));
       
       if (response.statusCode == 200) {
@@ -65,7 +66,7 @@ class NewsApiService {
       
       final response = await http.get(
         uri,
-        headers: {'Content-Type': 'application/json'},
+        headers: await getAuthHeaders(),
       ).timeout(const Duration(seconds: 10));
       
       if (response.statusCode == 200) {
@@ -91,7 +92,7 @@ class NewsApiService {
 
       final response = await http.get(
         uri,
-        headers: {'Content-Type': 'application/json'},
+        headers: await getAuthHeaders(),
       ).timeout(const Duration(seconds: 15)); // AI 생성 시간이 걸릴 수 있으므로 15초 설정
 
       if (response.statusCode == 200) {

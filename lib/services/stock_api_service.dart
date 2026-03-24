@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../config/api_config.dart';
+import 'api_auth_headers.dart';
 
 /// 주식 API 서비스 (REST + WebSocket)
 class StockApiService {
@@ -27,7 +28,7 @@ class StockApiService {
       final uri = Uri.parse('$_baseUrl/api/stocks/$code/overview');
       final res = await http.get(
         uri,
-        headers: {'Content-Type': 'application/json'},
+        headers: await getAuthHeaders(),
       ).timeout(const Duration(seconds: 10));
 
       if (res.statusCode == 200) {
@@ -53,7 +54,7 @@ class StockApiService {
       final uri = Uri.parse('$_baseUrl/api/stocks/$code/series?range=$range$forceQuery');
       final res = await http.get(
         uri,
-        headers: {'Content-Type': 'application/json'},
+        headers: await getAuthHeaders(),
       ).timeout(const Duration(seconds: 60));
 
       if (res.statusCode == 200) {
@@ -68,7 +69,8 @@ class StockApiService {
 
   /// 실시간 현재가 WebSocket 스트림
   /// 종목코드(6자리)를 넘기면 실시간 가격 이벤트를 Stream으로 반환합니다.
-  static StockRealtimeConnection connectRealtime(String code) {
+  static Future<StockRealtimeConnection> connectRealtime(String code) async {
+    final token = await getAccessToken();
     final controller = StreamController<StockRealtimePrice>.broadcast();
     WebSocketChannel? channel;
 
@@ -79,7 +81,10 @@ class StockApiService {
     }
 
     try {
-      final uri = Uri.parse('$_wsBaseUrl/api/stocks/ws/current?code=$code');
+      final query = token != null
+          ? 'code=$code&access_token=$token'
+          : 'code=$code';
+      final uri = Uri.parse('$_wsBaseUrl/api/stocks/ws/current?$query');
       channel = WebSocketChannel.connect(uri);
     } catch (e) {
       debugPrint('[WS] 초기 연결 실패(code=$code): $e');
@@ -135,7 +140,7 @@ class StockApiService {
       final uri = Uri.parse('$_baseUrl/api/stocks/trends?top_n=$topN');
       final res = await http.get(
         uri,
-        headers: {'Content-Type': 'application/json'},
+        headers: await getAuthHeaders(),
       ).timeout(const Duration(seconds: 10));
 
       if (res.statusCode == 200) {
@@ -173,7 +178,7 @@ class StockApiService {
       final uri = Uri.parse('$_baseUrl/api/stocks/weather').replace(queryParameters: params);
       final res = await http.get(
         uri,
-        headers: {'Content-Type': 'application/json'},
+        headers: await getAuthHeaders(),
       ).timeout(const Duration(seconds: 10));
 
       if (res.statusCode == 200) {
