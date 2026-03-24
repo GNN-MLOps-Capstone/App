@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'notification_service.dart';
 
 class OneSignalService {
   static final OneSignalService _instance = OneSignalService._internal();
@@ -35,6 +36,11 @@ class OneSignalService {
       // OneSignal 초기화
       OneSignal.initialize(app_id);
 
+      OneSignal.Notifications.addForegroundWillDisplayListener((event) async {
+        if (kDebugMode) print('🔔 알림 수신 감지: ${event.notification.title}');
+        await _saveNotificationToDb(event.notification);
+      });
+
       // 푸시 알림 권한 요청
       await OneSignal.Notifications.requestPermission(true);
 
@@ -58,6 +64,26 @@ class OneSignalService {
       if (kDebugMode) {
         print('OneSignal 초기화 오류: $e');
       }
+    }
+  }
+
+  Future<void> _saveNotificationToDb(OSNotification notification) async {
+    try {
+      String? onesignalId = OneSignal.User.pushSubscription.id;
+      if (onesignalId != null && onesignalId.isNotEmpty) {
+        await NotificationApiService.createNotification(
+          NotificationCreateRequest(
+            targetOnesignalId: onesignalId,
+            type: notification.additionalData?['type'] ?? 'general',
+            title: notification.title ?? '',
+            body: notification.body ?? '',
+            stockName: notification.additionalData?['stock_name'],
+          ),
+        );
+        if (kDebugMode) print('✅ 알림 DB 저장 완료');
+      }
+    } catch (e) {
+      if (kDebugMode) print('❌ 알림 DB 저장 실패: $e');
     }
   }
 
@@ -186,4 +212,6 @@ class OneSignalService {
   void disableForegroundNotifications() {
     OneSignal.Notifications.clearAll();
   }
+
+  
 }
