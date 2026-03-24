@@ -4,10 +4,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:uuid/uuid.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'widgets/bottom_nav_bar.dart';
+import '../models/news_models.dart';
+import '../services/news_api_service.dart';
+import '../services/user_api_service.dart';
 import '../config/api_config.dart';
 import 'news_detail_page.dart';
+
+const bool _enableDummyNewsFallback = bool.fromEnvironment(
+  'ENABLE_DUMMY_NEWS_FALLBACK',
+  defaultValue: false,
+);
 
 // ===================== 더미데이터 (총 40개 - 페이지당 20개씩 2페이지) =====================
 
@@ -58,57 +67,30 @@ final List<Map<String, dynamic>> _dummyPage2 = [
   {'news_id': 213100, 'title': '삼성물산, 패션·리조트 부문 실적 개선으로 주가 상승', 'summary': '삼성물산의 패션과 리조트 부문 실적이 크게 개선되며 주가가 상승세를 이어가고 있다.', 'pub_date': '2026-02-06T10:30:00', 'path': 'A1', 'stock_name': '삼성물산', 'stock_change': '+2.1%', 'stock_up': true},
 ];
 
-// ===================== 모델 =====================
-
-class NewsItem {
-  final int? newsId;
-  final String title;
-  final String summary;
-  final String? pubDate;
-  final String? path;
-  final String? stockName;
-  final String? stockChange;
-  final bool stockUp;
-
-  NewsItem({
-    this.newsId,
-    required this.title,
-    required this.summary,
-    this.pubDate,
-    this.path,
-    this.stockName,
-    this.stockChange,
-    this.stockUp = true,
-  });
-
-  factory NewsItem.fromMap(Map<String, dynamic> json) {
-    return NewsItem(
-      newsId: json['news_id'] as int?,
-      title: json['title'] as String? ?? '',
-      summary: json['summary'] as String? ?? '',
-      pubDate: json['pub_date'] as String?,
-      path: json['path'] as String?,
-      stockName: json['stock_name'] as String?,
-      stockChange: json['stock_change'] as String?,
-      stockUp: json['stock_up'] as bool? ?? true,
-    );
-  }
-}
-
 // ===================== 이벤트 로거 =====================
 
 class _EventLogger {
   static final _uuid = Uuid();
+  static const _storage = FlutterSecureStorage();
   static String get _baseUrl => ApiConfig.baseUrl;
   static const _endpoint = '/api/interactions/events';
 
   static Future<void> post(List<Map<String, dynamic>> events) async {
     try {
-      await http.post(
+      final token = await _storage.read(key: 'access_token');
+      final response = await http.post(
         Uri.parse('$_baseUrl$_endpoint'),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
         body: jsonEncode({'events': events}),
       );
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        debugPrint(
+          '[EventLogger] 이벤트 전송 실패(status=${response.statusCode}): ${response.body}',
+        );
+      }
     } catch (e) {
       debugPrint('[EventLogger] 이벤트 전송 실패: $e');
     }
@@ -130,17 +112,21 @@ class NewsScreen extends StatefulWidget {
 class _NewsScreenState extends State<NewsScreen> {
   final String _appSessionId = _EventLogger.newId();
   final String _screenSessionId = _EventLogger.newId();
-  late String _requestId;
+  final ScrollController _scrollController = ScrollController();
+  final List<NewsRecommendationItem> _items = [];
 
-  final List<NewsItem> _items = [];
+  late String _requestId;
+  String? _nextCursor;
+  String? _openContentSessionId;
+  int? _userId;
+  int _page = 1;
+  int _dummyPage = 0;
+
   bool _loading = true;
   bool _loadingMore = false;
-  int _page = 1;
-  bool _hasMore = true; // 더보기 버튼 표시 여부
-
-  final ScrollController _scrollController = ScrollController();
-  String? _openContentSessionId;
-  static const _userId = 'test-user';
+  bool _hasMore = false;
+  bool _usingDummy = false;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -156,11 +142,26 @@ class _NewsScreenState extends State<NewsScreen> {
     super.dispose();
   }
 
+  Future<void> _postEvents(List<Map<String, dynamic>> events) async {
+    final userId = _userId;
+    if (userId == null || events.isEmpty) return;
+    final payload = events
+        .map((event) => <String, dynamic>{'user_id': userId, ...event})
+        .toList();
+    await _EventLogger.post(payload);
+  }
+
   Future<void> _init() async {
-    await _EventLogger.post([
+    try {
+      final profile = await UserApiService.getProfile();
+      _userId = profile.id > 0 ? profile.id : null;
+    } catch (_) {
+      _userId = null;
+    }
+
+    await _postEvents([
       {
         'event_id': _EventLogger.newId(),
-        'user_id': _userId,
         'event_type': 'screen_view',
         'app_session_id': _appSessionId,
         'screen_session_id': _screenSessionId,
@@ -168,118 +169,186 @@ class _NewsScreenState extends State<NewsScreen> {
       },
       {
         'event_id': _EventLogger.newId(),
-        'user_id': _userId,
         'event_type': 'recommendation_request',
         'app_session_id': _appSessionId,
         'screen_session_id': _screenSessionId,
         'request_id': _requestId,
         'page': 1,
+        'event_ts_client': _EventLogger.nowIso(),
       },
     ]);
-    await _loadDummy();
+
+    await _loadRecommendations(
+      requestId: _requestId,
+      allowDummyFallback: _enableDummyNewsFallback,
+    );
   }
 
-  Future<void> _loadDummy({bool isMore = false}) async {
-    if (!isMore) setState(() => _loading = true);
-
-    await Future.delayed(const Duration(milliseconds: 300));
-
-    // 페이지에 맞는 더미데이터 선택
-    final newItems = (_page == 1 ? _dummyPage1 : _dummyPage2)
-        .map((e) => NewsItem.fromMap(e))
-        .toList();
-
+  Future<void> _loadRecommendations({
+    required String requestId,
+    bool isMore = false,
+    String? cursor,
+    bool allowDummyFallback = false,
+  }) async {
+    if (!mounted) return;
     setState(() {
       if (isMore) {
-        _items.addAll(newItems);
+        _loadingMore = true;
       } else {
-        _items..clear()..addAll(newItems);
+        _loading = true;
+        _errorMessage = null;
       }
-      _loading = false;
-      _loadingMore = false;
-      // 페이지 2까지만 있으므로 2페이지 로드 후 더보기 숨김
-      _hasMore = _page < 2; // api연결 후 이부분은  _hasMore = nextCursor != null;  이렇게 바꾸면 됨
     });
 
-    if (!isMore) {
-      await _EventLogger.post([
+    try {
+      final response = await NewsApiService.getRecommendations(
+        cursor: cursor,
+        requestId: requestId,
+        screenSessionId: _screenSessionId,
+        appSessionId: _appSessionId,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _usingDummy = false;
+        _requestId = response.requestId;
+        _page = response.page;
+        _nextCursor = response.nextCursor;
+        _hasMore = response.nextCursor != null;
+        _loading = false;
+        _loadingMore = false;
+        _errorMessage = null;
+        if (isMore) {
+          _items.addAll(response.items);
+        } else {
+          _items
+            ..clear()
+            ..addAll(response.items);
+        }
+      });
+
+      await _postEvents([
         {
           'event_id': _EventLogger.newId(),
-          'user_id': _userId,
           'event_type': 'recommendation_response',
           'app_session_id': _appSessionId,
           'screen_session_id': _screenSessionId,
-          'request_id': _requestId,
+          'request_id': requestId,
           'event_ts_client': _EventLogger.nowIso(),
-          'page': _page,
+          'page': response.page,
         },
       ]);
+    } catch (e) {
+      debugPrint(
+        '[NewsScreen] 추천 뉴스 로드 실패(requestId=$requestId, isMore=$isMore): $e',
+      );
+      if (allowDummyFallback) {
+        await _loadDummy(isMore: isMore);
+        return;
+      }
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _loadingMore = false;
+        _errorMessage = '추천 뉴스를 불러오지 못했습니다.';
+      });
     }
+  }
+
+  Future<void> _loadDummy({bool isMore = false}) async {
+    if (!mounted) return;
+    if (!isMore) {
+      _dummyPage = 1;
+    } else if (_dummyPage < 2) {
+      _dummyPage += 1;
+    }
+
+    // 페이지에 맞는 더미데이터 선택
+    final pageData = _dummyPage <= 1 ? _dummyPage1 : _dummyPage2;
+    final fallbackItems = pageData
+        .map(
+          (item) => NewsRecommendationItem.fromJson({
+            ...item,
+            'is_placeholder': true,
+          }),
+        )
+        .toList();
+
+    setState(() {
+      _usingDummy = true;
+      _page = _dummyPage;
+      _nextCursor = null;
+      _hasMore = _dummyPage < 2;
+      _loading = false;
+      _loadingMore = false;
+      _errorMessage = null;
+      if (isMore) {
+        _items.addAll(fallbackItems);
+      } else {
+        _items
+          ..clear()
+          ..addAll(fallbackItems);
+      }
+    });
   }
 
   // ── 더보기 버튼 클릭 ──
   Future<void> _onLoadMore() async {
     if (_loadingMore || !_hasMore) return;
-    setState(() => _loadingMore = true);
 
-    final maxExtent = _scrollController.position.maxScrollExtent;
-    final double scrollDepth = maxExtent > 0
-        ? (_scrollController.position.pixels / maxExtent * 100)
+    if (_usingDummy) {
+      setState(() => _loadingMore = true);
+      await _loadDummy(isMore: true);
+      return;
+    }
+
+    if (_nextCursor == null) return;
+
+    final maxExtent = _scrollController.hasClients
+        ? _scrollController.position.maxScrollExtent
+        : 0.0;
+    final scrollDepth = maxExtent > 0 && _scrollController.hasClients
+        ? (_scrollController.position.pixels / maxExtent * 100).clamp(0, 100)
         : 100.0;
-    _page++;
-    final newRequestId = _EventLogger.newId();
+    final nextRequestId = _EventLogger.newId();
 
-    // scroll_depth + recommendation_request 먼저 전송
-    await _EventLogger.post([
+    await _postEvents([
       {
         'event_id': _EventLogger.newId(),
-        'user_id': _userId,
         'event_type': 'scroll_depth',
         'app_session_id': _appSessionId,
         'screen_session_id': _screenSessionId,
-        'request_id': newRequestId,
+        'request_id': nextRequestId,
         'event_ts_client': _EventLogger.nowIso(),
-        'page': _page,
-        'scroll_depth': scrollDepth.clamp(0, 100),
+        'page': _page + 1,
+        'scroll_depth': scrollDepth,
       },
       {
         'event_id': _EventLogger.newId(),
-        'user_id': _userId,
         'event_type': 'recommendation_request',
         'app_session_id': _appSessionId,
         'screen_session_id': _screenSessionId,
-        'request_id': newRequestId,
+        'request_id': nextRequestId,
         'event_ts_client': _EventLogger.nowIso(),
-        'page': _page,
+        'page': _page + 1,
       },
     ]);
-    _requestId = newRequestId;
 
-    // 데이터 로드
-    await _loadDummy(isMore: true);
-
-    // 로드 완료 후 recommendation_response 전송
-    await _EventLogger.post([
-      {
-        'event_id': _EventLogger.newId(),
-        'user_id': _userId,
-        'event_type': 'recommendation_response',
-        'app_session_id': _appSessionId,
-        'screen_session_id': _screenSessionId,
-        'request_id': newRequestId,
-        'event_ts_client': _EventLogger.nowIso(),
-        'page': _page,
-      },
-    ]);
+    await _loadRecommendations(
+      requestId: nextRequestId,
+      isMore: true,
+      cursor: _nextCursor,
+      allowDummyFallback: _enableDummyNewsFallback,
+    );
   }
 
-  Future<void> _onNewsTap(NewsItem item, int index) async {
+  Future<void> _onNewsTap(NewsRecommendationItem item, int index) async {
     final contentSessionId = _EventLogger.newId();
     _openContentSessionId = contentSessionId;
-    await _EventLogger.post([
+
+    await _postEvents([
       {
         'event_id': _EventLogger.newId(),
-        'user_id': _userId,
         'event_type': 'content_open',
         'app_session_id': _appSessionId,
         'screen_session_id': _screenSessionId,
@@ -291,20 +360,25 @@ class _NewsScreenState extends State<NewsScreen> {
         'page': _page,
       },
     ]);
+
     if (!mounted) return;
     await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => NewsDetailPage(item: item)),
+      MaterialPageRoute(
+        builder: (_) => NewsDetailPage(
+          newsId: item.newsId,
+          initialItem: item,
+        ),
+      ),
     );
     await _onNewsLeave();
   }
 
   Future<void> _onNewsLeave() async {
     if (_openContentSessionId == null) return;
-    await _EventLogger.post([
+    await _postEvents([
       {
         'event_id': _EventLogger.newId(),
-        'user_id': _userId,
         'event_type': 'content_leave',
         'app_session_id': _appSessionId,
         'content_session_id': _openContentSessionId,
@@ -315,10 +389,9 @@ class _NewsScreenState extends State<NewsScreen> {
   }
 
   Future<void> _sendScreenLeave() async {
-    await _EventLogger.post([
+    await _postEvents([
       {
         'event_id': _EventLogger.newId(),
-        'user_id': _userId,
         'event_type': 'screen_leave',
         'app_session_id': _appSessionId,
         'screen_session_id': _screenSessionId,
@@ -391,49 +464,72 @@ class _NewsScreenState extends State<NewsScreen> {
             Expanded(
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
-                  : _items.isEmpty
-                  ? const Center(child: Text('추천 뉴스가 없습니다.'))
-                  : ListView.separated(
-                controller: _scrollController,
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                itemCount: _items.length + 1, // +1 for 더보기 버튼
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  if (index == _items.length) {
-                    // 더보기 버튼 or 로딩 or 없음
-                    if (_loadingMore) {
-                      return const Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Center(child: CircularProgressIndicator()),
-                      );
-                    }
-                    if (_hasMore) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        child: Center(
-                          child: GestureDetector(
-                            onTap: _onLoadMore,
-                            child: const Text(
-                              '더보기',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                color: Color(0xFF83848B),
-                              ),
+                  : _errorMessage != null
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  _errorMessage!,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Color(0xFF606060),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                TextButton(
+                                  onPressed: () => _loadRecommendations(requestId: _requestId),
+                                  child: const Text('다시 시도'),
+                                ),
+                              ],
                             ),
                           ),
-                        ),
-                      );
-                    }
-                    // 더 이상 뉴스 없으면 빈 공간
-                    return const SizedBox(height: 12);
-                  }
-                  return GestureDetector(
-                    onTap: () => _onNewsTap(_items[index], index),
-                    child: _NewsCard(item: _items[index]),
-                  );
-                },
-              ),
+                        )
+                      : _items.isEmpty
+                          ? const Center(child: Text('추천 뉴스가 없습니다.'))
+                          : ListView.separated(
+                              controller: _scrollController,
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                              itemCount: _items.length + 1,
+                              separatorBuilder: (context, index) => const SizedBox(height: 12),
+                              itemBuilder: (context, index) {
+                                if (index == _items.length) {
+                                  if (_loadingMore) {
+                                    return const Padding(
+                                      padding: EdgeInsets.all(16),
+                                      child: Center(child: CircularProgressIndicator()),
+                                    );
+                                  }
+                                  if (_hasMore) {
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      child: Center(
+                                        child: GestureDetector(
+                                          onTap: _onLoadMore,
+                                          child: const Text(
+                                            '더보기',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w500,
+                                              color: Color(0xFF83848B),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  return const SizedBox(height: 12);
+                                }
+
+                                return GestureDetector(
+                                  onTap: () => _onNewsTap(_items[index], index),
+                                  child: _NewsCard(item: _items[index]),
+                                );
+                              },
+                            ),
             ),
           ],
         ),
@@ -445,22 +541,19 @@ class _NewsScreenState extends State<NewsScreen> {
 // ===================== 뉴스 카드 =====================
 
 class _NewsCard extends StatelessWidget {
-  final NewsItem item;
+  final NewsRecommendationItem item;
+
   const _NewsCard({required this.item});
 
-  bool get _isUp => item.path == 'A1';
+  bool get _isUp => item.stockUp;
 
   String _relativeTime() {
-    if (item.pubDate == null) return '';
-    try {
-      final pub = DateTime.parse(item.pubDate!);
-      final diff = DateTime.now().difference(pub);
-      if (diff.inMinutes < 60) return '${diff.inMinutes}분 전';
-      if (diff.inHours < 24) return '${diff.inHours}시간 전';
-      return '${diff.inDays}일 전';
-    } catch (_) {
-      return '';
-    }
+    final pubDate = item.pubDate;
+    if (pubDate == null) return '';
+    final diff = DateTime.now().difference(pubDate);
+    if (diff.inMinutes < 60) return '${diff.inMinutes}분 전';
+    if (diff.inHours < 24) return '${diff.inHours}시간 전';
+    return '${diff.inDays}일 전';
   }
 
   @override
