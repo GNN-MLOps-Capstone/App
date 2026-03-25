@@ -464,30 +464,40 @@ class _StockDetailPageState extends State<StockDetailPage> {
             Text(widget.stockName,
                 style: const TextStyle(fontSize: 25, fontWeight: FontWeight.w600)),
             const SizedBox(height: 2),
-            Text('${_wonFormat.format(_currentPrice)}원',
-                style: const TextStyle(fontSize: 35, letterSpacing: -0.5)),
-            const SizedBox(height: 4),
-            if (_isFlat)
-              Text('보합', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: Colors.grey))
-            else
-              Row(children: [
-                SvgPicture.asset(
-                  _isUp
-                      ? 'assets/images/up_arrow.svg'
-                      : 'assets/images/down_arrow.svg',
-                  width: 10, height: 10,
-                  colorFilter: ColorFilter.mode(changeColor, BlendMode.srcIn),
-                  placeholderBuilder: (_) => Icon(
-                    _isUp ? Icons.arrow_upward : Icons.arrow_downward,
-                    color: changeColor, size: 14,
+            if (_overview == null)
+              const SizedBox(
+                height: 42,
+                child: Center(child: SizedBox(
+                  width: 20, height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: _kGreen),
+                )),
+              )
+            else ...[
+              Text('${_wonFormat.format(_currentPrice)}원',
+                  style: const TextStyle(fontSize: 35, letterSpacing: -0.5)),
+              const SizedBox(height: 4),
+              if (_isFlat)
+                Text('보합', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: Colors.grey))
+              else
+                Row(children: [
+                  SvgPicture.asset(
+                    _isUp
+                        ? 'assets/images/up_arrow.svg'
+                        : 'assets/images/down_arrow.svg',
+                    width: 10, height: 10,
+                    colorFilter: ColorFilter.mode(changeColor, BlendMode.srcIn),
+                    placeholderBuilder: (_) => Icon(
+                      _isUp ? Icons.arrow_upward : Icons.arrow_downward,
+                      color: changeColor, size: 14,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 3),
-                Text(changeRateText,
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: changeColor)),
-              ]),
+                  const SizedBox(width: 3),
+                  Text(changeRateText,
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: changeColor)),
+                ]),
+            ],
           ])),
-          _sentimentIcon(_sentiment),
+          if (_overview != null) _sentimentIcon(_sentiment),
         ]),
         const SizedBox(height: 10),
         Align(alignment: Alignment.centerRight,
