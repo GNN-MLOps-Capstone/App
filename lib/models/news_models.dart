@@ -6,7 +6,7 @@ class NewsRecommendationItem {
   final String? path;
   final String? stockName;
   final String? stockChange;
-  final bool stockUp;
+  final bool? stockUp;
   final bool isPlaceholder;
 
   const NewsRecommendationItem({
@@ -17,7 +17,7 @@ class NewsRecommendationItem {
     this.path,
     this.stockName,
     this.stockChange,
-    this.stockUp = true,
+    this.stockUp,
     this.isPlaceholder = false,
   });
 
@@ -32,7 +32,7 @@ class NewsRecommendationItem {
       path: json['path'] as String?,
       stockName: json['stock_name'] as String?,
       stockChange: json['stock_change'] as String?,
-      stockUp: json['stock_up'] as bool? ?? true,
+      stockUp: json['stock_up'] as bool?,
       isPlaceholder: json['is_placeholder'] as bool? ?? false,
     );
   }

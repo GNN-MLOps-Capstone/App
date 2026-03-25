@@ -545,7 +545,7 @@ class _NewsCard extends StatelessWidget {
 
   const _NewsCard({required this.item});
 
-  bool get _isUp => item.stockUp;
+  bool get _isUp => item.stockUp == true;
 
   String _relativeTime() {
     final pubDate = item.pubDate;
@@ -587,13 +587,16 @@ class _NewsCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      SvgPicture.asset(
-                        _isUp
-                            ? 'assets/images/up_arrow.svg'
-                            : 'assets/images/down_arrow.svg',
-                        width: 8,
-                        height: 8,
-                      ),
+                      if (item.stockUp != null)
+                        SvgPicture.asset(
+                          _isUp
+                              ? 'assets/images/up_arrow.svg'
+                              : 'assets/images/down_arrow.svg',
+                          width: 8,
+                          height: 8,
+                        )
+                      else
+                        const SizedBox(width: 8, height: 8),
                       const Spacer(),
                       Text(
                         item.title,
@@ -661,9 +664,9 @@ class _NewsCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w500,
-                            color: item.stockUp
-                                ? const Color(0xFFE63E3E)
-                                : const Color(0xFF1E3CD6),
+                            color: item.stockUp == false
+                                ? const Color(0xFF1E3CD6)
+                                : const Color(0xFFE63E3E),
                           ),
                         ),
                       ],
