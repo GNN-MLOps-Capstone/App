@@ -191,8 +191,7 @@ class _StockHomeScreenState extends State<StockHomeScreen> {
                 padding: const EdgeInsets.only(left: 16),
                 child: _SectionHeader(
                   title: '관심종목이 움직이고 있어요',
-                  onMore: () => Navigator.pushNamedAndRemoveUntil(
-                      context, '/watchlist', (r) => false),
+                  onMore: () => Navigator.pushNamed(context, '/watchlist'),
                 ),
               ),
               const SizedBox(height: 8),
@@ -225,8 +224,7 @@ class _StockHomeScreenState extends State<StockHomeScreen> {
                 padding: const EdgeInsets.only(left: 16),
                 child: _SectionHeader(
                   title: '오늘 꼭 봐야 할 뉴스예요',
-                  onMore: () => Navigator.pushNamedAndRemoveUntil(
-                      context, '/news', (r) => false),
+                  onMore: () => Navigator.pushNamed(context, '/news'),
                 ),
               ),
               const SizedBox(height: 8),
