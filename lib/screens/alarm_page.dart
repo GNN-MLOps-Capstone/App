@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../services/notification_service.dart';
 
 enum AlarmTag { highRisk, risk, keyword }
@@ -19,16 +20,10 @@ class AlarmItem {
   final AlarmTag tag;
   final String stockName;
   final double? sentimentScore;
-  
   final String title;
   final String body;
-
-  /// 알림 발생 시각(정렬/시간표시 핵심)
   final DateTime createdAt;
-
   bool isRead;
-
-  /// ✅ 즐겨찾기(= 중요 탭에 들어갈지)
   bool isStarred;
 
   AlarmItem({
@@ -47,8 +42,8 @@ class AlarmItem {
     return AlarmItem(
       id: r.id,
       tag: _tagFromType(r.type),
-      stockName: '',        // TODO: 백엔드에 stockName 필드 생기면 r.stockName으로 교체
-      sentimentScore: null, // TODO: 백엔드에 sentimentScore 필드 생기면 r.sentimentScore로 교체
+      stockName: '',
+      sentimentScore: null,
       title: r.title,
       body: r.body ?? '',
       createdAt: r.createdAt,
@@ -80,19 +75,16 @@ class AlarmItem {
     );
   }
 
-  /// 요청 규칙대로 timeLabel 생성
   String timeLabelNow(DateTime now) {
     final diff = now.difference(createdAt);
     if (diff.isNegative) return '방금 전';
-
     final minutes = diff.inMinutes;
     final hours = diff.inHours;
     final days = diff.inDays;
-
-    if (minutes <= 5) return '방금 전';          // 0~5분
-    if (minutes < 60) return '${minutes}분 전';   // 5분 초과~1시간 미만
-    if (hours < 24) return '${hours}시간 전';     // 1시간 이상~24시간 미만(분 버림)
-    return '${days}일 전';                       // 1일 이상
+    if (minutes <= 5) return '방금 전';
+    if (minutes < 60) return '${minutes}분 전';
+    if (hours < 24) return '${hours}시간 전';
+    return '${days}일 전';
   }
 }
 
@@ -107,10 +99,6 @@ class _AlarmPageState extends State<AlarmPage> {
   Timer? _ticker;
   List<AlarmItem> _items = [];
 
-  // ==============================
-  // 정렬/추가 공통 유틸
-  // ==============================
-
   void _sortByNewest() {
     _items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
@@ -121,14 +109,11 @@ class _AlarmPageState extends State<AlarmPage> {
     return merged;
   }
 
-  /// ✅ 새 알림 도착 시 호출하면 됨 (자동 최신순 + 맨 위)
-  /// - 같은 id가 있으면 업데이트(중복 방지)
   void addOrUpdateAlarm(AlarmItem newItem) {
     setState(() {
       final idx = _items.indexWhere((e) => e.id == newItem.id);
       if (idx >= 0) {
         final old = _items[idx];
-        // 기존 읽음/즐겨찾기 상태는 유지하면서 본문/시간/태그만 갱신
         _items[idx] = old.copyWith(
           tag: newItem.tag,
           stockName: newItem.stockName,
@@ -156,31 +141,21 @@ class _AlarmPageState extends State<AlarmPage> {
       if (idx < 0) return;
       final it = _items[idx];
       _items[idx] = it.copyWith(isStarred: !it.isStarred);
-      // 즐겨찾기 토글해도 정렬은 최신순 유지(필요하면 여기서 고정정렬 정책 변경 가능)
       _sortByNewest();
     });
   }
 
-  // ==============================
-  // 리스크/키워드 생성 로직 (더미)
-  // ==============================
-
   AlarmTag _tagBySentiment(double sentimentScore) {
-    // TODO(임계값 튜닝 필요):
-    // - sentimentScore가 X 이하이면 highRisk
-    // - sentimentScore가 Y 이하이면 risk
-    if (sentimentScore <= 35) return AlarmTag.highRisk; // TODO
-    if (sentimentScore <= 55) return AlarmTag.risk;     // TODO
-    return AlarmTag.risk; // TODO: 정책에 따라 "알림 생성 안 함"으로 바꿀 수 있음
+    if (sentimentScore <= 35) return AlarmTag.highRisk;
+    if (sentimentScore <= 55) return AlarmTag.risk;
+    return AlarmTag.keyword;
   }
 
   Future<List<String>> _fetchFavoriteStocks() async {
-    // TODO: 관심종목 페이지에서 가져오기 (상태관리/Firestore/로컬저장 등)
     return ['삼성전자', 'NAVER', '카카오'];
   }
 
   Future<List<String>> _fetchUserKeywordsFromFavorites() async {
-    // TODO: 관심종목 기반 키워드 정책 결정
     final favorites = await _fetchFavoriteStocks();
     return favorites;
   }
@@ -204,7 +179,7 @@ class _AlarmPageState extends State<AlarmPage> {
         'body': 'AI 서비스 관련 부정적 여론 증가, 감성 지수 70→45로 하락',
         'createdAt': now.subtract(const Duration(hours: 3)),
         'read': true,
-        'star': false, // 더미로 중요 하나 넣어둠
+        'star': false,
       },
       {
         'stock': 'LG에너지솔루션',
@@ -221,7 +196,6 @@ class _AlarmPageState extends State<AlarmPage> {
       final s = d['sent'] as double;
       final createdAt = d['createdAt'] as DateTime;
       final stock = d['stock'] as String;
-
       return AlarmItem(
         id: createdAt.millisecondsSinceEpoch,
         tag: _tagBySentiment(s),
@@ -242,14 +216,14 @@ class _AlarmPageState extends State<AlarmPage> {
       {
         'stock': '카카오',
         'title': '카카오 규제 이슈 발생',
-        'body': '공정거래위원회 조사 착수, 관련 키워드 “규제”, “조사” 급증 중',
+        'body': '공정거래위원회 조사 착수, 관련 키워드 "규제", "조사" 급증 중',
         'createdAt': now.subtract(const Duration(minutes: 32)),
         'read': false,
         'star': false,
       },
       {
         'stock': '삼성전자',
-        'title': '삼성전자 “반도체” 키워드 급등',
+        'title': '삼성전자 "반도체" 키워드 급등',
         'body': '관련 기사/언급량이 급증했습니다. 단기 이슈로 변동성 주의',
         'createdAt': now.subtract(const Duration(days: 2, minutes: 5)),
         'read': true,
@@ -262,37 +236,28 @@ class _AlarmPageState extends State<AlarmPage> {
       final text = '${n['title']} ${n['body']}';
       final matched = userKeywords.any((kw) => text.contains(kw));
       if (!matched) continue;
-
       final createdAt = n['createdAt'] as DateTime;
       final stock = n['stock'] as String;
-
-      results.add(
-        AlarmItem(
-          id: createdAt.millisecondsSinceEpoch,
-          tag: AlarmTag.keyword,
-          stockName: stock,
-          title: n['title'] as String,
-          body: n['body'] as String,
-          createdAt: createdAt,
-          isRead: n['read'] as bool,
-          isStarred: n['star'] as bool,
-        ),
-      );
+      results.add(AlarmItem(
+        id: createdAt.millisecondsSinceEpoch,
+        tag: AlarmTag.keyword,
+        stockName: stock,
+        title: n['title'] as String,
+        body: n['body'] as String,
+        createdAt: createdAt,
+        isRead: n['read'] as bool,
+        isStarred: n['star'] as bool,
+      ));
     }
     return results;
   }
 
-  // ==============================
-  // 초기 로드
-  // ==============================
-
   @override
   void initState() {
     super.initState();
-    _initFromApi();
-    //_initDummyItems();
+    //_initDummyItems(); // 더미데이터 사용 시 이걸로 교체
+    _initFromApi(); // API 연결 시 이걸로 교체
 
-    // timeLabel 갱신 (1분마다)
     _ticker = Timer.periodic(const Duration(minutes: 1), (_) {
       if (!mounted) return;
       setState(() {});
@@ -310,7 +275,6 @@ class _AlarmPageState extends State<AlarmPage> {
     final userKeywords = await _fetchUserKeywordsFromFavorites();
     final keywordItems = _generateKeywordAlarmsDummy(userKeywords);
     if (!mounted) return;
-
     setState(() {
       _items = _mergeAndSort(riskItems, keywordItems);
     });
@@ -333,78 +297,135 @@ class _AlarmPageState extends State<AlarmPage> {
     }
   }
 
+  // ===== 더미 모드 사용 시 =====
+  /*
   Future<void> _deleteItemWithApi(int id) async {
+    _deleteItem(id); // 더미: 바로 로컬에서 삭제
+  }
+   */
+
+// ===== API 연결 시 아래 주석 해제 =====
+  // /*
+Future<void> _deleteItemWithApi(int id) async {
+  try {
     final ok = await NotificationApiService.deleteNotification(id);
+    if (!mounted) return;
     if (ok) {
-      _deleteItem(id); // 성공 시 로컬에서도 제거
+      _deleteItem(id);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('알림 삭제에 실패했습니다.')),
+      );
     }
+  } catch (e) {
+    if (!mounted) return;
+    debugPrint('deleteNotification failed: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('알림 삭제 중 오류가 발생했습니다.')),
+    );
   }
+}
+  // */
 
+// ===== 더미 모드 사용 시 =====
+  /*
   Future<void> _toggleStarWithApi(int id) async {
-    try {
-      final newValue = await NotificationApiService.toggleImportant(id);
-      if (!mounted) return;
-      setState(() {
-        final idx = _items.indexWhere((e) => e.id == id);
-        if (idx >= 0) _items[idx].isStarred = newValue;
-      });
-    } catch (_) {}
+    setState(() {
+      final idx = _items.indexWhere((e) => e.id == id);
+      if (idx >= 0) {
+        _items[idx] = _items[idx].copyWith(isStarred: !_items[idx].isStarred);
+      }
+    });
   }
+  */
 
-  // ==============================
-  // 탭 카운트/필터
-  // ==============================
+// ===== API 연결 시 아래 주석 해제 =====
+  // /*
+Future<void> _toggleStarWithApi(int id) async {
+  try {
+    final newValue = await NotificationApiService.toggleImportant(id);
+    if (!mounted) return;
+    setState(() {
+      final idx = _items.indexWhere((e) => e.id == id);
+      if (idx >= 0) _items[idx].isStarred = newValue;
+    });
+  } catch (e) {
+    if (!mounted) return;
+    debugPrint('toggleImportant failed: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('중요 표시 변경에 실패했습니다.')),
+    );
+  }
+}
+// */
 
   int get _totalCount => _items.length;
   int get _starCount => _items.where((e) => e.isStarred).length;
   int get _unreadCount => _items.where((e) => !e.isRead).length;
-
   int get _riskTabCount =>
       _items.where((e) => e.tag == AlarmTag.highRisk || e.tag == AlarmTag.risk).length;
 
-  int get _keywordTabCount => _items.where((e) => e.tag == AlarmTag.keyword).length;
+  // ===== 더미 모드 사용 시 =====
+  /*
+  void _markAllRead() {
+    setState(() {
+      _items = _items.map((it) => it.copyWith(isRead: true)).toList();
+    });
+  }
+  */
 
+// ===== API 연결 시 아래 주석 해제 =====
+  // /*
   void _markAllRead() async {
     try {
       await NotificationApiService.markAsRead(id: null);
       if (!mounted) return;
       setState(() {
-        _items = _items.map((it) => it.isRead ? it : it.copyWith(isRead: true)).toList();
-        for (final it in _items) {
-          it.isRead = true;
-        }
+        _items = _items.map((it) => it.copyWith(isRead: true)).toList();
       });
-    } catch (_) {}
-  }
+    } catch (e) {
+      if (!mounted) return;
+      debugPrint('markAsRead(all) failed: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('모두 읽음 처리에 실패했습니다.')),
+      );
+    }
+  } // */
 
+  // ✅ 1번 수정: 상세 페이지 다녀온 후 _items 리스트에서 id로 찾아 isRead 갱신
   Future<void> _openDetailAndMarkRead(AlarmItem item) async {
     await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => AlarmDetailPage(item: item),
-      ),
+      MaterialPageRoute(builder: (_) => AlarmDetailPage(item: item)),
     );
 
     if (!mounted) return;
 
-    if (!item.isRead) {
-      try {
-        await NotificationApiService.markAsRead(id: item.id);
-        if (!mounted) return;
-        setState(() {
-          final idx = _items.indexWhere((e) => e.id == item.id);
-          if (idx >= 0) {
-            _items[idx] = _items[idx].copyWith(isRead: true);
-          }
-        });
-      } catch (e) {
-        debugPrint('Failed to mark as read: $e');
-      }
-    }
+    final idx = _items.indexWhere((e) => e.id == item.id);
+    if (idx < 0 || _items[idx].isRead) return;
+
+    // ===== 더미 모드 사용 시 =====
+    /*
+    setState(() {
+      _items[idx] = _items[idx].copyWith(isRead: true);
+    });
+     */
+
+    // ===== API 연결 시 아래 주석 해제 =====
+    // /*
+    try {
+      await NotificationApiService.markAsRead(id: item.id);
+      if (!mounted) return;
+      setState(() {
+        _items[idx] = _items[idx].copyWith(isRead: true);
+      });
+    } catch (e) {
+      debugPrint('Failed to mark as read: $e');
+    } // */
   }
 
-  /// 탭 순서:
-  /// 0 전체 / 1 중요 / 2 읽지 않음 / 3 긴급/리스크 / 4 키워드
+
+  /// 탭 순서: 0 전체 / 1 중요 / 2 읽지 않음 / 3 긴급/리스크
   List<AlarmItem> _filteredItems(int tabIndex) {
     switch (tabIndex) {
       case 1:
@@ -412,24 +433,19 @@ class _AlarmPageState extends State<AlarmPage> {
       case 2:
         return _items.where((e) => !e.isRead).toList();
       case 3:
+      // ✅ 3번 수정: tag가 명시적으로 highRisk/risk인 것만 포함
         return _items
             .where((e) => e.tag == AlarmTag.highRisk || e.tag == AlarmTag.risk)
             .toList();
-      case 4:
-        return _items.where((e) => e.tag == AlarmTag.keyword).toList();
       default:
         return _items;
     }
   }
 
-  // ==============================
-  // UI
-  // ==============================
-
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 5, // ✅ 중요 탭 추가!
+      length: 4,
       child: Scaffold(
         backgroundColor: const Color(0xFFF3F4F6),
         appBar: AppBar(
@@ -455,7 +471,8 @@ class _AlarmPageState extends State<AlarmPage> {
                   foregroundColor: Colors.black87,
                   disabledForegroundColor: Colors.black26,
                   backgroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
               ),
             ),
@@ -476,22 +493,19 @@ class _AlarmPageState extends State<AlarmPage> {
                   Tab(text: '중요 ($_starCount)'),
                   Tab(text: '읽지 않음 ($_unreadCount)'),
                   Tab(text: '긴급/리스크 ($_riskTabCount)'),
-                  Tab(text: '키워드 ($_keywordTabCount)'),
                 ],
               ),
             ),
           ),
         ),
         body: TabBarView(
-          children: List.generate(5, (tabIndex) {
+          children: List.generate(4, (tabIndex) {
             final list = _filteredItems(tabIndex);
-
             return ListView.builder(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
               itemCount: list.length,
               itemBuilder: (_, i) {
                 final item = list[i];
-
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: _AlarmSlidableCard(
@@ -510,7 +524,6 @@ class _AlarmPageState extends State<AlarmPage> {
   }
 }
 
-/// ✅ 슬라이드 액션(삭제/중요) 포함 카드
 class _AlarmSlidableCard extends StatelessWidget {
   final AlarmItem item;
   final VoidCallback onTap;
@@ -528,33 +541,36 @@ class _AlarmSlidableCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Slidable(
       key: ValueKey(item.id),
-
-      /// ✅ 오른쪽으로 슬라이드하면(=startToEnd) 왼쪽에 버튼
       startActionPane: ActionPane(
         motion: const DrawerMotion(),
-        extentRatio: 0.52, // 버튼 2개가 딱 들어가는 폭
+        extentRatio: 0.52,
         children: [
-          SlidableAction(
+          CustomSlidableAction(
             onPressed: (_) => onDelete(),
-            backgroundColor: const Color(0xFFEF4444),
-            foregroundColor: Colors.white,
-            icon: Icons.delete_outline,
-            label: '삭제',
+            backgroundColor: const Color(0xFF83848B),
             borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(14),
               bottomLeft: Radius.circular(14),
             ),
+            child: SvgPicture.asset(
+              'assets/images/delete.svg',
+              width: 24,
+              height: 24,
+              colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+            ),
           ),
-          SlidableAction(
+          CustomSlidableAction(
             onPressed: (_) => onToggleStar(),
-            backgroundColor: const Color(0xFF10B981),
-            foregroundColor: Colors.white,
-            icon: item.isStarred ? Icons.star : Icons.star_border,
-            label: '중요',
+            backgroundColor: const Color(0xFF0EC272),
+            child: SvgPicture.asset(
+              'assets/images/favorites.svg',
+              width: 24,
+              height: 24,
+              colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+            ),
           ),
         ],
       ),
-
       child: _AlarmCard(item: item, onTap: onTap),
     );
   }
@@ -568,62 +584,42 @@ class _AlarmCard extends StatelessWidget {
 
   bool get _isUnread => !item.isRead;
 
+  // ✅ 2번 수정: 읽음 여부와 무관하게 tag 기준으로만 배경색 결정
   Color get _bgColor {
-    if (!_isUnread) return Colors.white;
-
     if (item.tag == AlarmTag.highRisk || item.tag == AlarmTag.risk) {
-      return const Color(0xFFFDECEC);
+      return const Color(0xFFD6FCEB); // 리스크는 항상 초록
     }
-    return const Color(0xFFEAF3FF);
+    return Colors.white;
   }
 
+  // ✅ 2번 수정: 테두리도 동일하게 tag 기준
   Color get _borderColor {
-    if (item.isRead) return const Color(0xFFE5E7EB);
     if (item.tag == AlarmTag.highRisk || item.tag == AlarmTag.risk) {
-      return const Color(0xFFF6B6B6);
+      return const Color(0xFF0EC272);
     }
-    return const Color(0xFFB9D8FF);
+    return const Color(0xFFE5E7EB);
   }
 
   Widget _leadingDot() {
     return SizedBox(
       width: 26,
-      child: Center(
-        child: _isUnread
-            ? Container(
-          width: 10,
-          height: 10,
-          decoration: const BoxDecoration(
-            color: Color(0xFF2F80ED),
-            shape: BoxShape.circle,
-          ),
-        )
-            : const SizedBox.shrink(),
+      child: Padding(
+        padding: const EdgeInsets.only(top: 30), // ← 숫자 조절로 위치 변경
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: _isUnread
+              ? Container(
+            width: 10,
+            height: 10,
+            decoration: const BoxDecoration(
+              color: Color(0xFF0EC272),
+              shape: BoxShape.circle,
+            ),
+          )
+              : const SizedBox.shrink(),
+        ),
       ),
     );
-  }
-
-  Widget _badge() {
-    switch (item.tag) {
-      case AlarmTag.highRisk:
-        return const _Chip(
-          text: '높은 리스크',
-          fg: Colors.white,
-          bg: Color(0xFFEF4444),
-        );
-      case AlarmTag.risk:
-        return const _Chip(
-          text: '리스크',
-          fg: Color(0xFFEF4444),
-          bg: Color(0xFFFDE2E2),
-        );
-      case AlarmTag.keyword:
-        return const _Chip(
-          text: '키워드',
-          fg: Color(0xFF2F80ED),
-          bg: Color(0xFFDCEBFF),
-        );
-    }
   }
 
   @override
@@ -656,44 +652,43 @@ class _AlarmCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Text(
+                    item.title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.black87,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Expanded(
                         child: Text(
-                          item.title,
+                          item.body,
                           style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
+                            fontSize: 14,
+                            height: 1.35,
+                            fontWeight: FontWeight.w600,
                             color: Colors.black87,
                           ),
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       const SizedBox(width: 8),
-                      _badge(),
+                      Text(
+                        timeLabel,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.black54,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    item.body,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      height: 1.35,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    timeLabel,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.black54,
-                      fontWeight: FontWeight.w600,
-                    ),
                   ),
                 ],
               ),
@@ -758,14 +753,15 @@ class AlarmDetailPage extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text(
-              '“추후 연결 예정”',
+              '"추후 연결 예정"',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 12),
             Text(
               item.title,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.w600),
+              style: const TextStyle(
+                  color: Colors.black54, fontWeight: FontWeight.w600),
             ),
           ],
         ),
