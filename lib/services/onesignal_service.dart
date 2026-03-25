@@ -45,7 +45,8 @@ class OneSignalService {
       await OneSignal.Notifications.requestPermission(true);
 
       // 알림 클릭 리스너
-      OneSignal.Notifications.addClickListener((event) {
+      OneSignal.Notifications.addClickListener((event) async {
+        await _saveNotificationToDb(event.notification);
         if (kDebugMode) {
           print('알림 클릭: ${event.notification.title}');
         }
@@ -73,7 +74,7 @@ class OneSignalService {
       if (onesignalId != null && onesignalId.isNotEmpty) {
         await NotificationApiService.createNotification(
           NotificationCreateRequest(
-            targetOnesignalId: onesignalId,
+            notificationId: notification.notificationId,
             type: notification.additionalData?['type'] ?? 'general',
             title: notification.title ?? '',
             body: notification.body ?? '',
@@ -212,6 +213,4 @@ class OneSignalService {
   void disableForegroundNotifications() {
     OneSignal.Notifications.clearAll();
   }
-
-  
 }

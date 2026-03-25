@@ -17,11 +17,6 @@ class NotificationApiService {
   // 토큰 헤더 가져오기
   static Future<Map<String, String>> _getHeaders() async {
     String? token = await _storage.read(key: 'access_token');
-    if (token == null || token.isEmpty){
-      token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdHJpbmciLCJleHAiOjE3NzUyMjQ5MjB9.LlUBTA2q1aK1cHjZe8qyXtiS6eqU9q2_IavS6UvcmyU';
-      // 나중에 로그인과 합쳤을 때에는 이 코드로 위에 코드는 지우고
-      // throw Exception('Access token is missing');
-    }
     return {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer ${token ?? ""}',
@@ -113,7 +108,7 @@ class NotificationApiService {
         uri,
         headers: await _getHeaders(),
         body: json.encode(req.toJson()),
-      ).timeout(const Duration(seconds: 10));;
+      ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 201) {
         final data = json.decode(response.body);
@@ -161,7 +156,7 @@ class NotificationResponse {
 
 /// 알림 생성 요청 모델
 class NotificationCreateRequest {
-  final String targetOnesignalId;
+  final String notificationId;
   final String type;
   final String title;
   final String? body;
@@ -169,7 +164,7 @@ class NotificationCreateRequest {
   final double? sentimentScore;
 
   NotificationCreateRequest({
-    required this.targetOnesignalId,
+    required this.notificationId,
     required this.type,
     required this.title,
     this.body,
@@ -178,7 +173,7 @@ class NotificationCreateRequest {
   });
 
   Map<String, dynamic> toJson() => {
-    'onesignal_id': targetOnesignalId,
+    'notification_id': notificationId,
     'type': type,
     'title': title,
     'body': body,
