@@ -303,7 +303,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
           !dt.isAfter(dayEnd);
     }).toList();
 
-    final src = filtered.isNotEmpty ? filtered : sorted;
+    final src = filtered.length >= 2 ? filtered : sorted;
     return _PreparedChartData(
       points:     src.map((p) => p.c.toDouble()).toList(),
       pointTimes: src.map((p) => DateTime.fromMillisecondsSinceEpoch(p.t)).toList(),
@@ -409,9 +409,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
         onIndexChanged: _onBottomTap,
       ),
       body: SafeArea(
-        child: _loading && _overview == null
-            ? const Center(child: CircularProgressIndicator(color: _kGreen))
-            : _error != null && _overview == null
+        child: _error != null && _overview == null
             ? _buildError()
             : _buildContent(),
       ),
@@ -689,7 +687,7 @@ class _ChartBox extends StatelessWidget {
     child: SizedBox(height: 200,
         child: isLoading
             ? const Center(child: CircularProgressIndicator(color: _kGreen))
-            : chartPts.isEmpty
+            : chartPts.length < 2
             ? const Center(child: Text('장 마감 또는 데이터가 없습니다', style: TextStyle(color: Colors.grey)))
             : ClipRect(
             child: _SmoothChart(pts: chartPts, maxLabel: maxLabel, minLabel: minLabel,
@@ -767,8 +765,8 @@ class _SmoothChartState extends State<_SmoothChart> {
       onHorizontalDragCancel: ()  => _clearWithDelay(),
       child: Stack(children: [
         Positioned.fill(child: CustomPaint(painter: _CurvePainter(pts, _idx))),
-        Positioned.fill(child: _greenTag(sz, maxI, widget.maxLabel, above: true)),
-        Positioned.fill(child: _greenTag(sz, minI, widget.minLabel, above: false)),
+        _greenTag(sz, maxI, widget.maxLabel, above: true),
+        _greenTag(sz, minI, widget.minLabel, above: false),
         Positioned(left: _pad.left, right: _pad.right, bottom: 0,
             child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: widget.xLabels.map((t) =>
