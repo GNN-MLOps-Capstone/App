@@ -378,12 +378,19 @@ class _StockRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isUp = stock.changeRate >= 0;
-    final changeColor =
-        isUp ? const Color(0xFFFF2B3A) : const Color(0xFF0885FE);
-    final changeStr = isUp
-        ? '+${stock.changeRate.toStringAsFixed(1)}%'
-        : '${stock.changeRate.toStringAsFixed(1)}%';
+    final rate = stock.changeRate;
+    final Color changeColor;
+    final String changeStr;
+    if (rate > 0) {
+      changeColor = const Color(0xFFFF2B3A);
+      changeStr = '+${rate.toStringAsFixed(1)}%';
+    } else if (rate < 0) {
+      changeColor = const Color(0xFF0885FE);
+      changeStr = '${rate.toStringAsFixed(1)}%';
+    } else {
+      changeColor = Colors.grey;
+      changeStr = '0.0%';
+    }
     final priceStr =
         '${NumberFormat('#,###').format(stock.price)}원';
 
