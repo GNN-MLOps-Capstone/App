@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../models/watchlist_models.dart';
 import '../services/watchlist_service.dart';
 import '../services/news_api_service.dart';
+import '../services/user_api_service.dart';
 import 'widgets/bottom_nav_bar.dart';
 
 // TODO: 팀원이 키워드 API 구현 시 교체
@@ -22,11 +23,13 @@ class StockHomeScreen extends StatefulWidget {
 class _StockHomeScreenState extends State<StockHomeScreen> {
   List<WatchlistStock> _watchlist = [];
   List<NewsItem> _news = [];
+  String _userName = '';
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
+    _userName = widget.userName ?? '';
     _loadData();
   }
 
@@ -35,11 +38,13 @@ class _StockHomeScreenState extends State<StockHomeScreen> {
       final results = await Future.wait([
         WatchlistService().getWatchlist(),
         NewsApiService.getNewsList(limit: 3),
+        UserApiService.getProfile(),
       ]);
       if (!mounted) return;
       setState(() {
         _watchlist = (results[0] as List<WatchlistStock>).take(3).toList();
         _news = results[1] as List<NewsItem>;
+        _userName = (results[2] as UserResponse).nickname;
         _loading = false;
       });
     } catch (_) {
@@ -71,8 +76,7 @@ class _StockHomeScreenState extends State<StockHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final greetingName =
-        (widget.userName ?? '').isEmpty ? '사용자' : widget.userName!;
+    final greetingName = _userName.isEmpty ? '사용자' : _userName;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF3F4F6),
