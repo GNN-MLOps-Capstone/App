@@ -8,6 +8,7 @@ import 'widgets/bottom_nav_bar.dart';
 import 'stock_page.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'dart:convert';
+import 'stock_search_page.dart';
 import '../services/news_api_service.dart';
 
 import '../services/stock_api_service.dart';
