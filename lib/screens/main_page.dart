@@ -24,33 +24,61 @@ class _StockHomeScreenState extends State<StockHomeScreen> {
   List<WatchlistStock> _watchlist = [];
   List<NewsItem> _news = [];
   String _userName = '';
-  bool _loading = true;
+
+  bool _watchlistLoading = true;
+  bool _newsLoading = true;
+  bool _watchlistError = false;
+  bool _newsError = false;
 
   @override
   void initState() {
     super.initState();
     _userName = widget.userName ?? '';
-    _loadData();
+    _loadWatchlist();
+    _loadNews();
+    _loadProfile();
   }
 
-  Future<void> _loadData() async {
+  Future<void> _loadWatchlist() async {
     try {
-      final results = await Future.wait([
-        WatchlistService().getWatchlist(),
-        NewsApiService.getNewsList(limit: 3),
-        UserApiService.getProfile(),
-      ]);
+      final data = await WatchlistService().getWatchlist();
       if (!mounted) return;
       setState(() {
-        _watchlist = (results[0] as List<WatchlistStock>).take(3).toList();
-        _news = results[1] as List<NewsItem>;
-        _userName = (results[2] as UserResponse).nickname;
-        _loading = false;
+        _watchlist = data.take(3).toList();
+        _watchlistLoading = false;
       });
     } catch (_) {
       if (!mounted) return;
-      setState(() => _loading = false);
+      setState(() {
+        _watchlistLoading = false;
+        _watchlistError = true;
+      });
     }
+  }
+
+  Future<void> _loadNews() async {
+    try {
+      final data = await NewsApiService.getNewsList(limit: 3);
+      if (!mounted) return;
+      setState(() {
+        _news = data;
+        _newsLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _newsLoading = false;
+        _newsError = true;
+      });
+    }
+  }
+
+  Future<void> _loadProfile() async {
+    try {
+      final profile = await UserApiService.getProfile();
+      if (!mounted) return;
+      setState(() => _userName = profile.nickname);
+    } catch (_) {}
   }
 
   void _onBottomTap(int index) {
@@ -169,9 +197,11 @@ class _StockHomeScreenState extends State<StockHomeScreen> {
               ),
               const SizedBox(height: 8),
               _Card(
-                child: _loading
+                child: _watchlistLoading
                     ? const _LoadingIndicator()
-                    : _watchlist.isEmpty
+                    : _watchlistError
+                        ? const _EmptyHint(message: '관심종목을 불러오지 못했어요')
+                        : _watchlist.isEmpty
                         ? const _EmptyHint(message: '관심종목을 추가해보세요')
                         : Column(
                             children: _watchlist.asMap().entries.map((e) {
@@ -201,9 +231,11 @@ class _StockHomeScreenState extends State<StockHomeScreen> {
               ),
               const SizedBox(height: 8),
               _Card(
-                child: _loading
+                child: _newsLoading
                     ? const _LoadingIndicator()
-                    : _news.isEmpty
+                    : _newsError
+                        ? const _EmptyHint(message: '뉴스를 불러오지 못했어요')
+                        : _news.isEmpty
                         ? const _EmptyHint(message: '뉴스를 불러오지 못했어요')
                         : Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
