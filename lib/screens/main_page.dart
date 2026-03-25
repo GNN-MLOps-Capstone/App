@@ -433,7 +433,7 @@ class _StockRow extends StatelessWidget {
 }
 
 // ─── 종목 로고 ────────────────────────────────────────────────
-// SVG 파일 경로: assets/images/stocks/{종목코드}.svg
+// PNG 파일 경로: assets/images/stocks/{종목코드}.png
 
 class _StockLogo extends StatelessWidget {
   final String code;
@@ -442,11 +442,11 @@ class _StockLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SvgPicture.asset(
-      'assets/images/stocks/$code.svg',
+    return Image.asset(
+      'assets/images/stocks/$code.png',
       width: 40,
       height: 40,
-      placeholderBuilder: (_) => _fallback(),
+      errorBuilder: (_, __, ___) => _fallback(),
     );
   }
 
