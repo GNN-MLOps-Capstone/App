@@ -153,6 +153,8 @@ class _WatchlistPageState extends State<WatchlistPage> {
           code: s.code, name: s.name, weather: weather,
           price: overview.lastPrice, changeRate: overview.changeRate,
           keyword: s.keyword, aiSummary: s.aiSummary,
+          // TODO: 백엔드에서 issueIndex 제공 시 overview에서 직접 파싱하도록 수정 필요
+          // 현재는 /api/watchlist 응답의 issueIndex 값을 그대로 유지 (미제공 시 기본값 0.0)
           issueIndex: s.issueIndex, volume: overview.volume,
         );
       } catch (e) {
