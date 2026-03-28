@@ -6,6 +6,8 @@ class WatchlistStock {
   final double changeRate;
   final String keyword;
   final String aiSummary;
+  final double issueIndex; // 추가
+  final int volume;        // 추가
 
   WatchlistStock({
     required this.code,
@@ -15,6 +17,8 @@ class WatchlistStock {
     required this.changeRate,
     required this.keyword,
     required this.aiSummary,
+    this.issueIndex = 0.0, // 기본값 설정 (기존 코드 안 깨짐)
+    this.volume = 0,       // 기본값 설정 (기존 코드 안 깨짐)
   });
 
   factory WatchlistStock.fromJson(Map<String, dynamic> json) {
@@ -26,6 +30,8 @@ class WatchlistStock {
       changeRate: (json['changeRate'] as num?)?.toDouble() ?? 0.0,
       keyword: json['keyword'] as String? ?? '',
       aiSummary: json['aiSummary'] as String? ?? '',
+      issueIndex: (json['issueIndex'] as num?)?.toDouble() ?? 0.0, // 추가
+      volume: (json['volume'] as num?)?.toInt() ?? 0,              // 추가
     );
   }
 }
@@ -43,8 +49,8 @@ class WatchlistBriefing {
     return WatchlistBriefing(
       text: json['text'] as String? ?? '',
       topIssues: (json['topIssues'] as List<dynamic>?)
-              ?.map((e) => e.toString())
-              .toList() ??
+          ?.map((e) => e.toString())
+          .toList() ??
           [],
     );
   }
