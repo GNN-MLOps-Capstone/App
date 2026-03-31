@@ -8,11 +8,7 @@ class NewsDetailPage extends StatefulWidget {
   final int newsId;
   final NewsRecommendationItem? initialItem;
 
-  const NewsDetailPage({
-    super.key,
-    required this.newsId,
-    this.initialItem,
-  });
+  const NewsDetailPage({super.key, required this.newsId, this.initialItem});
 
   @override
   State<NewsDetailPage> createState() => _NewsDetailPageState();
@@ -120,22 +116,40 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.arrow_back, size: 26, color: Colors.black),
+                    icon: const Icon(
+                      Icons.arrow_back,
+                      size: 26,
+                      color: Colors.black,
+                    ),
                   ),
                   const Spacer(),
                   Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      const Icon(Icons.notifications_none, size: 28, color: Colors.black),
+                      const Icon(
+                        Icons.notifications_none,
+                        size: 28,
+                        color: Colors.black,
+                      ),
                       Positioned(
-                        right: -2, top: -2,
+                        right: -2,
+                        top: -2,
                         child: Container(
-                          width: 15, height: 15,
+                          width: 15,
+                          height: 15,
                           alignment: Alignment.center,
                           decoration: const BoxDecoration(
-                              color: Color(0xFF0EC272), shape: BoxShape.circle),
-                          child: const Text('2',
-                              style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                            color: Color(0xFF0EC272),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Text(
+                            '2',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -151,42 +165,42 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
                   : _errorMessage != null
-                      ? Center(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 24),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  _errorMessage!,
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Color(0xFF606060),
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                TextButton(
-                                  onPressed: _loadDetail,
-                                  child: const Text('다시 시도'),
-                                ),
-                              ],
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _errorMessage!,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF606060),
+                              ),
                             ),
-                          ),
-                        )
-                      : detail == null
-                          ? const SizedBox.shrink()
-                          : _NewsDetailContent(
-                              detail: detail,
-                              summaryExpanded: _summaryExpanded,
-                              onToggleSummary: () {
-                                setState(() => _summaryExpanded = !_summaryExpanded);
-                              },
-                              keywordScrollController: _keywordScrollController,
-                              sentimentColor: _sentimentColor(detail.sentiment),
-                              sentimentLabel: _sentimentLabel(detail.sentiment),
-                              formattedDate: _formatPubDate(detail.pubDate),
+                            const SizedBox(height: 12),
+                            TextButton(
+                              onPressed: _loadDetail,
+                              child: const Text('다시 시도'),
                             ),
+                          ],
+                        ),
+                      ),
+                    )
+                  : detail == null
+                  ? const SizedBox.shrink()
+                  : _NewsDetailContent(
+                      detail: detail,
+                      summaryExpanded: _summaryExpanded,
+                      onToggleSummary: () {
+                        setState(() => _summaryExpanded = !_summaryExpanded);
+                      },
+                      keywordScrollController: _keywordScrollController,
+                      sentimentColor: _sentimentColor(detail.sentiment),
+                      sentimentLabel: _sentimentLabel(detail.sentiment),
+                      formattedDate: _formatPubDate(detail.pubDate),
+                    ),
             ),
           ],
         ),
@@ -217,8 +231,12 @@ class _NewsDetailContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final summaryText = detail.summary.trim();
-    final bodyText = detail.body.trim().isEmpty ? summaryText : detail.body.trim();
-    final shortSummary = summaryText.length > 90 ? '${summaryText.substring(0, 90)}...' : summaryText;
+    final bodyText = detail.body.trim().isEmpty
+        ? summaryText
+        : detail.body.trim();
+    final shortSummary = summaryText.length > 90
+        ? '${summaryText.substring(0, 90)}...'
+        : summaryText;
     final hasKeywords = detail.keywords.isNotEmpty;
     final hasSentiment = sentimentLabel.isNotEmpty;
 
@@ -251,9 +269,11 @@ class _NewsDetailContent extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
-                          color: detail.stockUp == false
+                          color: detail.stockUp == true
+                              ? const Color(0xFFE63E3E)
+                              : detail.stockUp == false
                               ? const Color(0xFF1E3CD6)
-                              : const Color(0xFFE63E3E),
+                              : Colors.grey,
                         ),
                       ),
                     ],
@@ -266,7 +286,11 @@ class _NewsDetailContent extends StatelessWidget {
         ],
         Text(
           detail.title,
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, height: 1.4),
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            height: 1.4,
+          ),
         ),
         const SizedBox(height: 8),
 
@@ -420,7 +444,10 @@ class _NewsDetailContent extends StatelessWidget {
                       .map(
                         (keyword) => Container(
                           margin: const EdgeInsets.only(right: 8),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFE5E5E5),
                             borderRadius: BorderRadius.circular(999),
@@ -446,7 +473,11 @@ class _NewsDetailContent extends StatelessWidget {
         // 8. 본문
         Text(
           bodyText,
-          style: const TextStyle(fontSize: 15, height: 1.8, color: Colors.black87),
+          style: const TextStyle(
+            fontSize: 15,
+            height: 1.8,
+            color: Colors.black87,
+          ),
         ),
       ],
     );
@@ -456,7 +487,11 @@ class _NewsDetailContent extends StatelessWidget {
 // 스크롤바 색상 커스텀
 class _CustomScrollBehavior extends ScrollBehavior {
   @override
-  Widget buildScrollbar(BuildContext context, Widget child, ScrollableDetails details) {
+  Widget buildScrollbar(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) {
     return Theme(
       data: Theme.of(context).copyWith(
         scrollbarTheme: const ScrollbarThemeData(

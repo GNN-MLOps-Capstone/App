@@ -23,7 +23,7 @@ class NewsRecommendationItem {
 
   factory NewsRecommendationItem.fromJson(Map<String, dynamic> json) {
     return NewsRecommendationItem(
-      newsId: json['news_id'] as int,
+      newsId: json['news_id'] as int? ?? 0,
       title: json['title'] as String? ?? '',
       summary: json['summary'] as String? ?? '',
       pubDate: json['pub_date'] != null
@@ -123,7 +123,7 @@ class NewsDetailItem {
   factory NewsDetailItem.fromJson(Map<String, dynamic> json) {
     final rawKeywords = json['keywords'] as List<dynamic>? ?? const [];
     return NewsDetailItem(
-      newsId: json['news_id'] as int,
+      newsId: json['news_id'] as int? ?? 0,
       title: json['title'] as String? ?? '',
       summary: json['summary'] as String? ?? '',
       body: json['body'] as String? ?? '',
