@@ -196,12 +196,14 @@ class AuthResponse {
 
 /// 유저 프로필 모델
 class UserResponse {
+  final int id;
   final String googleId;
   final String email;
   final String nickname;
   final String? imgUrl;
 
   UserResponse({
+    required this.id,
     required this.googleId,
     required this.email,
     required this.nickname,
@@ -210,6 +212,7 @@ class UserResponse {
 
   factory UserResponse.fromJson(Map<String, dynamic> json) {
     return UserResponse(
+      id: json['id'] as int? ?? 0,
       googleId: json['google_id'] as String,
       email: json['email'] as String,
       nickname: json['nickname'] as String,
