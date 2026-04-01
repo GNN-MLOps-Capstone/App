@@ -505,11 +505,10 @@ class StockLogo extends StatelessWidget {
     return SizedBox(
       width: 36, height: 36,
       child: ClipOval(
-        child: SvgPicture.asset(
-          'assets/images/logo/$code.svg',
+        child: Image.asset(
+          'assets/images/stocks/$code.png',
           width: 36, height: 36,
           fit: BoxFit.cover,
-          placeholderBuilder: (_) => _fallback(),
           errorBuilder: (_, __, ___) => _fallback(),
         ),
       ),
