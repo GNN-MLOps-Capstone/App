@@ -337,11 +337,25 @@ class _TrendCardState extends State<_TrendCard> {
   final WatchlistService _watchlistService = WatchlistService();
   String _aiSummary = '';
   bool _summaryLoading = false;
+  List<String> _keywords = [];
 
   @override
   void initState() {
     super.initState();
     _checkWatchlistStatus();
+    _loadKeywords();
+  }
+
+  Future<void> _loadKeywords() async {
+    try {
+      final data = await StockApiService.getThemeKeywords(widget.item.code);
+      if (!mounted) return;
+      setState(() {
+        _keywords = data.take(2).map((e) => e['keyword'] as String).toList();
+      });
+    } catch (e) {
+      debugPrint('키워드 로드 실패: $e');
+    }
   }
 
   Future<void> _checkWatchlistStatus() async {
@@ -416,7 +430,23 @@ class _TrendCardState extends State<_TrendCard> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(widget.item.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                        Row(
+                          children: [
+                            Text(widget.item.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                            if (_keywords.isNotEmpty) ...[
+                              const SizedBox(width: 6),
+                              ..._keywords.map((kw) => Container(
+                                margin: const EdgeInsets.only(right: 4),
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE6FAF2),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(kw, style: const TextStyle(fontSize: 11, color: Color(0xFF0EC272), fontWeight: FontWeight.w600)),
+                              )),
+                            ],
+                          ],
+                        ),
                         const SizedBox(height: 4),
                         Row(
                           children: [

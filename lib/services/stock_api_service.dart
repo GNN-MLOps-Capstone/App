@@ -191,6 +191,39 @@ class StockApiService {
       throw StockApiException('Network error: $e', 0);
     }
   }
+
+  static Future<List<Map<String, dynamic>>> getRelatedStocks(String code) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/api/stocks/$code/related?limit=3');
+      final res = await http.get(uri, headers: await getAuthHeaders())
+          .timeout(const Duration(seconds: 10));
+      if (res.statusCode == 200) {
+        final json = jsonDecode(res.body) as Map<String, dynamic>;
+        return (json['related_stocks'] as List).cast<Map<String, dynamic>>();
+      }
+      throw StockApiException('Failed to load related stocks: ${res.statusCode}', res.statusCode);
+    } catch (e) {
+      if (e is StockApiException) rethrow;
+      throw StockApiException('Network error: $e', 0);
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getThemeKeywords(String code) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/api/stocks/$code/theme-keywords?limit=5');
+      final res = await http.get(uri, headers: await getAuthHeaders())
+          .timeout(const Duration(seconds: 10));
+      if (res.statusCode == 200) {
+        final json = jsonDecode(res.body) as Map<String, dynamic>;
+        return (json['theme_keywords'] as List)
+            .cast<Map<String, dynamic>>();
+      }
+      throw StockApiException('Failed to load theme keywords: ${res.statusCode}', res.statusCode);
+    } catch (e) {
+      if (e is StockApiException) rethrow;
+      throw StockApiException('Network error: $e', 0);
+    }
+  }
 }
 
 class StockApiException implements Exception {

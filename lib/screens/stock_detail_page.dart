@@ -61,6 +61,41 @@ class StockDetailPage extends StatefulWidget {
 
 class _StockDetailPageState extends State<StockDetailPage> {
   List<String> _aiSummaryLines = ['최신 뉴스를 요약하고 있습니다...'];
+  List<TagItem> _themeKeywords = [];
+  List<RelatedStock> _relatedStocks = [];
+
+  Future<void> _loadRelatedStocks() async {
+    try {
+      final data = await StockApiService.getRelatedStocks(widget.stockCode);
+      if (!mounted) return;
+      setState(() {
+        _relatedStocks = data.map((e) => RelatedStock(
+          code: e['stock_code'] as String,
+          name: e['stock_name'] as String,
+        )).toList();
+      });
+    } catch (e) {
+      debugPrint('[상세] 연관 종목 로드 실패: $e');
+    }
+  }
+
+  Future<void> _loadThemeKeywords() async {
+    try {
+      final data = await StockApiService.getThemeKeywords(widget.stockCode);
+      if (!mounted) return;
+      const levelToRank = {'HIGH': 1, 'MEDIUM': 2, 'LOW': 3, 'NONE': 4};
+      setState(() {
+        _themeKeywords = data.asMap().entries.map((e) => TagItem(
+          label: e.value['keyword'] as String,
+          relevance: (e.value['similarity_score'] as num).toDouble(),
+          rank: levelToRank[e.value['color_level']] ?? (e.key + 1),
+        )).toList();
+      });
+    } catch (e, st) {
+      debugPrint('[상세] 테마 키워드 로드 실패: $e\n$st');
+    }
+  }
+
   Future<void> _loadSummary() async {
     try {
       final data = await NewsApiService.getStockSummary(widget.stockName);
@@ -121,6 +156,8 @@ class _StockDetailPageState extends State<StockDetailPage> {
     }
     _loadData();
     _loadSummary();
+    _loadThemeKeywords();
+    _loadRelatedStocks();
     _startSeriesAutoRefresh();
   }
 
@@ -539,22 +576,11 @@ class _StockDetailPageState extends State<StockDetailPage> {
           onToggle: () => setState(() => _newsExpanded = !_newsExpanded),
         ),
         const SizedBox(height: 14),
-        _KeywordCard(stockName: widget.stockName, tags: const [
-          TagItem(label: 'HBM3E',    relevance: 0.93, rank: 1),
-          TagItem(label: 'AI반도체', relevance: 0.76, rank: 2),
-          TagItem(label: '엔비디아', relevance: 0.56, rank: 3),
-          TagItem(label: 'GPU',      relevance: 0.36, rank: 4),
-          TagItem(label: '삼성전자', relevance: 0.28, rank: 5),
-          TagItem(label: 'TSMC',     relevance: 0.21, rank: 6),
-          TagItem(label: '파운드리', relevance: 0.15, rank: 7),
-          TagItem(label: 'DDR5',     relevance: 0.10, rank: 8),
-        ]),
+        if (_themeKeywords.isNotEmpty)
+          _KeywordCard(stockName: widget.stockName, tags: _themeKeywords),
         const SizedBox(height: 12),
-        _RelatedSection(stockName: widget.stockName, related: const [
-          RelatedStock(name: 'SK 하이닉스',  logoText: 'SK',  logoColor: Color(0xFFEA3323)),
-          RelatedStock(name: '이수페타시스', logoText: 'ISU', logoColor: Color(0xFF005BAC)),
-          RelatedStock(name: '엔비디아',     logoText: 'N',   logoColor: Color(0xFF76B900)),
-        ]),
+        if (_relatedStocks.isNotEmpty)
+          _RelatedSection(stockName: widget.stockName, related: _relatedStocks),
       ]),
     );
   }
@@ -1070,8 +1096,8 @@ class _KeywordCardState extends State<_KeywordCard> {
 }
 
 class RelatedStock {
-  final String name, logoText; final Color logoColor; final String? logoUrl;
-  const RelatedStock({required this.name, required this.logoText, required this.logoColor, this.logoUrl});
+  final String code, name;
+  const RelatedStock({required this.code, required this.name});
 }
 
 class _RelatedSection extends StatelessWidget {
@@ -1097,7 +1123,7 @@ class _RelatedSection extends StatelessWidget {
       decoration: BoxDecoration(color: _kBg, borderRadius: BorderRadius.circular(14),
           border: Border.all(color: const Color(0xFFE5E7EB))),
       child: Column(children: [
-        Text(r.logoText, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: r.logoColor)),
+        StockLogo(code: r.code),
         const SizedBox(height: 6),
         Text(r.name, textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
