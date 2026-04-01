@@ -80,6 +80,29 @@ class NewsRecommendationPage {
   }
 }
 
+class NewsDetailStockItem {
+  final String stockId;
+  final String stockName;
+  final String? stockChange;
+  final bool? stockUp;
+
+  const NewsDetailStockItem({
+    required this.stockId,
+    required this.stockName,
+    this.stockChange,
+    this.stockUp,
+  });
+
+  factory NewsDetailStockItem.fromJson(Map<String, dynamic> json) {
+    return NewsDetailStockItem(
+      stockId: json['stock_id'] as String? ?? '',
+      stockName: json['stock_name'] as String? ?? '',
+      stockChange: json['stock_change'] as String?,
+      stockUp: json['stock_up'] as bool?,
+    );
+  }
+}
+
 class NewsDetailItem {
   final int newsId;
   final String title;
@@ -89,6 +112,7 @@ class NewsDetailItem {
   final String? url;
   final String? sentiment;
   final List<String> keywords;
+  final List<NewsDetailStockItem> relatedStocks;
   final String? stockName;
   final String? stockChange;
   final bool? stockUp;
@@ -102,6 +126,7 @@ class NewsDetailItem {
     this.url,
     this.sentiment,
     this.keywords = const [],
+    this.relatedStocks = const [],
     this.stockName,
     this.stockChange,
     this.stockUp,
@@ -114,6 +139,16 @@ class NewsDetailItem {
       summary: item.summary,
       body: item.summary,
       pubDate: item.pubDate,
+      relatedStocks: item.stockName != null
+          ? [
+              NewsDetailStockItem(
+                stockId: '',
+                stockName: item.stockName!,
+                stockChange: item.stockChange,
+                stockUp: item.stockUp,
+              ),
+            ]
+          : const [],
       stockName: item.stockName,
       stockChange: item.stockChange,
       stockUp: item.stockUp,
@@ -122,6 +157,16 @@ class NewsDetailItem {
 
   factory NewsDetailItem.fromJson(Map<String, dynamic> json) {
     final rawKeywords = json['keywords'] as List<dynamic>? ?? const [];
+    final rawRelatedStocks =
+        json['related_stocks'] as List<dynamic>? ?? const [];
+    final relatedStocks = rawRelatedStocks
+        .map(
+          (stock) => NewsDetailStockItem.fromJson(
+            Map<String, dynamic>.from(stock as Map),
+          ),
+        )
+        .where((stock) => stock.stockName.isNotEmpty)
+        .toList();
     return NewsDetailItem(
       newsId: json['news_id'] as int? ?? 0,
       title: json['title'] as String? ?? '',
@@ -133,6 +178,7 @@ class NewsDetailItem {
       url: json['url'] as String?,
       sentiment: json['sentiment'] as String?,
       keywords: rawKeywords.map((keyword) => keyword.toString()).toList(),
+      relatedStocks: relatedStocks,
       stockName: json['stock_name'] as String?,
       stockChange: json['stock_change'] as String?,
       stockUp: json['stock_up'] as bool?,
