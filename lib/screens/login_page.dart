@@ -5,6 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../services/user_api_service.dart';
 import '../config/api_config.dart';
 import '../services/onesignal_service.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 
 class GoogleLoginPage extends StatefulWidget {
   const GoogleLoginPage({super.key});
@@ -68,6 +69,17 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
         debugPrint('🔔 OneSignal External User ID 설정 완료');
       } catch (e) {
         debugPrint('❌ OneSignal ID 설정 실패: $e');
+      }
+
+      try {
+        final settings = await UserApiService.getSettings();
+        OneSignal.User.addTagWithKey(
+            "is_dnd",
+            settings.nightPushProhibit ? "true" : "false"
+        );
+        print("OneSignal 태그 동기화 완료: is_dnd = ${settings.nightPushProhibit}");
+      } catch (e) {
+        print("로그인 시 OneSignal 태그 동기화 실패: $e");
       }
 
       if (!mounted) return;

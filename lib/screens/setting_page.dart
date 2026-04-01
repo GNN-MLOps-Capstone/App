@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../services/user_api_service.dart';
 import 'widgets/bottom_nav_bar.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 
 class SettingPage extends StatefulWidget {
   const SettingPage({super.key});
@@ -19,6 +20,7 @@ class _SettingPageState extends State<SettingPage> {
   bool _riskAlert = true;
   bool _goodNewsAlert = true;
   bool _favoriteAlert = true;
+  bool _nightProhibit = true;
 
   bool get _allPush => _riskAlert && _goodNewsAlert && _favoriteAlert;
 
@@ -67,6 +69,7 @@ class _SettingPageState extends State<SettingPage> {
         final start = rawStart.length >= 5 ? rawStart.substring(0, 5) : '23:00';
         final finish = rawFinish.length >= 5 ? rawFinish.substring(0, 5) : '07:00';
         _dndTimeRangeLabel = '$start ~ $finish';
+        _nightProhibit =  settings.nightPushProhibit;
       });
     } catch (e) {
       debugPrint('서버 설정 로드 실패: $e');
@@ -114,6 +117,14 @@ class _SettingPageState extends State<SettingPage> {
   void _toggleFavorite(bool value) {
     setState(() => _favoriteAlert = value);
     UserApiService.updateSettings({'interest_only': value, 'push': _allPush});
+  }
+
+  void _toggleNight() {
+    setState(() {
+      _nightProhibit = !_nightProhibit; // 현재 상태를 반전
+    });
+    UserApiService.updateSettings({'night_push_prohibit': _nightProhibit,});
+    OneSignal.User.addTagWithKey("is_dnd", _nightProhibit ? "true" : "false");
   }
 
   Future<void> _openDndDialog() async {
@@ -584,16 +595,16 @@ class _SettingPageState extends State<SettingPage> {
                                   fontWeight: FontWeight.w700)),
                         ),
                         GestureDetector(
-                          onTap: _openDndDialog,
+                          onTap: _toggleNight,
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 14, vertical: 4),
                             decoration: BoxDecoration(
-                              color: green,
+                              color: _nightProhibit ? green : const Color(0xFFADADAD),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              _dndTimeRangeLabel,
+                              _nightProhibit ? _dndTimeRangeLabel : '꺼짐',
                               style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 13,
