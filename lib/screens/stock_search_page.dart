@@ -269,7 +269,7 @@ class _SearchResultCardState extends State<SearchResultCard> {
             children: [
               Row(
                 children: [
-                  StockLogo(code: widget.stock.code),
+                  StockLogo(code: widget.stock.code, name: widget.stock.name),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
