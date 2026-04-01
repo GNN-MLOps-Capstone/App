@@ -373,6 +373,17 @@ class _TrendCardState extends State<_TrendCard> {
     }
   }
 
+  String _weatherToAsset(String weather) {
+    const map = {
+      'THUNDERSTORM': '급락',
+      'RAINY': '하락',
+      'CLOUDY': '보합',
+      'PARTLY_CLOUDY': '상승',
+      'SUNNY': '급등',
+    };
+    return map[weather] ?? '보합';
+  }
+
   Future<void> _loadSummary() async {
     if (_aiSummary.isNotEmpty) return;
     setState(() => _summaryLoading = true);
@@ -410,7 +421,7 @@ class _TrendCardState extends State<_TrendCard> {
             children: [
               Row(
                 children: [
-                  StockLogo(code: widget.item.code),
+                  StockLogo(code: widget.item.code, name: widget.item.name),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -437,7 +448,7 @@ class _TrendCardState extends State<_TrendCard> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  SvgPicture.asset('assets/images/${widget.item.weather}.svg', width: 34, height: 34),
+                  SvgPicture.asset('assets/images/${_weatherToAsset(widget.item.weather)}.svg', width: 34, height: 34),
                   const SizedBox(width: 8),
                   GestureDetector(
                     onTap: _toggleWatchlist,
@@ -486,7 +497,8 @@ class _TrendCardState extends State<_TrendCard> {
 
 class StockLogo extends StatelessWidget {
   final String code;
-  const StockLogo({super.key, required this.code});
+  final String name;
+  const StockLogo({super.key, required this.code, required this.name});
 
   @override
   Widget build(BuildContext context) {
@@ -497,14 +509,23 @@ class StockLogo extends StatelessWidget {
           'assets/images/logo/$code.svg',
           width: 36, height: 36,
           fit: BoxFit.cover,
-          placeholderBuilder: (_) => Container(
-            width: 36, height: 36,
-            decoration: const BoxDecoration(color: Color(0xFFD1D5DB), shape: BoxShape.circle),
-          ),
-          errorBuilder: (_, __, ___) => Container(
-            width: 36, height: 36,
-            decoration: const BoxDecoration(color: Color(0xFFD1D5DB), shape: BoxShape.circle),
-          ),
+          placeholderBuilder: (_) => _fallback(),
+          errorBuilder: (_, __, ___) => _fallback(),
+        ),
+      ),
+    );
+  }
+
+  Widget _fallback() {
+    return CircleAvatar(
+      radius: 18,
+      backgroundColor: const Color(0xFFE5E7EB),
+      child: Text(
+        name.isNotEmpty ? name[0] : '?',
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.bold,
+          color: Colors.black54,
         ),
       ),
     );
