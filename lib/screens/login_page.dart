@@ -4,6 +4,7 @@ import 'main_page.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../services/user_api_service.dart';
 import '../config/api_config.dart';
+import '../services/onesignal_service.dart';
 
 class GoogleLoginPage extends StatefulWidget {
   const GoogleLoginPage({super.key});
@@ -61,6 +62,13 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
       );
 
       final authResponse = await UserApiService.login(loginRequest);
+
+      try {
+        await OneSignalService().setUserId(authResponse.user.googleId.toString());
+        debugPrint('🔔 OneSignal External User ID 설정 완료');
+      } catch (e) {
+        debugPrint('❌ OneSignal ID 설정 실패: $e');
+      }
 
       if (!mounted) return;
 

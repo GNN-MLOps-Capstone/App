@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'notification_service.dart';
 
 class OneSignalService {
+  final Set<String> _savedNotificationIds = <String>{};
   static final OneSignalService _instance = OneSignalService._internal();
   factory OneSignalService() => _instance;
   OneSignalService._internal();
@@ -35,11 +37,17 @@ class OneSignalService {
       // OneSignal 초기화
       OneSignal.initialize(app_id);
 
+      OneSignal.Notifications.addForegroundWillDisplayListener((event) async {
+        if (kDebugMode) print('🔔 알림 수신 감지: ${event.notification.title}');
+        await _saveNotificationToDb(event.notification);
+      });
+
       // 푸시 알림 권한 요청
       await OneSignal.Notifications.requestPermission(true);
 
       // 알림 클릭 리스너
-      OneSignal.Notifications.addClickListener((event) {
+      OneSignal.Notifications.addClickListener((event) async {
+        await _saveNotificationToDb(event.notification);
         if (kDebugMode) {
           print('알림 클릭: ${event.notification.title}');
         }
@@ -60,6 +68,38 @@ class OneSignalService {
       }
     }
   }
+
+  Future<void> _saveNotificationToDb(OSNotification notification) async {
+    final notificationId = notification.notificationId;
+    if (notificationId.isEmpty || _savedNotificationIds.contains(notificationId)) {
+      if (kDebugMode) print('이미 처리된 알림입니다 (ID: $notificationId)');
+      return;
+    }
+    try {
+      final createdId = await NotificationApiService.createNotification(
+        NotificationCreateRequest(
+          notificationId: notification.notificationId,
+          type: notification.additionalData?['type'] ?? 'general',
+          title: notification.title ?? '',
+          body: notification.body ?? '',
+          stockName: notification.additionalData?['stock_name'],
+          sentimentScore: notification.additionalData?['sentiment_score'] != null 
+              ? double.tryParse(notification.additionalData!['sentiment_score'].toString()) 
+              : null,
+        ),
+      );
+
+      if (createdId != null) {
+        _savedNotificationIds.add(notificationId); // 성공 리스트에 추가
+        if (kDebugMode) print('✅ 알림 DB 저장 완료 (서버 ID: $createdId)');
+      } else {
+        // [실패 처리] 반환값이 null이면 예외 발생
+        throw Exception('서버 응답이 null입니다.');
+      }
+    } catch (e) {
+      if (kDebugMode) print('❌ 알림 DB 저장 실패: $e');
+    }
+  } 
 
   // 알림 클릭 처리
   void _handleNotificationClick(OSNotificationClickEvent event) {
