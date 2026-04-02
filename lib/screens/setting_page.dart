@@ -132,10 +132,11 @@ class _SettingPageState extends State<SettingPage> {
       final updated = await UserApiService.updateSettings({
         'night_push_prohibit': next,
       });
-      if (!mounted) return;
-      setState(() {
-        _nightProhibit = updated.nightPushProhibit;
-      });
+      if (mounted) {
+        setState(() {
+          _nightProhibit = updated.nightPushProhibit;
+        });
+      }
 
       try {
         await OneSignal.User.addTagWithKey(
