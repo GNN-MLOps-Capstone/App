@@ -20,7 +20,7 @@ class _SettingPageState extends State<SettingPage> {
   bool _riskAlert = true;
   bool _goodNewsAlert = true;
   bool _favoriteAlert = true;
-  bool _nightProhibit = true;
+  bool _nightProhibit = false;
 
   bool get _allPush => _riskAlert && _goodNewsAlert && _favoriteAlert;
 
@@ -119,12 +119,27 @@ class _SettingPageState extends State<SettingPage> {
     UserApiService.updateSettings({'interest_only': value, 'push': _allPush});
   }
 
-  void _toggleNight() {
+  Future<void> _toggleNight() async {
+    final next = !_nightProhibit;
     setState(() {
-      _nightProhibit = !_nightProhibit; // 현재 상태를 반전
+      _nightProhibit = next;
     });
-    UserApiService.updateSettings({'night_push_prohibit': _nightProhibit,});
-    OneSignal.User.addTagWithKey("is_dnd", _nightProhibit ? "true" : "false");
+
+    try {
+      final updated = await UserApiService.updateSettings({
+        'night_push_prohibit': next,
+      });
+
+      await OneSignal.User.addTagWithKey(
+        "is_dnd",
+        updated.nightPushProhibit ? "true" : "false",
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _nightProhibit = !next;
+      });
+    }
   }
 
   Future<void> _openDndDialog() async {

@@ -73,7 +73,7 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
 
       try {
         final settings = await UserApiService.getSettings();
-        OneSignal.User.addTagWithKey(
+        await OneSignal.User.addTagWithKey(
             "is_dnd",
             settings.nightPushProhibit ? "true" : "false"
         );
