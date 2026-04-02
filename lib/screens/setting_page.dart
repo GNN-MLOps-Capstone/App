@@ -139,6 +139,12 @@ class _SettingPageState extends State<SettingPage> {
       setState(() {
         _nightProhibit = !next;
       });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('설정 변경에 실패했습니다. 다시 시도해주세요.'),
+          duration: Duration(milliseconds: 1500),
+        ),
+      );
     }
   }
 
