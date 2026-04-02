@@ -150,12 +150,6 @@ class _SettingPageState extends State<SettingPage> {
               duration: Duration(milliseconds: 1500),
             ),
           );
-        } finally {
-          if (mounted) {
-            setState(() {
-              _isUpdatingNight = false;
-            });
-          }
         }
       }
     } catch (e) {
@@ -169,6 +163,12 @@ class _SettingPageState extends State<SettingPage> {
           duration: Duration(milliseconds: 1500),
         ),
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUpdatingNight = false;
+        });
+      }
     }
   }
 
