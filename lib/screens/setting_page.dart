@@ -21,6 +21,7 @@ class _SettingPageState extends State<SettingPage> {
   bool _goodNewsAlert = true;
   bool _favoriteAlert = true;
   bool _nightProhibit = false;
+  bool _isUpdatingNight = false;
 
   bool get _allPush => _riskAlert && _goodNewsAlert && _favoriteAlert;
 
@@ -120,8 +121,10 @@ class _SettingPageState extends State<SettingPage> {
   }
 
   Future<void> _toggleNight() async {
+    if (_isUpdatingNight) return;
     final next = !_nightProhibit;
     setState(() {
+      _isUpdatingNight = true;
       _nightProhibit = next;
     });
 
@@ -129,11 +132,32 @@ class _SettingPageState extends State<SettingPage> {
       final updated = await UserApiService.updateSettings({
         'night_push_prohibit': next,
       });
+      if (!mounted) return;
+      setState(() {
+        _nightProhibit = updated.nightPushProhibit;
+      });
 
-      await OneSignal.User.addTagWithKey(
-        "is_dnd",
-        updated.nightPushProhibit ? "true" : "false",
-      );
+      try {
+        await OneSignal.User.addTagWithKey(
+          "is_dnd",
+          updated.nightPushProhibit ? "true" : "false",
+        );
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('설정은 저장됐지만 알림 동기화에 실패했습니다.'),
+              duration: Duration(milliseconds: 1500),
+            ),
+          );
+        } finally {
+          if (mounted) {
+            setState(() {
+              _isUpdatingNight = false;
+            });
+          }
+        }
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -616,7 +640,7 @@ class _SettingPageState extends State<SettingPage> {
                                   fontWeight: FontWeight.w700)),
                         ),
                         GestureDetector(
-                          onTap: _toggleNight,
+                          onTap: _isUpdatingNight ? null : _toggleNight,
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 14, vertical: 4),
