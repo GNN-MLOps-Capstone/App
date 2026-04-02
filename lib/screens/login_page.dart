@@ -5,7 +5,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../services/user_api_service.dart';
 import '../config/api_config.dart';
 import '../services/onesignal_service.dart';
-import 'package:onesignal_flutter/onesignal_flutter.dart';
 
 class GoogleLoginPage extends StatefulWidget {
   const GoogleLoginPage({super.key});
@@ -74,10 +73,7 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
       Future(() async {
         try {
           final settings = await UserApiService.getSettings();
-          await OneSignal.User.addTagWithKey(
-            "is_dnd",
-            settings.nightPushProhibit ? "true" : "false",
-          );
+          await OneSignalService.syncDnd(settings.nightPushProhibit);
           debugPrint("OneSignal 태그 동기화 완료: is_dnd = ${settings.nightPushProhibit}");
         } catch (e) {
           debugPrint("로그인 시 OneSignal 태그 동기화 실패: $e");

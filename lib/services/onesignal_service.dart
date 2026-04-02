@@ -226,4 +226,8 @@ class OneSignalService {
   void disableForegroundNotifications() {
     OneSignal.Notifications.clearAll();
   }
+
+  static Future<void> syncDnd(bool isDnd) async {
+    await OneSignal.User.addTagWithKey("is_dnd", isDnd ? "true" : "false");
+  }
 }

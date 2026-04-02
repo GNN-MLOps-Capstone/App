@@ -2,8 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../services/user_api_service.dart';
+import '../services/onesignal_service.dart';
 import 'widgets/bottom_nav_bar.dart';
-import 'package:onesignal_flutter/onesignal_flutter.dart';
 
 class SettingPage extends StatefulWidget {
   const SettingPage({super.key});
@@ -57,6 +57,8 @@ class _SettingPageState extends State<SettingPage> {
     }
   }
 
+  bool _isLoadingSettings = true;
+
   Future<void> _loadServerSettings() async {
     try {
       final settings = await UserApiService.getSettings();
@@ -74,6 +76,12 @@ class _SettingPageState extends State<SettingPage> {
       });
     } catch (e) {
       debugPrint('서버 설정 로드 실패: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingSettings = false;
+        });
+      }
     }
   }
 
@@ -139,10 +147,7 @@ class _SettingPageState extends State<SettingPage> {
       }
 
       try {
-        await OneSignal.User.addTagWithKey(
-          "is_dnd",
-          updated.nightPushProhibit ? "true" : "false",
-        );
+        await OneSignalService.syncDnd(updated.nightPushProhibit);
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -641,7 +646,9 @@ class _SettingPageState extends State<SettingPage> {
                                   fontWeight: FontWeight.w700)),
                         ),
                         GestureDetector(
-                          onTap: _isUpdatingNight ? null : _toggleNight,
+                          onTap: (_isLoadingSettings || _isUpdatingNight)
+                              ? null
+                              : _toggleNight,
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 14, vertical: 4),
