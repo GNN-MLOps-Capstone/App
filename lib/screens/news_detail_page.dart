@@ -234,13 +234,14 @@ class _NewsDetailContent extends StatelessWidget {
     final bodyText = detail.body.trim().isEmpty
         ? summaryText
         : detail.body.trim();
+    final trimmedStockName = detail.stockName?.trim();
     final stockItems = detail.relatedStocks.isNotEmpty
         ? detail.relatedStocks
-        : detail.stockName != null
+        : trimmedStockName?.isNotEmpty == true
         ? [
             NewsDetailStockItem(
               stockId: '',
-              stockName: detail.stockName!,
+              stockName: trimmedStockName!,
               stockChange: detail.stockChange,
               stockUp: detail.stockUp,
             ),

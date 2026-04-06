@@ -96,7 +96,7 @@ class NewsDetailStockItem {
   factory NewsDetailStockItem.fromJson(Map<String, dynamic> json) {
     return NewsDetailStockItem(
       stockId: json['stock_id'] as String? ?? '',
-      stockName: json['stock_name'] as String? ?? '',
+      stockName: (json['stock_name'] as String? ?? '').trim(),
       stockChange: json['stock_change'] as String?,
       stockUp: json['stock_up'] as bool?,
     );
@@ -133,17 +133,18 @@ class NewsDetailItem {
   });
 
   factory NewsDetailItem.fromRecommendationItem(NewsRecommendationItem item) {
+    final trimmedStockName = item.stockName?.trim();
     return NewsDetailItem(
       newsId: item.newsId,
       title: item.title,
       summary: item.summary,
       body: item.summary,
       pubDate: item.pubDate,
-      relatedStocks: item.stockName != null
+      relatedStocks: trimmedStockName?.isNotEmpty == true
           ? [
               NewsDetailStockItem(
                 stockId: '',
-                stockName: item.stockName!,
+                stockName: trimmedStockName!,
                 stockChange: item.stockChange,
                 stockUp: item.stockUp,
               ),
@@ -165,7 +166,7 @@ class NewsDetailItem {
             Map<String, dynamic>.from(stock as Map),
           ),
         )
-        .where((stock) => stock.stockName.isNotEmpty)
+        .where((stock) => stock.stockName.trim().isNotEmpty)
         .toList();
     return NewsDetailItem(
       newsId: json['news_id'] as int? ?? 0,
