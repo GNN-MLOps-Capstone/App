@@ -70,6 +70,16 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
         debugPrint('❌ OneSignal ID 설정 실패: $e');
       }
 
+      Future(() async {
+        try {
+          final settings = await UserApiService.getSettings();
+          await OneSignalService.syncDnd(settings.nightPushProhibit);
+          debugPrint("OneSignal 태그 동기화 완료: is_dnd = ${settings.nightPushProhibit}");
+        } catch (e) {
+          debugPrint("로그인 시 OneSignal 태그 동기화 실패: $e");
+        }
+      });
+
       if (!mounted) return;
 
       Navigator.pushReplacement(
