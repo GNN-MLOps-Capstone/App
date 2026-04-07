@@ -234,6 +234,19 @@ class _NewsDetailContent extends StatelessWidget {
     final bodyText = detail.body.trim().isEmpty
         ? summaryText
         : detail.body.trim();
+    final trimmedStockName = detail.stockName?.trim();
+    final stockItems = detail.relatedStocks.isNotEmpty
+        ? detail.relatedStocks
+        : trimmedStockName?.isNotEmpty == true
+        ? [
+            NewsDetailStockItem(
+              stockId: '',
+              stockName: trimmedStockName!,
+              stockChange: detail.stockChange,
+              stockUp: detail.stockUp,
+            ),
+          ]
+        : const <NewsDetailStockItem>[];
     final shortSummary = summaryText.length > 90
         ? '${summaryText.substring(0, 90)}...'
         : summaryText;
@@ -244,10 +257,18 @@ class _NewsDetailContent extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
       children: [
         // 1. 종목 태그
-        if (detail.stockName != null && detail.stockChange != null) ...[
-          Row(
-            children: [
-              Container(
+        if (stockItems.isNotEmpty) ...[
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: stockItems.map((stock) {
+              final stockChange = stock.stockChange;
+              final stockColor = stock.stockUp == true
+                  ? const Color(0xFFE63E3E)
+                  : stock.stockUp == false
+                  ? const Color(0xFF1E3CD6)
+                  : Colors.grey;
+              return Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: const Color(0xFFE3E3E3),
@@ -257,30 +278,27 @@ class _NewsDetailContent extends StatelessWidget {
                   TextSpan(
                     children: [
                       TextSpan(
-                        text: '${detail.stockName}  ',
+                        text: stock.stockName,
                         style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
                           color: Colors.black87,
                         ),
                       ),
-                      TextSpan(
-                        text: detail.stockChange,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: detail.stockUp == true
-                              ? const Color(0xFFE63E3E)
-                              : detail.stockUp == false
-                              ? const Color(0xFF1E3CD6)
-                              : Colors.grey,
+                      if (stockChange != null && stockChange.isNotEmpty)
+                        TextSpan(
+                          text: '  $stockChange',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: stockColor,
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),
-              ),
-            ],
+              );
+            }).toList(),
           ),
           const SizedBox(height: 12),
         ],
