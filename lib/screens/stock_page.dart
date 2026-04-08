@@ -339,6 +339,17 @@ class _TrendCardState extends State<_TrendCard> {
   bool _summaryLoading = false;
   List<String> _keywords = [];
 
+  String _weatherSvg(String weather) {
+    switch (weather) {
+      case 'SUNNY':       return '급등';
+      case 'PARTLY_CLOUDY': return '상승';
+      case 'CLOUDY':      return '보합';
+      case 'RAINY':       return '하락';
+      case 'THUNDERSTORM': return '급락';
+      default:            return '보합';
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -404,7 +415,7 @@ class _TrendCardState extends State<_TrendCard> {
   Widget build(BuildContext context) {
     final changeColor = widget.item.isUp == null
         ? Colors.grey
-        : (widget.item.isUp! ? Colors.red : Colors.blue);
+        : (widget.item.isUp! ? const Color(0xFFFF2B3A) : const Color(0xFF1E3CD6));
 
     return AnimatedSize(
       duration: const Duration(milliseconds: 250),
@@ -432,17 +443,22 @@ class _TrendCardState extends State<_TrendCard> {
                       children: [
                         Row(
                           children: [
-                            Text(widget.item.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                            Flexible(
+                              child: Text(widget.item.name, style: const TextStyle(fontSize: 15, color: Color(0xFF000000)), overflow: TextOverflow.ellipsis),
+                            ),
                             if (_keywords.isNotEmpty) ...[
                               const SizedBox(width: 6),
-                              ..._keywords.map((kw) => Container(
-                                margin: const EdgeInsets.only(right: 4),
-                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFE6FAF2),
-                                  borderRadius: BorderRadius.circular(20),
+                              ..._keywords.map((kw) => Flexible(
+                                child: Container(
+                                  margin: const EdgeInsets.only(right: 4),
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF3F4F6),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(kw, style: const TextStyle(fontSize: 10, color: Color(
+                                      0xFF7A818E), fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
                                 ),
-                                child: Text(kw, style: const TextStyle(fontSize: 11, color: Color(0xFF0EC272), fontWeight: FontWeight.w600)),
                               )),
                             ],
                           ],
@@ -450,24 +466,16 @@ class _TrendCardState extends State<_TrendCard> {
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            Text(widget.item.priceText, style: const TextStyle(fontSize: 13, color: Colors.black87)),
+                            Text(widget.item.priceText, style: const TextStyle(fontSize: 13, color: Color(0xFFA1A9B5))),
                             const SizedBox(width: 8),
-                            if (widget.item.isUp != null) ...[
-                              SvgPicture.asset(
-                                widget.item.isUp! ? 'assets/images/up_arrow.svg' : 'assets/images/down_arrow.svg',
-                                width: 8, height: 8,
-                                colorFilter: ColorFilter.mode(changeColor, BlendMode.srcIn),
-                              ),
-                              const SizedBox(width: 2),
-                            ],
-                            Text(widget.item.changeText, style: TextStyle(fontSize: 13, color: changeColor, fontWeight: FontWeight.w700)),
+                            Text(widget.item.changeText, style: TextStyle(fontSize: 13, color: changeColor)),
                           ],
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(width: 8),
-                  SvgPicture.asset('assets/images/${widget.item.weather}.svg', width: 34, height: 34),
+                  SvgPicture.asset('assets/images/${_weatherSvg(widget.item.weather)}.svg', width: 34, height: 34),
                   const SizedBox(width: 8),
                   GestureDetector(
                     onTap: _toggleWatchlist,
