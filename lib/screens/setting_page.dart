@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../services/user_api_service.dart';
+import '../services/onesignal_service.dart';
 import 'widgets/bottom_nav_bar.dart';
 
 class SettingPage extends StatefulWidget {
@@ -19,6 +20,8 @@ class _SettingPageState extends State<SettingPage> {
   bool _riskAlert = true;
   bool _goodNewsAlert = true;
   bool _favoriteAlert = true;
+  bool _nightProhibit = false;
+  bool _isUpdatingNight = false;
 
   bool get _allPush => _riskAlert && _goodNewsAlert && _favoriteAlert;
 
@@ -54,6 +57,8 @@ class _SettingPageState extends State<SettingPage> {
     }
   }
 
+  bool _isLoadingSettings = true;
+
   Future<void> _loadServerSettings() async {
     try {
       final settings = await UserApiService.getSettings();
@@ -67,9 +72,16 @@ class _SettingPageState extends State<SettingPage> {
         final start = rawStart.length >= 5 ? rawStart.substring(0, 5) : '23:00';
         final finish = rawFinish.length >= 5 ? rawFinish.substring(0, 5) : '07:00';
         _dndTimeRangeLabel = '$start ~ $finish';
+        _nightProhibit =  settings.nightPushProhibit;
       });
     } catch (e) {
       debugPrint('서버 설정 로드 실패: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingSettings = false;
+        });
+      }
     }
   }
 
@@ -114,6 +126,56 @@ class _SettingPageState extends State<SettingPage> {
   void _toggleFavorite(bool value) {
     setState(() => _favoriteAlert = value);
     UserApiService.updateSettings({'interest_only': value, 'push': _allPush});
+  }
+
+  Future<void> _toggleNight() async {
+    if (_isUpdatingNight) return;
+    final next = !_nightProhibit;
+    setState(() {
+      _isUpdatingNight = true;
+      _nightProhibit = next;
+    });
+
+    try {
+      final updated = await UserApiService.updateSettings({
+        'night_push_prohibit': next,
+      });
+      if (mounted) {
+        setState(() {
+          _nightProhibit = updated.nightPushProhibit;
+        });
+      }
+
+      try {
+        await OneSignalService.syncDnd(updated.nightPushProhibit);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('설정은 저장됐지만 알림 동기화에 실패했습니다.'),
+              duration: Duration(milliseconds: 1500),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _nightProhibit = !next;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('설정 변경에 실패했습니다. 다시 시도해주세요.'),
+          duration: Duration(milliseconds: 1500),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUpdatingNight = false;
+        });
+      }
+    }
   }
 
   Future<void> _openDndDialog() async {
@@ -584,16 +646,18 @@ class _SettingPageState extends State<SettingPage> {
                                   fontWeight: FontWeight.w700)),
                         ),
                         GestureDetector(
-                          onTap: _openDndDialog,
+                          onTap: (_isLoadingSettings || _isUpdatingNight)
+                              ? null
+                              : _toggleNight,
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 14, vertical: 4),
                             decoration: BoxDecoration(
-                              color: green,
+                              color: _nightProhibit ? green : const Color(0xFFADADAD),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              _dndTimeRangeLabel,
+                              _nightProhibit ? _dndTimeRangeLabel : '꺼짐',
                               style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 13,
