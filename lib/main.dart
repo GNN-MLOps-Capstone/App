@@ -46,7 +46,7 @@ class StockApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      initialRoute: '/home',
+      initialRoute: '/login',
 
       // ✅ Noto Sans KR 폰트 전체 적용
       theme: ThemeData(
