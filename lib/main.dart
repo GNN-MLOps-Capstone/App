@@ -45,7 +45,7 @@ class StockApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      initialRoute: '/home',
+      initialRoute: '/login',
 
       // ✅ Pretendard 폰트 적용
       theme: ThemeData(
