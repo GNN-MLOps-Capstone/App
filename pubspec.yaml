@@ -78,7 +78,7 @@ flutter:
     - assets/images/
     - assets/images/stocks/
     - lib/screens/name.csv
-    - assets/fonts/
+   # - assets/fonts/
 
   fonts:
     - family: Pretendard
