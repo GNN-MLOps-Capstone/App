@@ -507,7 +507,7 @@ class _NewsScreenState extends State<NewsScreen> {
   late String _requestId;
   String? _nextCursor;
   String? _openContentSessionId;
-  String? _userId;
+  int? _userId;
   int _page = 1;
   int _dummyPage = 0;
 
@@ -543,7 +543,7 @@ class _NewsScreenState extends State<NewsScreen> {
   Future<void> _init() async {
     try {
       final profile = await UserApiService.getProfile();
-      _userId = profile.googleId.isNotEmpty ? profile.googleId : null;
+      _userId = profile.id > 0 ? profile.id : null;
     } catch (_) {
       _userId = null;
     }
