@@ -6,6 +6,7 @@ import '../services/onesignal_service.dart';
 import 'widgets/bottom_nav_bar.dart';
 import 'login_page.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SettingPage extends StatefulWidget {
   const SettingPage({super.key});
@@ -268,15 +269,15 @@ class _SettingPageState extends State<SettingPage> {
 
     if (confirmed == true) {
       try {
-        // onesignal에 연결했던 external_id 삭제
-        await OneSignal.User.addAlias("external_id", "");
-        await OneSignal.User.removeAlias("external_id");
-        await Future.delayed(const Duration(milliseconds: 500));
         // 정보 초기화
         bool success = await UserApiService.deleteUser();
         
         if (success) {
           if (!mounted) return;
+
+          // 로컬 인증 토큰 삭제
+          const storage = FlutterSecureStorage();
+          await storage.delete(key: 'access_token');
 
           try {
             await OneSignal.logout();
@@ -294,6 +295,13 @@ class _SettingPageState extends State<SettingPage> {
             ),
           );
 
+          // Google 세션 해제
+          try {
+            final googleSignIn = GoogleSignIn(scopes: ['email']);
+            await googleSignIn.signOut();
+            await googleSignIn.disconnect();
+          } catch (_) {}
+
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(builder: (context) => const GoogleLoginPage()),
@@ -306,9 +314,10 @@ class _SettingPageState extends State<SettingPage> {
       } catch (e) {
         if (!mounted) return;
         // 에러 발생 시 처리
+        debugPrint('deleteUser failed: $e');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('초기화에 실패했습니다: $e'),
+          const SnackBar(
+            content: Text('탈퇴 처리에 실패했습니다. 잠시 후 다시 시도해주세요.'),
             backgroundColor: Colors.red,
           ),
         );

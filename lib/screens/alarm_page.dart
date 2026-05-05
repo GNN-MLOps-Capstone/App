@@ -418,7 +418,10 @@ Future<void> _toggleStarWithApi(int id) async {
       await NotificationApiService.markAsRead(id: item.id);
       if (!mounted) return;
       setState(() {
-        _items[idx] = _items[idx].copyWith(isRead: true);
+         final freshIdx = _items.indexWhere((e) => e.id == item.id);
+        if (freshIdx >= 0) {
+          _items[freshIdx] = _items[freshIdx].copyWith(isRead: true);
+        }
       });
     } catch (e) {
       debugPrint('Failed to mark as read: $e');
