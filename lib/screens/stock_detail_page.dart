@@ -1123,7 +1123,7 @@ class _RelatedSection extends StatelessWidget {
       decoration: BoxDecoration(color: _kBg, borderRadius: BorderRadius.circular(14),
           border: Border.all(color: const Color(0xFFE5E7EB))),
       child: Column(children: [
-        StockLogo(code: r.code),
+        StockLogo(code: r.code, name: r.name),
         const SizedBox(height: 6),
         Text(r.name, textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
