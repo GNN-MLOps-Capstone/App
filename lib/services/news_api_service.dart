@@ -53,6 +53,9 @@ class NewsApiService {
             json.decode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
         return NewsRecommendationPage.fromJson(body);
       }
+      if (_isAuthFailure(response.statusCode)) {
+        throw NewsApiException(_authFailureMessage, response.statusCode);
+      }
       throw NewsApiException(
         'Failed to load recommendations: ${response.statusCode}',
         response.statusCode,
@@ -80,6 +83,9 @@ class NewsApiService {
       if (response.statusCode == 404) {
         throw NewsApiException('News not found', 404);
       }
+      if (_isAuthFailure(response.statusCode)) {
+        throw NewsApiException(_authFailureMessage, response.statusCode);
+      }
       throw NewsApiException(
         'Failed to load news detail: ${response.statusCode}',
         response.statusCode,
@@ -104,6 +110,8 @@ class NewsApiService {
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonData = json.decode(utf8.decode(response.bodyBytes));
         return StockSummary.fromJson(jsonData);
+      } else if (_isAuthFailure(response.statusCode)) {
+        throw NewsApiException(_authFailureMessage, response.statusCode);
       } else if (response.statusCode == 404) {
         throw NewsApiException('존재하지 않는 종목입니다.', 404);
       } else {
@@ -128,6 +136,13 @@ class NewsApiService {
       return false;
     }
   }
+
+  static bool _isAuthFailure(int statusCode) {
+    return statusCode == 401 || statusCode == 403;
+  }
+
+  static const String _authFailureMessage =
+      '인증이 만료되었거나 거부되었습니다. 다시 로그인해주세요. 로그인 직후에도 반복되면 GOOGLE_CLIENT_ID가 서버 검증용 Google OAuth Web Client ID와 일치하는지 확인하세요.';
 }
 
 /// 뉴스 API 예외
