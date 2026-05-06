@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'firebase_options.dart';
 import 'screens/main_page.dart';
@@ -48,11 +47,9 @@ class StockApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       initialRoute: '/login',
 
-      // ✅ Noto Sans KR 폰트 전체 적용
+      // ✅ Pretendard 폰트 적용
       theme: ThemeData(
-        textTheme: GoogleFonts.notoSansKrTextTheme(
-          ThemeData.light().textTheme,
-        ),
+        fontFamily: 'Pretendard',
       ),
 
       routes: {
