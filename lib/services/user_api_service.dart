@@ -33,7 +33,10 @@ class UserApiService {
         uri,
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
-          'id_token': request.idToken,
+          'google_id': request.googleId,
+          'email': request.email,
+          'nickname': request.nickname,
+          'img_url': request.imgUrl,
           if (onesignalId != null) 'onesignal_id': onesignalId,
         }),
       ).timeout(const Duration(seconds: 10));
@@ -285,9 +288,17 @@ class SettingResponse {
 }
 
 class UserLoginRequest {
-  final String idToken;
+  final String googleId;
+  final String email;
+  final String nickname;
+  final String? imgUrl;
+  final String? onesignalId;
 
   UserLoginRequest({
-    required this.idToken,
+    required this.googleId,
+    required this.email,
+    required this.nickname,
+    this.imgUrl,
+    this.onesignalId,
   });
 }
