@@ -59,8 +59,8 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBbIxiDOl-gonEIQxmkhQ9PhYoBUJQg_4o',
-    appId: '1:39483935865:ios:ef0feb6787a6ffc5c298a8',
+    apiKey: 'AIzaSyB7eYij11J8OMa_0IX4X6KaEBCqntQQFDM',
+    appId: '1:39483935865:ios:af314eff333866e0495b2b',
     messagingSenderId: '39483935865',
     projectId: 'stockapp-3cebb',
     storageBucket: 'stockapp-3cebb.firebasestorage.app',
@@ -68,8 +68,8 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyBbIxiDOl-gonEIQxmkhQ9PhYoBUJQg_4o',
-    appId: '1:39483935865:ios:ef0feb6787a6ffc5c298a8',
+    apiKey: 'AIzaSyB7eYij11J8OMa_0IX4X6KaEBCqntQQFDM',
+    appId: '1:39483935865:ios:af314eff333866e0495b2b',
     messagingSenderId: '39483935865',
     projectId: 'stockapp-3cebb',
     storageBucket: 'stockapp-3cebb.firebasestorage.app',

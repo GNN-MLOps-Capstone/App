@@ -58,10 +58,7 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
       if (!mounted) return;
 
       final loginRequest = UserLoginRequest(
-        googleId: account.id,
-        email: account.email ?? '',
-        nickname: account.displayName ?? '',
-        imgUrl: account.photoUrl,
+        idToken: idToken,
       );
 
       final authResponse = await UserApiService.login(loginRequest);
