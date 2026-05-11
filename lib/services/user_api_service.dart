@@ -46,6 +46,11 @@ class UserApiService {
         await _storage.write(key: 'access_token', value: authData.accessToken);
         
         return authData;
+      } else if (_isAuthFailure(response.statusCode)) {
+        throw UserApiException(
+          '로그인 인증에 실패했습니다. 다시 로그인하거나 GOOGLE_CLIENT_ID가 서버 검증용 Google OAuth Web Client ID와 일치하는지 확인하세요.',
+          response.statusCode,
+        );
       } else {
         throw UserApiException(
           'failed to upload data: ${response.statusCode}',
@@ -72,6 +77,8 @@ class UserApiService {
         return UserResponse.fromJson(json.decode(response.body));
       } else if (response.statusCode == 404) {
         throw UserApiException('User not found', 404);
+      } else if (_isAuthFailure(response.statusCode)) {
+        throw UserApiException(_authFailureMessage, response.statusCode);
       } else {
         throw UserApiException(
           'Failed to load profile: ${response.statusCode}',
@@ -98,6 +105,8 @@ class UserApiService {
         return SettingResponse.fromJson(json.decode(response.body));
       } else if (response.statusCode == 404) {
         throw UserApiException('User not found', 404);
+      } else if (_isAuthFailure(response.statusCode)) {
+        throw UserApiException(_authFailureMessage, response.statusCode);
       } else {
         throw UserApiException(
           'Failed to load settings: ${response.statusCode}',
@@ -123,6 +132,8 @@ class UserApiService {
       
       if (response.statusCode == 200) {
         return SettingResponse.fromJson(json.decode(response.body));
+      } else if (_isAuthFailure(response.statusCode)) {
+        throw UserApiException(_authFailureMessage, response.statusCode);
       } else {
         throw UserApiException(
           'Failed to update settings: ${response.statusCode}',
@@ -145,7 +156,18 @@ class UserApiService {
         headers: await _getHeaders(),
       ).timeout(const Duration(seconds: 10));
       
-      return response.statusCode == 204;
+      if (_isAuthFailure(response.statusCode)) {
+        throw UserApiException(_authFailureMessage, response.statusCode);
+      }
+      if (response.statusCode == 204) {
+        return true;
+      }
+      final responseBody = utf8.decode(response.bodyBytes).trim();
+      final bodyMessage = responseBody.isEmpty ? '' : ' - $responseBody';
+      throw UserApiException(
+        '회원 탈퇴 요청에 실패했습니다: ${response.statusCode}$bodyMessage',
+        response.statusCode,
+      );
     } catch (e) {
       if (e is UserApiException) rethrow;
       throw UserApiException('Network error: $e', 0);
@@ -162,6 +184,13 @@ class UserApiService {
       return false;
     }
   }
+
+  static bool _isAuthFailure(int statusCode) {
+    return statusCode == 401 || statusCode == 403;
+  }
+
+  static const String _authFailureMessage =
+      '인증이 만료되었거나 거부되었습니다. 다시 로그인해주세요. 로그인 직후에도 반복되면 GOOGLE_CLIENT_ID가 서버 검증용 Google OAuth Web Client ID와 일치하는지 확인하세요.';
 }
 
 /// 유저 API 예외
@@ -199,12 +228,14 @@ class AuthResponse {
 
 /// 유저 프로필 모델
 class UserResponse {
+  final int id;
   final String googleId;
   final String email;
   final String nickname;
   final String? imgUrl;
 
   UserResponse({
+    required this.id,
     required this.googleId,
     required this.email,
     required this.nickname,
@@ -213,6 +244,7 @@ class UserResponse {
 
   factory UserResponse.fromJson(Map<String, dynamic> json) {
     return UserResponse(
+      id: json['id'] as int? ?? 0,
       googleId: json['google_id'] as String,
       email: json['email'] as String,
       nickname: json['nickname'] as String,

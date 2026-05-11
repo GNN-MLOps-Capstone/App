@@ -2,7 +2,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../services/user_api_service.dart';
+import '../services/onesignal_service.dart';
 import 'widgets/bottom_nav_bar.dart';
+import 'login_page.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SettingPage extends StatefulWidget {
   const SettingPage({super.key});
@@ -19,6 +23,8 @@ class _SettingPageState extends State<SettingPage> {
   bool _riskAlert = true;
   bool _goodNewsAlert = true;
   bool _favoriteAlert = true;
+  bool _nightProhibit = false;
+  bool _isUpdatingNight = false;
 
   bool get _allPush => _riskAlert && _goodNewsAlert && _favoriteAlert;
 
@@ -54,6 +60,8 @@ class _SettingPageState extends State<SettingPage> {
     }
   }
 
+  bool _isLoadingSettings = true;
+
   Future<void> _loadServerSettings() async {
     try {
       final settings = await UserApiService.getSettings();
@@ -67,9 +75,16 @@ class _SettingPageState extends State<SettingPage> {
         final start = rawStart.length >= 5 ? rawStart.substring(0, 5) : '23:00';
         final finish = rawFinish.length >= 5 ? rawFinish.substring(0, 5) : '07:00';
         _dndTimeRangeLabel = '$start ~ $finish';
+        _nightProhibit =  settings.nightPushProhibit;
       });
     } catch (e) {
       debugPrint('서버 설정 로드 실패: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingSettings = false;
+        });
+      }
     }
   }
 
@@ -114,6 +129,56 @@ class _SettingPageState extends State<SettingPage> {
   void _toggleFavorite(bool value) {
     setState(() => _favoriteAlert = value);
     UserApiService.updateSettings({'interest_only': value, 'push': _allPush});
+  }
+
+  Future<void> _toggleNight() async {
+    if (_isUpdatingNight) return;
+    final next = !_nightProhibit;
+    setState(() {
+      _isUpdatingNight = true;
+      _nightProhibit = next;
+    });
+
+    try {
+      final updated = await UserApiService.updateSettings({
+        'night_push_prohibit': next,
+      });
+      if (mounted) {
+        setState(() {
+          _nightProhibit = updated.nightPushProhibit;
+        });
+      }
+
+      try {
+        await OneSignalService.syncDnd(updated.nightPushProhibit);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('설정은 저장됐지만 알림 동기화에 실패했습니다.'),
+              duration: Duration(milliseconds: 1500),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _nightProhibit = !next;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('설정 변경에 실패했습니다. 다시 시도해주세요.'),
+          duration: Duration(milliseconds: 1500),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUpdatingNight = false;
+        });
+      }
+    }
   }
 
   Future<void> _openDndDialog() async {
@@ -203,21 +268,60 @@ class _SettingPageState extends State<SettingPage> {
     if (!mounted) return;
 
     if (confirmed == true) {
-      // TODO: API 연결 후 실제 초기화 API 호출로 교체
-      // await UserApiService.deleteUser();
-      if (!mounted) return;
-      setState(() {
-        _riskAlert = false;
-        _goodNewsAlert = false;
-        _favoriteAlert = false;
-        _dndTimeRangeLabel = '23:00 ~ 07:00';
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('설정이 초기화되었습니다.'),
-          duration: Duration(milliseconds: 1200),
-        ),
-      );
+      try {
+        // 정보 초기화
+        bool success = await UserApiService.deleteUser();
+        
+        if (success) {
+          if (!mounted) return;
+
+          // 로컬 인증 토큰 삭제
+          const storage = FlutterSecureStorage();
+          await storage.delete(key: 'access_token');
+
+          try {
+            await OneSignal.logout();
+          } catch (e) {
+            // OneSignal 실패가 전체 탈퇴 로직을 멈추지 않도록 에러만 출력
+            debugPrint("OneSignal ID 제거 실패: $e");
+          }
+          
+          // 탈퇴 성공시 성공 메시지 표시
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('회원 탈퇴가 완료되었습니다. 이용해 주셔서 감사합니다.'),
+              duration: Duration(milliseconds: 1500),
+              backgroundColor: Colors.blue,
+            ),
+          );
+
+          // Google 세션 해제
+          try {
+            final googleSignIn = GoogleSignIn(scopes: ['email']);
+            await googleSignIn.signOut();
+            await googleSignIn.disconnect();
+          } catch (_) {}
+
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const GoogleLoginPage()),
+            (route) => false,
+          );
+
+        } else {
+          throw Exception('탈퇴 처리 중 서버 오류가 발생했습니다.');
+        }
+      } catch (e) {
+        if (!mounted) return;
+        // 에러 발생 시 처리
+        debugPrint('deleteUser failed: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('탈퇴 처리에 실패했습니다. 잠시 후 다시 시도해주세요.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -584,16 +688,18 @@ class _SettingPageState extends State<SettingPage> {
                                   fontWeight: FontWeight.w700)),
                         ),
                         GestureDetector(
-                          onTap: _openDndDialog,
+                          onTap: (_isLoadingSettings || _isUpdatingNight)
+                              ? null
+                              : _toggleNight,
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 14, vertical: 4),
                             decoration: BoxDecoration(
-                              color: green,
+                              color: _nightProhibit ? green : const Color(0xFFADADAD),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              _dndTimeRangeLabel,
+                              _nightProhibit ? _dndTimeRangeLabel : '꺼짐',
                               style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 13,

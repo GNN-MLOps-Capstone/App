@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 
+import '../models/news_models.dart';
 import '../models/watchlist_models.dart';
 import '../services/watchlist_service.dart';
 import '../services/news_api_service.dart';
@@ -22,7 +23,7 @@ class StockHomeScreen extends StatefulWidget {
 
 class _StockHomeScreenState extends State<StockHomeScreen> {
   List<WatchlistStock> _watchlist = [];
-  List<NewsItem> _news = [];
+  List<NewsRecommendationItem> _news = [];
   String _userName = '';
 
   bool _watchlistLoading = true;
@@ -58,10 +59,10 @@ class _StockHomeScreenState extends State<StockHomeScreen> {
 
   Future<void> _loadNews() async {
     try {
-      final data = await NewsApiService.getNewsList(limit: 3);
+      final page = await NewsApiService.getRecommendations();
       if (!mounted) return;
       setState(() {
-        _news = data;
+        _news = page.items.take(3).toList();
         _newsLoading = false;
       });
     } catch (_) {
@@ -468,7 +469,7 @@ class _StockLogo extends StatelessWidget {
 // ─── 뉴스 행 ─────────────────────────────────────────────────
 
 class _NewsRow extends StatelessWidget {
-  final NewsItem news;
+  final NewsRecommendationItem news;
   final String timeAgo;
   const _NewsRow({required this.news, required this.timeAgo});
 

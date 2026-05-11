@@ -364,6 +364,7 @@ Future<void> _toggleStarWithApi(int id) async {
   int get _unreadCount => _items.where((e) => !e.isRead).length;
   int get _riskTabCount =>
       _items.where((e) => e.tag == AlarmTag.highRisk || e.tag == AlarmTag.risk).length;
+  int get _keywordCount => _items.where((e) => e.tag == AlarmTag.keyword).length;
 
   // ===== 더미 모드 사용 시 =====
   /*
@@ -417,7 +418,10 @@ Future<void> _toggleStarWithApi(int id) async {
       await NotificationApiService.markAsRead(id: item.id);
       if (!mounted) return;
       setState(() {
-        _items[idx] = _items[idx].copyWith(isRead: true);
+         final freshIdx = _items.indexWhere((e) => e.id == item.id);
+        if (freshIdx >= 0) {
+          _items[freshIdx] = _items[freshIdx].copyWith(isRead: true);
+        }
       });
     } catch (e) {
       debugPrint('Failed to mark as read: $e');
@@ -437,6 +441,8 @@ Future<void> _toggleStarWithApi(int id) async {
         return _items
             .where((e) => e.tag == AlarmTag.highRisk || e.tag == AlarmTag.risk)
             .toList();
+      case 4:
+        return _items.where((e) => e.tag == AlarmTag.keyword).toList();
       default:
         return _items;
     }
@@ -445,7 +451,7 @@ Future<void> _toggleStarWithApi(int id) async {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 4,
+      length: 5,
       child: Scaffold(
         backgroundColor: const Color(0xFFF3F4F6),
         appBar: AppBar(
@@ -484,22 +490,26 @@ Future<void> _toggleStarWithApi(int id) async {
               color: Colors.white,
               child: TabBar(
                 isScrollable: true,
+                tabAlignment: TabAlignment.start,
+                labelPadding: const EdgeInsets.symmetric(horizontal: 12),
                 labelColor: Colors.black87,
                 unselectedLabelColor: Colors.black45,
                 indicatorColor: Colors.black87,
                 indicatorWeight: 2.6,
+                indicatorSize: TabBarIndicatorSize.label,
                 tabs: [
                   Tab(text: '전체 ($_totalCount)'),
                   Tab(text: '중요 ($_starCount)'),
                   Tab(text: '읽지 않음 ($_unreadCount)'),
                   Tab(text: '긴급/리스크 ($_riskTabCount)'),
+                  Tab(text: '키워드 ($_keywordCount)'),
                 ],
               ),
             ),
           ),
         ),
         body: TabBarView(
-          children: List.generate(4, (tabIndex) {
+          children: List.generate(5, (tabIndex) {
             final list = _filteredItems(tabIndex);
             return ListView.builder(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
