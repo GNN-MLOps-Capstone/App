@@ -4,6 +4,9 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../services/user_api_service.dart';
 import '../services/onesignal_service.dart';
 import 'widgets/bottom_nav_bar.dart';
+import 'login_page.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SettingPage extends StatefulWidget {
   const SettingPage({super.key});
@@ -265,21 +268,60 @@ class _SettingPageState extends State<SettingPage> {
     if (!mounted) return;
 
     if (confirmed == true) {
-      // TODO: API 연결 후 실제 초기화 API 호출로 교체
-      // await UserApiService.deleteUser();
-      if (!mounted) return;
-      setState(() {
-        _riskAlert = false;
-        _goodNewsAlert = false;
-        _favoriteAlert = false;
-        _dndTimeRangeLabel = '23:00 ~ 07:00';
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('설정이 초기화되었습니다.'),
-          duration: Duration(milliseconds: 1200),
-        ),
-      );
+      try {
+        // 정보 초기화
+        bool success = await UserApiService.deleteUser();
+        
+        if (success) {
+          if (!mounted) return;
+
+          // 로컬 인증 토큰 삭제
+          const storage = FlutterSecureStorage();
+          await storage.delete(key: 'access_token');
+
+          try {
+            await OneSignal.logout();
+          } catch (e) {
+            // OneSignal 실패가 전체 탈퇴 로직을 멈추지 않도록 에러만 출력
+            debugPrint("OneSignal ID 제거 실패: $e");
+          }
+          
+          // 탈퇴 성공시 성공 메시지 표시
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('회원 탈퇴가 완료되었습니다. 이용해 주셔서 감사합니다.'),
+              duration: Duration(milliseconds: 1500),
+              backgroundColor: Colors.blue,
+            ),
+          );
+
+          // Google 세션 해제
+          try {
+            final googleSignIn = GoogleSignIn(scopes: ['email']);
+            await googleSignIn.signOut();
+            await googleSignIn.disconnect();
+          } catch (_) {}
+
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const GoogleLoginPage()),
+            (route) => false,
+          );
+
+        } else {
+          throw Exception('탈퇴 처리 중 서버 오류가 발생했습니다.');
+        }
+      } catch (e) {
+        if (!mounted) return;
+        // 에러 발생 시 처리
+        debugPrint('deleteUser failed: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('탈퇴 처리에 실패했습니다. 잠시 후 다시 시도해주세요.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
