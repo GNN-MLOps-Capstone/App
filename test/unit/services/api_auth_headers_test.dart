@@ -32,7 +32,13 @@ void main() {
 
       expect(
         () => getAuthHeaders(),
-        throwsA(isA<Exception>()),
+        throwsA(
+          isA<AuthRequiredException>().having(
+            (e) => e.message,
+            'message',
+            contains('GOOGLE_CLIENT_ID'),
+          ),
+        ),
       );
     });
 
@@ -41,7 +47,13 @@ void main() {
 
       expect(
         () => getAuthHeaders(),
-        throwsA(isA<Exception>()),
+        throwsA(
+          isA<AuthRequiredException>().having(
+            (e) => e.message,
+            'message',
+            contains('GOOGLE_CLIENT_ID'),
+          ),
+        ),
       );
     });
 
@@ -50,7 +62,13 @@ void main() {
 
       expect(
         () => getAuthHeaders(),
-        throwsA(isA<Exception>()),
+        throwsA(
+          isA<AuthRequiredException>().having(
+            (e) => e.message,
+            'message',
+            contains('GOOGLE_CLIENT_ID'),
+          ),
+        ),
       );
     });
   });

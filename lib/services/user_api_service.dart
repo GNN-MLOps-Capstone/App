@@ -156,7 +156,15 @@ class UserApiService {
       if (_isAuthFailure(response.statusCode)) {
         throw UserApiException(_authFailureMessage, response.statusCode);
       }
-      return response.statusCode == 204;
+      if (response.statusCode == 204) {
+        return true;
+      }
+      final responseBody = utf8.decode(response.bodyBytes).trim();
+      final bodyMessage = responseBody.isEmpty ? '' : ' - $responseBody';
+      throw UserApiException(
+        '회원 탈퇴 요청에 실패했습니다: ${response.statusCode}$bodyMessage',
+        response.statusCode,
+      );
     } catch (e) {
       if (e is UserApiException) rethrow;
       throw UserApiException('Network error: $e', 0);

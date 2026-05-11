@@ -62,6 +62,9 @@ class NewsApiService {
       );
     } catch (e) {
       if (e is NewsApiException) rethrow;
+      if (e is AuthRequiredException) {
+        throw NewsApiException(e.message, 401);
+      }
       throw NewsApiException('Network error: $e', 0);
     }
   }
@@ -92,6 +95,9 @@ class NewsApiService {
       );
     } catch (e) {
       if (e is NewsApiException) rethrow;
+      if (e is AuthRequiredException) {
+        throw NewsApiException(e.message, 401);
+      }
       throw NewsApiException('Network error: $e', 0);
     }
   }
@@ -122,6 +128,9 @@ class NewsApiService {
       }
     } catch (e) {
       if (e is NewsApiException) rethrow;
+      if (e is AuthRequiredException) {
+        throw NewsApiException(e.message, 401);
+      }
       throw NewsApiException('네트워크 오류가 발생했습니다: $e', 0);
     }
   }

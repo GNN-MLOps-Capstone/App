@@ -309,16 +309,28 @@ void main() {
       expect(result, true);
     });
 
-    test('200 응답 시 false 반환 (204가 아님)', () async {
+    test('204가 아닌 응답 시 UserApiException 발생', () async {
       _mockSecureStorage();
-      final client = MockClient((_) async => http.Response('', 200));
-
-      final result = await http.runWithClient(
-        () => UserApiService.deleteUser(),
-        () => client,
+      final client = MockClient(
+        (_) async => http.Response('already deleted', 200),
       );
 
-      expect(result, false);
+      expect(
+        () =>
+            http.runWithClient(() => UserApiService.deleteUser(), () => client),
+        throwsA(
+          isA<UserApiException>()
+              .having((e) => e.statusCode, 'statusCode', 200)
+              .having(
+                (e) => e.message,
+                'message',
+                allOf(
+                  contains('회원 탈퇴 요청에 실패했습니다'),
+                  contains('already deleted'),
+                ),
+              ),
+        ),
+      );
     });
   });
 }

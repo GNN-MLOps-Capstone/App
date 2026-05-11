@@ -138,7 +138,15 @@ void main() {
           () => NewsApiService.getRecommendations(),
           () => client,
         ),
-        throwsA(isA<NewsApiException>()),
+        throwsA(
+          isA<NewsApiException>()
+              .having((e) => e.statusCode, 'statusCode', 401)
+              .having(
+                (e) => e.message,
+                'message',
+                contains('GOOGLE_CLIENT_ID'),
+              ),
+        ),
       );
     });
   });

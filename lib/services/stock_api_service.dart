@@ -37,6 +37,9 @@ class StockApiService {
       throw StockApiException('Failed to load overview: ${res.statusCode}', res.statusCode);
     } catch (e) {
       if (e is StockApiException) rethrow;
+      if (e is AuthRequiredException) {
+        throw StockApiException(e.message, 401);
+      }
       throw StockApiException('Network error: $e', 0);
     }
   }
@@ -63,6 +66,9 @@ class StockApiService {
       throw StockApiException('Failed to load series: ${res.statusCode}', res.statusCode);
     } catch (e) {
       if (e is StockApiException) rethrow;
+      if (e is AuthRequiredException) {
+        throw StockApiException(e.message, 401);
+      }
       throw StockApiException('Network error: $e', 0);
     }
   }
@@ -153,6 +159,9 @@ class StockApiService {
       throw StockApiException('Failed to load AI trends: ${res.statusCode}', res.statusCode);
     } catch (e) {
       if (e is StockApiException) rethrow;
+      if (e is AuthRequiredException) {
+        throw StockApiException(e.message, 401);
+      }
       throw StockApiException('Network error: $e', 0);
     }
   }
@@ -188,6 +197,9 @@ class StockApiService {
       throw StockApiException('Failed to load stock weather: ${res.statusCode}', res.statusCode);
     } catch (e) {
       if (e is StockApiException) rethrow;
+      if (e is AuthRequiredException) {
+        throw StockApiException(e.message, 401);
+      }
       throw StockApiException('Network error: $e', 0);
     }
   }
@@ -204,6 +216,9 @@ class StockApiService {
       throw StockApiException('Failed to load related stocks: ${res.statusCode}', res.statusCode);
     } catch (e) {
       if (e is StockApiException) rethrow;
+      if (e is AuthRequiredException) {
+        throw StockApiException(e.message, 401);
+      }
       throw StockApiException('Network error: $e', 0);
     }
   }
@@ -221,6 +236,9 @@ class StockApiService {
       throw StockApiException('Failed to load theme keywords: ${res.statusCode}', res.statusCode);
     } catch (e) {
       if (e is StockApiException) rethrow;
+      if (e is AuthRequiredException) {
+        throw StockApiException(e.message, 401);
+      }
       throw StockApiException('Network error: $e', 0);
     }
   }
