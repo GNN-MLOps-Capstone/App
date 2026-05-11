@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
@@ -8,8 +11,10 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-import java.io.FileInputStream
-import java.util.Properties
+val localProps = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) FileInputStream(f).use { load(it) }
+}
 
 android {
     namespace = "com.example.stock"
@@ -26,117 +31,11 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.stock"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-    }
-
-    // Task to generate google-services.json from environment variables
-    task("generateGoogleServicesJson") {
-        doLast {
-            // .env.local is in the project root directory
-            val envFile = File(rootProject.projectDir.parentFile, ".env.local")
-            val properties = Properties()
-
-            if (envFile.exists()) {
-                FileInputStream(envFile).use { input ->
-                    properties.load(input)
-                }
-            } else {
-                println("Warning: .env.local file not found at ${envFile.absolutePath}. Please create it with Firebase credentials.")
-                return@doLast
-            }
-
-            val googleServicesDir = File(projectDir, "src")
-            val googleServicesFile = File(googleServicesDir, "google-services.json")
-
-            // Create directory if it doesn't exist
-            googleServicesDir.mkdirs()
-
-            // Template google-services.json with placeholders
-            val template = """
-            {
-              "project_info": {
-                "project_number": "${properties.getProperty("FIREBASE_PROJECT_NUMBER", "")}",
-                "project_id": "${properties.getProperty("FIREBASE_PROJECT_ID", "")}",
-                "storage_bucket": "${properties.getProperty("FIREBASE_STORAGE_BUCKET", "")}"
-              },
-              "client": [
-                {
-                  "client_info": {
-                    "mobilesdk_app_id": "${properties.getProperty("FIREBASE_MOBILESDK_APP_ID", "")}",
-                    "android_client_info": {
-                      "package_name": "com.example.stock"
-                    }
-                  },
-                  "oauth_client": [
-                    {
-                      "client_id": "${properties.getProperty("FIREBASE_CLIENT_ID", "")}",
-                      "client_type": 1,
-                      "android_info": {
-                        "package_name": "com.example.stock",
-                        "certificate_hash": "55fb45c8acef94d2a54058178a0d519c755d0d00"
-                      }
-                    },
-                    {
-                      "client_id": "${properties.getProperty("FIREBASE_CLIENT_ID_ANDROID_CERT2", "")}",
-                      "client_type": 1,
-                      "android_info": {
-                        "package_name": "com.example.stock",
-                        "certificate_hash": "d52e9f312ed2c8da8edfb491a694f744f7288df3"
-                      }
-                    },
-                    {
-                      "client_id": "${properties.getProperty("FIREBASE_CLIENT_ID_WEB", "")}",
-                      "client_type": 3
-                    }
-                  ],
-                  "api_key": [
-                    {
-                      "current_key": "${properties.getProperty("FIREBASE_API_KEY", "")}"
-                    }
-                  ],
-                  "services": {
-                    "appinvite_service": {
-                      "other_platform_oauth_client": [
-                        {
-                          "client_id": "${properties.getProperty("FIREBASE_CLIENT_ID_WEB", "")}",
-                          "client_type": 3
-                        },
-                        {
-                          "client_id": "${properties.getProperty("FIREBASE_IOS_CLIENT_ID", "")}",
-                          "client_type": 2,
-                          "ios_info": {
-                            "bundle_id": "com.example.stock.gnnproject"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                }
-              ],
-              "configuration_version": "1"
-            }
-            """.trimIndent()
-
-            googleServicesFile.writeText(template)
-            println("Generated google-services.json with environment variables")
-        }
-    }
-
-    // Make sure the generation happens before the app is compiled
-    tasks.named("preBuild") {
-        dependsOn("generateGoogleServicesJson")
-    }
-
-    val localProps = Properties().apply {
-        val f = rootProject.file("local.properties")
-        if (f.exists()) FileInputStream(f).use { load(it) }
     }
 
     signingConfigs {
@@ -153,6 +52,100 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+}
+
+// Task to generate google-services.json from environment variables
+tasks.register("generateGoogleServicesJson") {
+    doLast {
+        val envFile = File(rootProject.projectDir.parentFile, ".env.local")
+        val properties = Properties()
+
+        if (envFile.exists()) {
+            FileInputStream(envFile).use { input ->
+                properties.load(input)
+            }
+        } else {
+            println("Warning: .env.local file not found at ${envFile.absolutePath}. Please create it with Firebase credentials.")
+            return@doLast
+        }
+
+        val googleServicesDir = File(projectDir, "src")
+        val googleServicesFile = File(googleServicesDir, "google-services.json")
+
+        googleServicesDir.mkdirs()
+
+        val template = """
+        {
+          "project_info": {
+            "project_number": "${properties.getProperty("FIREBASE_PROJECT_NUMBER", "")}",
+            "project_id": "${properties.getProperty("FIREBASE_PROJECT_ID", "")}",
+            "storage_bucket": "${properties.getProperty("FIREBASE_STORAGE_BUCKET", "")}"
+          },
+          "client": [
+            {
+              "client_info": {
+                "mobilesdk_app_id": "${properties.getProperty("FIREBASE_MOBILESDK_APP_ID", "")}",
+                "android_client_info": {
+                  "package_name": "com.example.stock"
+                }
+              },
+              "oauth_client": [
+                {
+                  "client_id": "${properties.getProperty("FIREBASE_CLIENT_ID", "")}",
+                  "client_type": 1,
+                  "android_info": {
+                    "package_name": "com.example.stock",
+                    "certificate_hash": "55fb45c8acef94d2a54058178a0d519c755d0d00"
+                  }
+                },
+                {
+                  "client_id": "${properties.getProperty("FIREBASE_CLIENT_ID_ANDROID_CERT2", "")}",
+                  "client_type": 1,
+                  "android_info": {
+                    "package_name": "com.example.stock",
+                    "certificate_hash": "d52e9f312ed2c8da8edfb491a694f744f7288df3"
+                  }
+                },
+                {
+                  "client_id": "${properties.getProperty("FIREBASE_CLIENT_ID_WEB", "")}",
+                  "client_type": 3
+                }
+              ],
+              "api_key": [
+                {
+                  "current_key": "${properties.getProperty("FIREBASE_API_KEY", "")}"
+                }
+              ],
+              "services": {
+                "appinvite_service": {
+                  "other_platform_oauth_client": [
+                    {
+                      "client_id": "${properties.getProperty("FIREBASE_CLIENT_ID_WEB", "")}",
+                      "client_type": 3
+                    },
+                    {
+                      "client_id": "${properties.getProperty("FIREBASE_IOS_CLIENT_ID", "")}",
+                      "client_type": 2,
+                      "ios_info": {
+                        "bundle_id": "com.example.stock.gnnproject"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "configuration_version": "1"
+        }
+        """.trimIndent()
+
+        googleServicesFile.writeText(template)
+        println("Generated google-services.json with environment variables")
+    }
+}
+
+tasks.named("preBuild") {
+    dependsOn("generateGoogleServicesJson")
 }
 
 flutter {
