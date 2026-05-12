@@ -25,7 +25,7 @@ final List<Map<String, dynamic>> _dummyPage1 = [
     'news_id': 231353,
     'title': '[경제쏙] 자사주 소각, \'트럼프\' 널뛰기 증시에 \'단비\'',
     'summary':
-        '3차 상법개정안 시행으로 삼성전자, SK 등 대기업들의 자사주 소각 계획 발표와 주가 상승, 중소·중견 기업의 자사주 소각 관련 내용.',
+    '3차 상법개정안 시행으로 삼성전자, SK 등 대기업들의 자사주 소각 계획 발표와 주가 상승, 중소·중견 기업의 자사주 소각 관련 내용.',
     'pub_date': '2026-03-12T06:34:00',
     'path': 'A1',
     'stock_name': '삼성전자',
@@ -36,7 +36,7 @@ final List<Map<String, dynamic>> _dummyPage1 = [
     'news_id': 231321,
     'title': '기술은 잘 나가는데 내 자리는요? 코엑스에 몰려온 애타는 청춘들',
     'summary':
-        '배터리 산업의 채용 시장이 전기차 캐즘과 AI 기술 발전으로 인해 어려움을 겪고 있으며, ESS 분야로의 전환과 기업별 목표 설정이 중요해지고 있다.',
+    '배터리 산업의 채용 시장이 전기차 캐즘과 AI 기술 발전으로 인해 어려움을 겪고 있으며, ESS 분야로의 전환과 기업별 목표 설정이 중요해지고 있다.',
     'pub_date': '2026-03-12T07:08:00',
     'path': 'A1',
     'stock_name': 'SK하이닉스',
@@ -47,7 +47,7 @@ final List<Map<String, dynamic>> _dummyPage1 = [
     'news_id': 231226,
     'title': '이경실 "깡통 주식만 3억 넘어…7만원 본전에 판 삼성전자 꼴도 보기 싫어"',
     'summary':
-        '개그우먼 이경실이 과거 삼성전자 주식 투자 실패 경험과 부동산 투자 실패담을 언급하며 재테크 관련 이야기를 나눔.',
+    '개그우먼 이경실이 과거 삼성전자 주식 투자 실패 경험과 부동산 투자 실패담을 언급하며 재테크 관련 이야기를 나눔.',
     'pub_date': '2026-03-12T07:47:00',
     'path': 'A2',
     'stock_name': '삼성전자',
@@ -58,7 +58,7 @@ final List<Map<String, dynamic>> _dummyPage1 = [
     'news_id': 231270,
     'title': '"국내 AI 소비자들, 주변엔 챗GPT보다 제미나이 추천"',
     'summary':
-        '컨슈머인사이트 조사에서 챗GPT는 이용률 1위이나, 추천의향은 제미나이가 더 높게 나타나 AI 서비스 시장 경쟁 구도를 보여줌.',
+    '컨슈머인사이트 조사에서 챗GPT는 이용률 1위이나, 추천의향은 제미나이가 더 높게 나타나 AI 서비스 시장 경쟁 구도를 보여줌.',
     'pub_date': '2026-03-12T07:30:00',
     'path': 'A2',
     'stock_name': '카카오',
@@ -69,7 +69,7 @@ final List<Map<String, dynamic>> _dummyPage1 = [
     'news_id': 227736,
     'title': '바이오시밀러 SC면 다 잘되는 줄 알지만... 처방 패턴 바뀌면 \'헛일\'',
     'summary':
-        '바이오시밀러 시장 경쟁에서 SC 제형의 중요성을 분석하며, 셀트리온, 삼성바이오에피스 등 기업들의 사례를 통해 시장 접근 전략을 제시.',
+    '바이오시밀러 시장 경쟁에서 SC 제형의 중요성을 분석하며, 셀트리온, 삼성바이오에피스 등 기업들의 사례를 통해 시장 접근 전략을 제시.',
     'pub_date': '2026-03-10T21:12:00',
     'path': 'A1',
     'stock_name': '셀트리온',
@@ -80,7 +80,7 @@ final List<Map<String, dynamic>> _dummyPage1 = [
     'news_id': 215033,
     'title': '\'군사기지 사용 거절\' 스페인에 보복 나선 트럼프',
     'summary':
-        '트럼프 대통령이 스페인의 기지 사용 거부에 대한 보복으로 무역 단절을 선언하고, 이란과의 군사적 긴장 고조에 대한 입장을 밝혔다.',
+    '트럼프 대통령이 스페인의 기지 사용 거부에 대한 보복으로 무역 단절을 선언하고, 이란과의 군사적 긴장 고조에 대한 입장을 밝혔다.',
     'pub_date': '2026-03-03T21:19:00',
     'path': 'A2',
     'stock_name': '한화에어로',
@@ -91,7 +91,7 @@ final List<Map<String, dynamic>> _dummyPage1 = [
     'news_id': 214800,
     'title': '삼성전자, HBM3E 8단 3분기 본격 양산 엔비디아 공급 가능성',
     'summary':
-        '삼성전자가 AI 메모리인 HBM3E 8단 제품을 3분기 내 본격 양산하고, 12단 제품도 하반기에 공급할 예정입니다.',
+    '삼성전자가 AI 메모리인 HBM3E 8단 제품을 3분기 내 본격 양산하고, 12단 제품도 하반기에 공급할 예정입니다.',
     'pub_date': '2026-03-12T14:00:00',
     'path': 'A1',
     'stock_name': '삼성전자',
@@ -122,7 +122,7 @@ final List<Map<String, dynamic>> _dummyPage1 = [
     'news_id': 214650,
     'title': 'POSCO홀딩스, 리튬 생산 본격화… 2차전지 소재 공급 확대',
     'summary':
-        'POSCO홀딩스가 아르헨티나 리튬 염호에서 본격적인 리튬 생산을 시작하며 2차전지 소재 시장 공급 확대에 나섰다.',
+    'POSCO홀딩스가 아르헨티나 리튬 염호에서 본격적인 리튬 생산을 시작하며 2차전지 소재 시장 공급 확대에 나섰다.',
     'pub_date': '2026-03-09T11:00:00',
     'path': 'A1',
     'stock_name': 'POSCO홀딩스',
@@ -193,7 +193,7 @@ final List<Map<String, dynamic>> _dummyPage1 = [
     'news_id': 214300,
     'title': '기아차, 픽업트럭 타스만 글로벌 판매 호조',
     'summary':
-        '기아자동차의 픽업트럭 타스만이 호주·중동 시장에서 판매 호조를 보이며 글로벌 픽업트럭 시장 공략에 청신호가 켜졌다.',
+    '기아자동차의 픽업트럭 타스만이 호주·중동 시장에서 판매 호조를 보이며 글로벌 픽업트럭 시장 공략에 청신호가 켜졌다.',
     'pub_date': '2026-03-02T15:00:00',
     'path': 'A1',
     'stock_name': '기아',
@@ -237,7 +237,7 @@ final List<Map<String, dynamic>> _dummyPage2 = [
     'news_id': 214100,
     'title': '포스코퓨처엠, 양극재 생산 능력 대폭 확대 계획 발표',
     'summary':
-        '포스코퓨처엠이 2차전지 핵심 소재인 양극재 생산 능력을 대폭 확대하는 계획을 발표하며 배터리 소재 시장 주도권 확보에 나섰다.',
+    '포스코퓨처엠이 2차전지 핵심 소재인 양극재 생산 능력을 대폭 확대하는 계획을 발표하며 배터리 소재 시장 주도권 확보에 나섰다.',
     'pub_date': '2026-02-26T10:30:00',
     'path': 'A1',
     'stock_name': '포스코퓨처엠',
@@ -258,7 +258,7 @@ final List<Map<String, dynamic>> _dummyPage2 = [
     'news_id': 214000,
     'title': '롯데케미칼, 석유화학 업황 부진에 실적 악화 우려',
     'summary':
-        '롯데케미칼이 글로벌 석유화학 업황 부진으로 인해 올해 실적이 크게 악화될 것이라는 우려가 시장에서 제기되고 있다.',
+    '롯데케미칼이 글로벌 석유화학 업황 부진으로 인해 올해 실적이 크게 악화될 것이라는 우려가 시장에서 제기되고 있다.',
     'pub_date': '2026-02-24T14:00:00',
     'path': 'A2',
     'stock_name': '롯데케미칼',
@@ -289,7 +289,7 @@ final List<Map<String, dynamic>> _dummyPage2 = [
     'news_id': 213850,
     'title': '삼성SDI, 전고체 배터리 2027년 양산 목표 재확인',
     'summary':
-        '삼성SDI가 차세대 배터리로 주목받는 전고체 배터리의 2027년 양산 목표를 재확인하며 기술 개발에 박차를 가하고 있다.',
+    '삼성SDI가 차세대 배터리로 주목받는 전고체 배터리의 2027년 양산 목표를 재확인하며 기술 개발에 박차를 가하고 있다.',
     'pub_date': '2026-02-21T13:30:00',
     'path': 'A1',
     'stock_name': '삼성SDI',
@@ -310,7 +310,7 @@ final List<Map<String, dynamic>> _dummyPage2 = [
     'news_id': 213750,
     'title': '셀트리온, 미국 FDA 바이오시밀러 허가 획득',
     'summary':
-        '셀트리온이 자사 바이오시밀러 제품에 대해 미국 FDA로부터 판매 허가를 획득하며 미국 시장 진출의 발판을 마련했다.',
+    '셀트리온이 자사 바이오시밀러 제품에 대해 미국 FDA로부터 판매 허가를 획득하며 미국 시장 진출의 발판을 마련했다.',
     'pub_date': '2026-02-19T15:00:00',
     'path': 'A1',
     'stock_name': '셀트리온',
@@ -351,7 +351,7 @@ final List<Map<String, dynamic>> _dummyPage2 = [
     'news_id': 213550,
     'title': '에코프로비엠, 하이니켈 양극재 유럽 공급 계약 체결',
     'summary':
-        '에코프로비엠이 유럽 주요 배터리 제조사와 하이니켈 양극재 장기 공급 계약을 체결하며 유럽 시장 공략을 본격화했다.',
+    '에코프로비엠이 유럽 주요 배터리 제조사와 하이니켈 양극재 장기 공급 계약을 체결하며 유럽 시장 공략을 본격화했다.',
     'pub_date': '2026-02-15T09:30:00',
     'path': 'A1',
     'stock_name': '에코프로비엠',
@@ -382,7 +382,7 @@ final List<Map<String, dynamic>> _dummyPage2 = [
     'news_id': 213400,
     'title': '대한항공, 아시아나 합병 완료… 메가캐리어 출범',
     'summary':
-        '대한항공이 아시아나항공과의 합병을 완료하며 국내 최초의 메가캐리어가 출범했다. 글로벌 항공 시장에서의 경쟁력이 크게 강화될 전망이다.',
+    '대한항공이 아시아나항공과의 합병을 완료하며 국내 최초의 메가캐리어가 출범했다. 글로벌 항공 시장에서의 경쟁력이 크게 강화될 전망이다.',
     'pub_date': '2026-02-12T09:00:00',
     'path': 'A1',
     'stock_name': '대한항공',
@@ -393,7 +393,7 @@ final List<Map<String, dynamic>> _dummyPage2 = [
     'news_id': 213350,
     'title': '고려아연, 경영권 분쟁 일단락… 주가 안정세',
     'summary':
-        '고려아연의 경영권 분쟁이 일단락되며 주가가 안정세를 찾아가고 있다. 향후 사업 방향에 대한 시장의 관심이 집중되고 있다.',
+    '고려아연의 경영권 분쟁이 일단락되며 주가가 안정세를 찾아가고 있다. 향후 사업 방향에 대한 시장의 관심이 집중되고 있다.',
     'pub_date': '2026-02-11T15:30:00',
     'path': 'A2',
     'stock_name': '고려아연',
@@ -404,7 +404,7 @@ final List<Map<String, dynamic>> _dummyPage2 = [
     'news_id': 213300,
     'title': 'HD현대중공업, 친환경 LNG선 대규모 수주 성공',
     'summary':
-        'HD현대중공업이 글로벌 주요 선사로부터 친환경 LNG 운반선 대규모 수주에 성공하며 조선 업황 회복에 청신호가 켜졌다.',
+    'HD현대중공업이 글로벌 주요 선사로부터 친환경 LNG 운반선 대규모 수주에 성공하며 조선 업황 회복에 청신호가 켜졌다.',
     'pub_date': '2026-02-10T10:00:00',
     'path': 'A1',
     'stock_name': 'HD현대중공업',
@@ -415,7 +415,7 @@ final List<Map<String, dynamic>> _dummyPage2 = [
     'news_id': 213250,
     'title': '카카오, 계열사 구조조정 가속화… 핵심 사업에 집중',
     'summary':
-        '카카오그룹이 비핵심 계열사에 대한 구조조정을 가속화하며 AI와 플랫폼 핵심 사업에 역량을 집중하기로 전략 방향을 변경했다.',
+    '카카오그룹이 비핵심 계열사에 대한 구조조정을 가속화하며 AI와 플랫폼 핵심 사업에 역량을 집중하기로 전략 방향을 변경했다.',
     'pub_date': '2026-02-09T11:00:00',
     'path': 'A2',
     'stock_name': '카카오',
@@ -436,7 +436,7 @@ final List<Map<String, dynamic>> _dummyPage2 = [
     'news_id': 213150,
     'title': '엔씨소프트, 신작 TL 글로벌 흥행으로 실적 반전 기대',
     'summary':
-        '엔씨소프트의 신작 게임 TL이 글로벌 시장에서 흥행에 성공하며 오랜 실적 부진을 벗어날 수 있을지 시장의 기대가 높아지고 있다.',
+    '엔씨소프트의 신작 게임 TL이 글로벌 시장에서 흥행에 성공하며 오랜 실적 부진을 벗어날 수 있을지 시장의 기대가 높아지고 있다.',
     'pub_date': '2026-02-07T14:00:00',
     'path': 'A1',
     'stock_name': '엔씨소프트',
@@ -657,10 +657,10 @@ class _NewsScreenState extends State<NewsScreen> {
     final fallbackItems = pageData
         .map(
           (item) => NewsRecommendationItem.fromJson({
-            ...item,
-            'is_placeholder': true,
-          }),
-        )
+        ...item,
+        'is_placeholder': true,
+      }),
+    )
         .toList();
 
     setState(() {
@@ -807,26 +807,15 @@ class _NewsScreenState extends State<NewsScreen> {
           children: [
             // ── 헤더 ──
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+              padding: const EdgeInsets.fromLTRB(16, 30, 16, 0),
               child: Row(
                 children: [
-                  IconButton(
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(
-                      Icons.arrow_back,
-                      size: 26,
-                      color: Colors.black,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
                   const Expanded(
                     child: Text(
                       '회원님을 위한 추천 뉴스',
                       style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
+                        fontSize: 23,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
@@ -875,72 +864,72 @@ class _NewsScreenState extends State<NewsScreen> {
                   ? const Center(child: CircularProgressIndicator())
                   : _errorMessage != null
                   ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              _errorMessage!,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Color(0xFF606060),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            TextButton(
-                              onPressed: () =>
-                                  _loadRecommendations(requestId: _requestId),
-                              child: const Text('다시 시도'),
-                            ),
-                          ],
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _errorMessage!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF606060),
                         ),
                       ),
-                    )
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: () =>
+                            _loadRecommendations(requestId: _requestId),
+                        child: const Text('다시 시도'),
+                      ),
+                    ],
+                  ),
+                ),
+              )
                   : _items.isEmpty
                   ? const Center(child: Text('추천 뉴스가 없습니다.'))
                   : ListView.separated(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                      itemCount: _items.length + 1,
-                      separatorBuilder: (context, index) =>
-                          const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        if (index == _items.length) {
-                          if (_loadingMore) {
-                            return const Padding(
-                              padding: EdgeInsets.all(16),
-                              child: Center(child: CircularProgressIndicator()),
-                            );
-                          }
-                          if (_hasMore) {
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              child: Center(
-                                child: GestureDetector(
-                                  onTap: _onLoadMore,
-                                  child: const Text(
-                                    '더보기',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                      color: Color(0xFF83848B),
-                                    ),
-                                  ),
-                                ),
+                controller: _scrollController,
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                itemCount: _items.length + 1,
+                separatorBuilder: (context, index) =>
+                const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  if (index == _items.length) {
+                    if (_loadingMore) {
+                      return const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    }
+                    if (_hasMore) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: Center(
+                          child: GestureDetector(
+                            onTap: _onLoadMore,
+                            child: const Text(
+                              '더보기',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: Color(0xFF83848B),
                               ),
-                            );
-                          }
-                          return const SizedBox(height: 12);
-                        }
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                    return const SizedBox(height: 12);
+                  }
 
-                        return GestureDetector(
-                          onTap: () => _onNewsTap(_items[index], index),
-                          child: _NewsCard(item: _items[index]),
-                        );
-                      },
-                    ),
+                  return GestureDetector(
+                    onTap: () => _onNewsTap(_items[index], index),
+                    child: _NewsCard(item: _items[index]),
+                  );
+                },
+              ),
             ),
           ],
         ),
@@ -1011,7 +1000,7 @@ class _NewsCard extends StatelessWidget {
                       const Spacer(),
                       Text(
                         item.title,
-                        maxLines: 4,
+                        maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: Colors.white,

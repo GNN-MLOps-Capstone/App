@@ -178,19 +178,11 @@ class _StockPageState extends State<StockPage> {
             children: [
               Row(
                 children: [
-                  IconButton(
-                    onPressed: () => Navigator.maybePop(context),
-                    icon: const Icon(Icons.arrow_back, color: Colors.black87),
-                  ),
-                  const SizedBox(width: 4),
                   const Text('주식', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                   const Spacer(),
+                  // 알림 버튼 - 이렇게 수정
                   IconButton(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('알림 화면은 아직 준비 중입니다.')),
-                      );
-                    },
+                    onPressed: () => Navigator.pushNamed(context, '/alarm'),
                     icon: Stack(
                       clipBehavior: Clip.none,
                       children: [
@@ -207,11 +199,7 @@ class _StockPageState extends State<StockPage> {
                     ),
                   ),
                   IconButton(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('설정 화면은 아직 준비 중입니다.')),
-                      );
-                    },
+                    onPressed: () => Navigator.pushNamed(context, '/settings'),
                     icon: const Icon(Icons.settings, size: 26),
                   ),
                 ],

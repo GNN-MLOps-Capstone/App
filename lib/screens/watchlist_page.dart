@@ -648,11 +648,13 @@ class _WatchlistStockCard extends StatefulWidget {
 class _WatchlistStockCardState extends State<_WatchlistStockCard> {
   String _summary = '';
   bool _summaryLoading = false;
+  List<String> _keywords = [];
 
   @override
   void initState() {
     super.initState();
     _summary = widget.stock.aiSummary;
+    _loadKeywords();
   }
 
   @override
@@ -681,6 +683,24 @@ class _WatchlistStockCardState extends State<_WatchlistStockCard> {
         _summary = '요약 정보를 불러오지 못했습니다.';
         _summaryLoading = false;
       });
+    }
+  }
+
+  // 추가
+  Future<void> _loadKeywords() async {
+    try {
+      final shortCode = widget.stock.code.length == 6
+          ? widget.stock.code
+          : widget.stock.code.startsWith('KR')
+          ? widget.stock.code.substring(3, 9)
+          : widget.stock.code;
+      final data = await StockApiService.getThemeKeywords(shortCode);
+      if (!mounted) return;
+      setState(() {
+        _keywords = data.take(2).map((e) => e['keyword'] as String).toList();
+      });
+    } catch (e) {
+      debugPrint('키워드 로드 실패: $e');
     }
   }
 
@@ -741,24 +761,46 @@ class _WatchlistStockCardState extends State<_WatchlistStockCard> {
                   );
                 },
                 child: Row(children: [
-                  Container(
-                      width: 40, height: 40,
-                      decoration: const BoxDecoration(
-                          color: Color(0xFFEEEEEE), shape: BoxShape.circle),
-                      alignment: Alignment.center,
-                      child: Text(widget.stock.name[0],
-                          style: const TextStyle(
-                              color: Colors.grey,
-                              fontWeight: FontWeight.bold))),
+                  // 이렇게 바꾸면 된다
+                  StockLogo(code: widget.stock.code, name: widget.stock.name),
                   const SizedBox(width: 12),
+                  // 기존 GestureDetector > Row 안의 Column 부분
                   Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    // 종목명 + 키워드 태그 (최대 2개)
-                    Row(children: [
-                      Text(widget.stock.name,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 15)),
-                      _buildKeywordTags(widget.stock.keyword),
-                    ]),
+                    // 이 부분을 수정
+                    SizedBox(  // 👈 최대 너비를 명시적으로 제한
+                      width: 160,  // 화면 너비에 맞게 조절
+                      child: Row(children: [
+                        Flexible(
+                          child: Text(
+                            widget.stock.name,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (_keywords.isNotEmpty) ...[
+                          const SizedBox(width: 4),
+                          ..._keywords.map((kw) => Container(
+                            constraints: const BoxConstraints(maxWidth: 60),
+                            margin: const EdgeInsets.only(left: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF3F4F6),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              kw,
+                              style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Color(0xFF7A818E),
+                                  fontWeight: FontWeight.w500),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
+                          )),
+                        ],
+                      ]),
+                    ),
+                    // 가격/등락률 Row는 그대로
                     const SizedBox(height: 4),
                     Row(children: [
                       Text('${_formatPrice(widget.stock.price)}원',
