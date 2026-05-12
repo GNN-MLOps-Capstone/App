@@ -416,7 +416,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
             padding: const EdgeInsets.only(left: 24),
             child: IconButton(
               icon: const Icon(Icons.notifications_outlined, color: Colors.black),
-              onPressed: () {},
+              onPressed: () => Navigator.pushNamed(context, '/alarm'),
             ),
           ),
           Padding(
@@ -425,18 +425,8 @@ class _StockDetailPageState extends State<StockDetailPage> {
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
               icon: const Icon(Icons.settings, color: Colors.black),
-              onPressed: () {
-                if (!_isStockCodeValid) {
-                  Navigator.maybePop(context);
-                  return;
-                }
-                _seriesCache.clear();
-                _seriesInFlight.clear();
-                _rangeChangeSeq++;
-                _loadData();
-                _loadSummary();
-                _startSeriesAutoRefresh();
-              },
+              // 이렇게 바꾸면 된다
+              onPressed: () => Navigator.pushNamed(context, '/settings'),
             ),
           ),
         ],
@@ -498,8 +488,15 @@ class _StockDetailPageState extends State<StockDetailPage> {
         const SizedBox(height: 12),
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(widget.stockName,
-                style: const TextStyle(fontSize: 25, fontWeight: FontWeight.w600)),
+            Row(children: [                          // ← 추가
+              StockLogo(                             // ← 추가
+                code: widget.stockCode,             // ← 추가
+                name: widget.stockName,             // ← 추가
+              ),                                    // ← 추가
+              const SizedBox(width: 10),            // ← 추가
+              Text(widget.stockName,
+                  style: const TextStyle(fontSize: 25, fontWeight: FontWeight.w600)),
+            ]),                                     // ← 추가
             const SizedBox(height: 2),
             if (_overview == null)
               const SizedBox(
@@ -1123,7 +1120,7 @@ class _RelatedSection extends StatelessWidget {
       decoration: BoxDecoration(color: _kBg, borderRadius: BorderRadius.circular(14),
           border: Border.all(color: const Color(0xFFE5E7EB))),
       child: Column(children: [
-        StockLogo(code: r.code, name: r.name),
+        StockLogo(code: r.code,name: r.name),
         const SizedBox(height: 6),
         Text(r.name, textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
