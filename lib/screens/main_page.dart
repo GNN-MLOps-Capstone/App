@@ -233,9 +233,9 @@ class _StockHomeScreenState extends State<StockHomeScreen> {
                 child: _newsLoading
                     ? const _LoadingIndicator()
                     : _newsError
-                    ? const _EmptyHint(message: '뉴스를 불러오지 못했어요')
+                    ? const _EmptyHint(message: '뉴스를 불러오지 못했어요')  // 에러
                     : _news.isEmpty
-                    ? const _EmptyHint(message: '뉴스를 불러오지 못했어요')
+                    ? const _EmptyHint(message: '표시할 뉴스가 없어요')      // 빈 상태
                     : Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: _news.asMap().entries.map((e) {
