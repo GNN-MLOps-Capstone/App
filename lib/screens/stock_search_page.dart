@@ -89,8 +89,9 @@ class _StockSearchPageState extends State<StockSearchPage> {
                   const SizedBox(width: 4),
                   const Text('검색', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                   const Spacer(),
+                  // 알림 버튼 - 이렇게 수정
                   IconButton(
-                    onPressed: () {},
+                    onPressed: () => Navigator.pushNamed(context, '/alarm'),
                     icon: Stack(
                       clipBehavior: Clip.none,
                       children: [
@@ -106,7 +107,10 @@ class _StockSearchPageState extends State<StockSearchPage> {
                       ],
                     ),
                   ),
-                  IconButton(onPressed: () {}, icon: const Icon(Icons.settings, size: 26)),
+                  IconButton(
+                    onPressed: () => Navigator.pushNamed(context, '/settings'),
+                    icon: const Icon(Icons.settings, size: 26),
+                  ),
                 ],
               ),
 
@@ -275,7 +279,7 @@ class _SearchResultCardState extends State<SearchResultCard> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(widget.stock.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                        Text(widget.stock.name, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 15)),
                         if (!_overviewLoading && _overview != null) ...[
                           const SizedBox(height: 4),
                           Row(
