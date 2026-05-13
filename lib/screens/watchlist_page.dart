@@ -11,7 +11,6 @@ import 'stock_detail_page.dart';
 import 'stock_page.dart';
 import 'stock_search_page.dart';
 
-// ── 정렬 옵션 ──
 enum SortOption {
   userDefined('사용자 설정순 (기본)'),
   issueIndexHigh('이슈지수 높은 순'),
@@ -25,8 +24,6 @@ enum SortOption {
 
 enum StockFilter { none, rising, falling }
 
-// ── keyword 문자열을 태그 리스트로 분리하는 유틸 ──
-// "HBM,실적" → ['HBM', '실적'] (최대 2개)
 List<String> _parseKeywords(String keyword) {
   if (keyword.trim().isEmpty) return [];
   return keyword
@@ -57,7 +54,6 @@ class _WatchlistPageState extends State<WatchlistPage> {
   final Set<String> _expandedCodes = {};
   bool _editMode = false;
 
-  // ── 종목 검색용 CSV 데이터 ──
   List<StockItem> _allStocks = [];
   bool _stocksLoading = true;
 
@@ -153,8 +149,6 @@ class _WatchlistPageState extends State<WatchlistPage> {
           code: s.code, name: s.name, weather: weather,
           price: overview.lastPrice, changeRate: overview.changeRate,
           keyword: s.keyword, aiSummary: s.aiSummary,
-          // TODO: 백엔드에서 issueIndex 제공 시 overview에서 직접 파싱하도록 수정 필요
-          // 현재는 /api/watchlist 응답의 issueIndex 값을 그대로 유지 (미제공 시 기본값 0.0)
           issueIndex: s.issueIndex, volume: overview.volume,
         );
       } catch (e) {
@@ -477,10 +471,6 @@ class _WatchlistPageState extends State<WatchlistPage> {
   }
 }
 
-// ══════════════════════════════════════════════════════
-//  키워드 태그 위젯
-// ══════════════════════════════════════════════════════
-
 class _KeywordTag extends StatelessWidget {
   final String label;
   const _KeywordTag(this.label);
@@ -505,7 +495,6 @@ class _KeywordTag extends StatelessWidget {
   }
 }
 
-// 빈 회색 박스 (keyword 없을 때)
 class _EmptyKeywordBox extends StatelessWidget {
   const _EmptyKeywordBox();
 
@@ -522,13 +511,9 @@ class _EmptyKeywordBox extends StatelessWidget {
   }
 }
 
-// ── keyword 문자열 → 태그 Row 빌더 ──
-// keyword 있으면 태그, 없으면 빈 회색 박스 2개
 Widget _buildKeywordTags(String keyword) {
   final tags = _parseKeywords(keyword);
-
   if (tags.isEmpty) {
-    // 키워드 못 받아온 경우 → 빈 회색 박스 2개
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -539,8 +524,6 @@ Widget _buildKeywordTags(String keyword) {
       ],
     );
   }
-
-  // 키워드 있는 경우 → 태그 표시 (최대 2개)
   return Row(
     mainAxisSize: MainAxisSize.min,
     children: tags.map((t) => Padding(
@@ -550,13 +533,8 @@ Widget _buildKeywordTags(String keyword) {
   );
 }
 
-// ══════════════════════════════════════════════════════
-//  편집 모드 카드
-// ══════════════════════════════════════════════════════
-
 class _EditModeCard extends StatelessWidget {
   final WatchlistStock stock;
-
   const _EditModeCard({required this.stock});
 
   String _formatPrice(int price) {
@@ -624,10 +602,6 @@ class _EditModeCard extends StatelessWidget {
   }
 }
 
-// ══════════════════════════════════════════════════════
-//  관심종목 카드 (일반 모드)
-// ══════════════════════════════════════════════════════
-
 class _WatchlistStockCard extends StatefulWidget {
   final WatchlistStock stock;
   final bool expanded;
@@ -686,7 +660,6 @@ class _WatchlistStockCardState extends State<_WatchlistStockCard> {
     }
   }
 
-  // 추가
   Future<void> _loadKeywords() async {
     try {
       final shortCode = widget.stock.code.length == 6
@@ -741,97 +714,88 @@ class _WatchlistStockCardState extends State<_WatchlistStockCard> {
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(children: [
-              // 로고 + 종목명 + 태그 + 가격 → 탭하면 상세페이지
-              GestureDetector(
-                onTap: () {
-                  final shortCode = widget.stock.code.length == 6
-                      ? widget.stock.code
-                      : widget.stock.code.length >= 9 &&
-                      widget.stock.code.startsWith('KR')
-                      ? widget.stock.code.substring(3, 9)
-                      : widget.stock.code;
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => StockDetailPage(
-                        stockName: widget.stock.name,
-                        stockCode: shortCode.toUpperCase(),
-                      ),
-                    ),
-                  );
-                },
-                child: Row(children: [
-                  // 이렇게 바꾸면 된다
-                  StockLogo(code: widget.stock.code, name: widget.stock.name),
-                  const SizedBox(width: 12),
-                  // 기존 GestureDetector > Row 안의 Column 부분
-                  Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    // 이 부분을 수정
-                    SizedBox(  // 👈 최대 너비를 명시적으로 제한
-                      width: 160,  // 화면 너비에 맞게 조절
-                      child: Row(children: [
-                        Flexible(
-                          child: Text(
-                            widget.stock.name,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                            overflow: TextOverflow.ellipsis,
-                          ),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    final shortCode = widget.stock.code.length == 6
+                        ? widget.stock.code
+                        : widget.stock.code.length >= 9 &&
+                        widget.stock.code.startsWith('KR')
+                        ? widget.stock.code.substring(3, 9)
+                        : widget.stock.code;
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => StockDetailPage(
+                          stockName: widget.stock.name,
+                          stockCode: shortCode.toUpperCase(),
                         ),
-                        if (_keywords.isNotEmpty) ...[
-                          const SizedBox(width: 4),
-                          ..._keywords.map((kw) => Container(
-                            constraints: const BoxConstraints(maxWidth: 60),
-                            margin: const EdgeInsets.only(left: 4),
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF3F4F6),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
+                      ),
+                    );
+                  },
+                  child: Row(children: [
+                    StockLogo(code: widget.stock.code, name: widget.stock.name),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Row(children: [
+                          Flexible(
                             child: Text(
-                              kw,
-                              style: const TextStyle(
-                                  fontSize: 10,
-                                  color: Color(0xFF7A818E),
-                                  fontWeight: FontWeight.w500),
+                              widget.stock.name,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                               overflow: TextOverflow.ellipsis,
                               maxLines: 1,
                             ),
-                          )),
-                        ],
+                          ),
+                          if (_keywords.isNotEmpty) ...[
+                            const SizedBox(width: 4),
+                            ..._keywords.map((kw) => Flexible(
+                              child: Container(
+                                margin: const EdgeInsets.only(left: 4),
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF3F4F6),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  kw,
+                                  style: const TextStyle(
+                                      fontSize: 10,
+                                      color: Color(0xFF7A818E),
+                                      fontWeight: FontWeight.w500),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              ),
+                            )),
+                          ],
+                        ]),
+                        const SizedBox(height: 4),
+                        Row(children: [
+                          Text('${_formatPrice(widget.stock.price)}원',
+                              style: const TextStyle(fontSize: 13, color: Colors.black87)),
+                          const SizedBox(width: 6),
+                          if (rate != 0) ...[
+                            Icon(rate > 0 ? Icons.arrow_upward : Icons.arrow_downward,
+                                size: 10, color: color),
+                            const SizedBox(width: 2),
+                          ],
+                          Text(rateText,
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  color: color,
+                                  fontWeight: FontWeight.bold)),
+                        ]),
                       ]),
                     ),
-                    // 가격/등락률 Row는 그대로
-                    const SizedBox(height: 4),
-                    Row(children: [
-                      Text('${_formatPrice(widget.stock.price)}원',
-                          style: const TextStyle(
-                              fontSize: 13, color: Colors.black87)),
-                      const SizedBox(width: 6),
-                      if (rate != 0) ...[
-                        Icon(
-                            rate > 0
-                                ? Icons.arrow_upward
-                                : Icons.arrow_downward,
-                            size: 10, color: color),
-                        const SizedBox(width: 2),
-                      ],
-                      Text(rateText,
-                          style: TextStyle(
-                              fontSize: 13,
-                              color: color,
-                              fontWeight: FontWeight.bold)),
-                    ]),
                   ]),
-                ]),
+                ),
               ),
-              const Spacer(),
-              SvgPicture.asset('assets/images/$weatherAsset',
-                  width: 32, height: 32),
+              SvgPicture.asset('assets/images/$weatherAsset', width: 32, height: 32),
               const SizedBox(width: 12),
               GestureDetector(
                   onTap: widget.onHeartTap,
-                  child: const Icon(Icons.favorite,
-                      color: Color(0xFF0EC272), size: 22)),
+                  child: const Icon(Icons.favorite, color: Color(0xFF0EC272), size: 22)),
               const SizedBox(width: 8),
               GestureDetector(
                   onTap: () {
@@ -868,9 +832,7 @@ class _WatchlistStockCardState extends State<_WatchlistStockCard> {
                                 color: Color(0xFF0EC272)),
                           )))
                       : Text(
-                      _summary.isEmpty
-                          ? '요약 정보가 없습니다.'
-                          : _summary,
+                      _summary.isEmpty ? '요약 정보가 없습니다.' : _summary,
                       style: const TextStyle(
                           fontSize: 15,
                           height: 1.5,
@@ -883,8 +845,6 @@ class _WatchlistStockCardState extends State<_WatchlistStockCard> {
     );
   }
 }
-
-// ── 말풍선 위젯 ──────────────────────────────────────
 
 class _StockTabSpeechBubble extends StatelessWidget {
   const _StockTabSpeechBubble();
