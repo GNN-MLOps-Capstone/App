@@ -244,7 +244,7 @@ class StockApiService {
   }
 
   /// 종목별 최신 뉴스 및 감성 분석 결과 조회
-  static Future<LatestNews> getLatestStockNews({String? stockId, String? stockName}) async {
+  static Future<List<LatestNews>> getLatestStockNews({String? stockId, String? stockName}) async {
     final normalizedStockId = stockId?.trim();
     final normalizedStockName = stockName?.trim();
     
@@ -270,8 +270,8 @@ class StockApiService {
 
       if (res.statusCode == 200) {
         // 한글 깨짐 방지를 위해 utf8.decode 사용
-        final json = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
-        return LatestNews.fromJson(json);
+        final List<dynamic> jsonList = jsonDecode(utf8.decode(res.bodyBytes));
+        return jsonList.map((json) => LatestNews.fromJson(json as Map<String, dynamic>)).toList();
       }
       throw StockApiException('최신 뉴스를 불러오지 못했습니다: ${res.statusCode}', res.statusCode);
     } catch (e) {

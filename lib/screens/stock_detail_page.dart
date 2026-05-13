@@ -63,7 +63,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
   List<String> _aiSummaryLines = ['최신 뉴스를 요약하고 있습니다...'];
   List<TagItem> _themeKeywords = [];
   List<RelatedStock> _relatedStocks = [];
-  LatestNews? _latestNews;
+  List<LatestNews>? latestNewsList;
 
   Future<void> _loadRelatedStocks() async {
     try {
@@ -100,9 +100,9 @@ class _StockDetailPageState extends State<StockDetailPage> {
   Future<void> _fetchLatestNews() async {
     try {
       // 우리가 서비스에 만든 함수를 호출!
-      final news = await StockApiService.getLatestStockNews(stockName: widget.stockName);
+      final newsList = await StockApiService.getLatestStockNews(stockName: widget.stockName);
       setState(() {
-        _latestNews = news; // 서버 데이터를 변수에 저장하고 화면 갱신
+        latestNewsList = newsList; // 서버 데이터를 변수에 저장하고 화면 갱신
       });
     } catch (e) {
       print('뉴스 가져오기 실패: $e');
@@ -590,15 +590,13 @@ class _StockDetailPageState extends State<StockDetailPage> {
         //   onToggle: () => setState(() => _newsExpanded = !_newsExpanded),
         // ),
         _BreakingNewsCard(
-          items: _latestNews == null 
-            ? [] // 데이터가 오기 전에는 비워둠
-            : [
-                BreakingNewsItem(
-                  isUp: _latestNews!.isUp, 
-                  title: _latestNews!.title, 
-                  source: _latestNews!.source,
-                ),
-              ],
+          items: (latestNewsList == null || latestNewsList!.isEmpty)
+            ? [] 
+            : latestNewsList!.map((news) => BreakingNewsItem(
+                isUp: news.isUp, 
+                title: news.title, 
+                source: news.source,
+              )).toList(),
           expanded: _newsExpanded,
           onToggle: () => setState(() => _newsExpanded = !_newsExpanded),
         ),
