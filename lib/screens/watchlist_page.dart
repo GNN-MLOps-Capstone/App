@@ -662,11 +662,7 @@ class _WatchlistStockCardState extends State<_WatchlistStockCard> {
 
   Future<void> _loadKeywords() async {
     try {
-      final shortCode = widget.stock.code.length == 6
-          ? widget.stock.code
-          : widget.stock.code.startsWith('KR')
-          ? widget.stock.code.substring(3, 9)
-          : widget.stock.code;
+      final shortCode = WatchlistService().toStockCode(widget.stock.code);
       final data = await StockApiService.getThemeKeywords(shortCode);
       if (!mounted) return;
       setState(() {
@@ -717,12 +713,7 @@ class _WatchlistStockCardState extends State<_WatchlistStockCard> {
               Expanded(
                 child: GestureDetector(
                   onTap: () {
-                    final shortCode = widget.stock.code.length == 6
-                        ? widget.stock.code
-                        : widget.stock.code.length >= 9 &&
-                        widget.stock.code.startsWith('KR')
-                        ? widget.stock.code.substring(3, 9)
-                        : widget.stock.code;
+                    final shortCode = WatchlistService().toStockCode(widget.stock.code);
                     Navigator.push(
                       context,
                       MaterialPageRoute(
