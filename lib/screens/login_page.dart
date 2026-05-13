@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'main_page.dart';
+import 'onboarding_theme_page.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../services/user_api_service.dart';
 import '../config/api_config.dart';
@@ -14,6 +16,7 @@ class GoogleLoginPage extends StatefulWidget {
 }
 
 class _GoogleLoginPageState extends State<GoogleLoginPage> {
+  static const _storage = FlutterSecureStorage();
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
     serverClientId: ApiConfig.googleClientId,
@@ -85,8 +88,8 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => StockHomeScreen(
-            userName: authResponse.user.nickname, // ✅ 서버 응답값 사용
+          builder: (_) => OnboardingThemePage(
+            userName: authResponse.user.nickname,
           ),
         ),
       );

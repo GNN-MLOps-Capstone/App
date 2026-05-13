@@ -242,6 +242,56 @@ class StockApiService {
       throw StockApiException('Network error: $e', 0);
     }
   }
+
+  /// 카테고리별 시가총액 상위 종목 조회
+  /// GET /api/stocks/by-category?categories=...&limit=10
+  static Future<List<OnboardingStock>> getStocksByCategories(
+    List<String> categories, {
+    int limit = 10,
+  }) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/api/stocks/by-category').replace(
+        queryParameters: {
+          'categories': categories.join(','),
+          'limit': '$limit',
+        },
+      );
+      final res = await http
+          .get(uri, headers: await getAuthHeaders())
+          .timeout(const Duration(seconds: 10));
+
+      if (res.statusCode == 200) {
+        final list = jsonDecode(res.body) as List;
+        return list
+            .cast<Map<String, dynamic>>()
+            .map(OnboardingStock.fromJson)
+            .toList();
+      }
+      throw StockApiException(
+          'Failed to load stocks by category: ${res.statusCode}',
+          res.statusCode);
+    } catch (e) {
+      if (e is StockApiException) rethrow;
+      if (e is AuthRequiredException) throw StockApiException(e.message, 401);
+      throw StockApiException('Network error: $e', 0);
+    }
+  }
+}
+
+class OnboardingStock {
+  final String code;
+  final String name;
+  final int? marketCap;
+
+  OnboardingStock({required this.code, required this.name, this.marketCap});
+
+  factory OnboardingStock.fromJson(Map<String, dynamic> json) {
+    return OnboardingStock(
+      code: json['code'] as String,
+      name: json['name'] as String,
+      marketCap: (json['market_cap'] as num?)?.toInt(),
+    );
+  }
 }
 
 class StockApiException implements Exception {
