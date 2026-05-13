@@ -666,7 +666,11 @@ class _WatchlistStockCardState extends State<_WatchlistStockCard> {
       final data = await StockApiService.getThemeKeywords(shortCode);
       if (!mounted) return;
       setState(() {
-        _keywords = data.take(2).map((e) => e['keyword'] as String).toList();
+        _keywords = data
+            .take(2)
+            .where((e) => e['keyword'] is String)
+            .map((e) => e['keyword'] as String)
+            .toList();
       });
     } catch (e) {
       debugPrint('키워드 로드 실패: $e');
