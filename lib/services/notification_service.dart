@@ -114,6 +114,35 @@ class NotificationApiService {
       rethrow;
     }
   }
+
+  /// 읽지 않은 알림 개수 가져오기
+  static Future<int> getUnreadNotificationCount() async {
+    try {
+      // 백엔드에서 설정한 엔드포인트에 맞춰 경로를 수정하세요 (예: /api/notifications/unread-count)
+      final uri = Uri.parse('$_baseUrl/api/notifications/unread-count');
+
+      final response = await http.get(
+        uri,
+        headers: await _getHeaders(),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        // 백엔드 응답 구조가 { "count": 5 } 형태라고 가정할 때
+        final rawCount = data['count'] ?? data['unread_count']; // 혹시 모를 다른 키 이름까지 1차 방어
+        final safeCount = int.tryParse(rawCount?.toString() ?? '0') ?? 0;
+        return safeCount;
+      } else {
+        // 에러 발생 시 기본값 0 반환 또는 예외 처리
+        print('❌ 알림 API 서버 에러 응답 코드: ${response.statusCode}');
+        return 0;
+      }
+    } catch (e) {
+      // 로그를 남기거나 에러를 던집니다.
+      print('Error fetching unread count: $e');
+      return 0;
+    }
+  }
 }
 
 /// 알림 응답 모델

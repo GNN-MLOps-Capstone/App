@@ -10,6 +10,7 @@ import 'widgets/bottom_nav_bar.dart';
 import '../services/watchlist_service.dart';
 import '../services/news_api_service.dart';
 import '../services/stock_api_service.dart';
+import '../services/notification_service.dart';
 
 class StockItem {
   final String name;
@@ -34,11 +35,14 @@ class _StockPageState extends State<StockPage> {
   List<_TrendItem> _top5 = [];
   bool _trendsLoading = false;
 
+  int _unreadCount = 0;
+
   @override
   void initState() {
     super.initState();
     _loadNameCsv();
     _loadTrends();
+    _loadUnreadCount();
   }
 
   Future<void> _loadNameCsv() async {
@@ -129,6 +133,18 @@ class _StockPageState extends State<StockPage> {
     }
   }
 
+  Future<void> _loadUnreadCount() async {
+    try {
+      final count = await NotificationApiService.getUnreadNotificationCount();
+      if (!mounted) return;
+      setState(() {
+        _unreadCount = count;
+      });
+    } catch (e) {
+      debugPrint('❌ 주식 페이지 알림 개수 로드 실패: $e');
+    }
+  }
+
   String? _toShortCode(String isuCd) {
     final normalized = isuCd.trim().toUpperCase();
     if (_shortCodePattern.hasMatch(normalized)) return normalized;
@@ -187,30 +203,35 @@ class _StockPageState extends State<StockPage> {
                   const Spacer(),
                   IconButton(
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('알림 화면은 아직 준비 중입니다.')),
-                      );
+                      Navigator.pushNamed(context, '/alarm').then((_) {
+                        _loadUnreadCount();
+                      });
                     },
                     icon: Stack(
                       clipBehavior: Clip.none,
                       children: [
                         const Icon(Icons.notifications_none_outlined, size: 26),
-                        Positioned(
-                          right: -2, top: -2,
-                          child: Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: const BoxDecoration(color: Color(0xFF22C55E), shape: BoxShape.circle),
-                            child: const Text('2', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                        if (_unreadCount > 0)
+                          Positioned(
+                            right: -2, top: -2,
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: const BoxDecoration(color: Color(0xFF22C55E), shape: BoxShape.circle),
+                              child: Text(
+                                  _unreadCount > 99 ? '99+' : '$_unreadCount',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                  )),
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ),
                   IconButton(
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('설정 화면은 아직 준비 중입니다.')),
-                      );
+                      Navigator.pushNamed(context, '/settings');
                     },
                     icon: const Icon(Icons.settings, size: 26),
                   ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../services/user_api_service.dart';
 import '../services/onesignal_service.dart';
+import '../services/notification_service.dart';
 import 'widgets/bottom_nav_bar.dart';
 import 'login_page.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
@@ -30,11 +31,14 @@ class _SettingPageState extends State<SettingPage> {
 
   String _dndTimeRangeLabel = '23:00 ~ 07:00';
 
+  int _unreadCount = 0;
+
   @override
   void initState() {
     super.initState();
     _loadUserProfile();
     _loadServerSettings();
+    _loadUnreadCount();
   }
 
   Future<void> _loadUserProfile() async {
@@ -178,6 +182,20 @@ class _SettingPageState extends State<SettingPage> {
           _isUpdatingNight = false;
         });
       }
+    }
+  }
+
+  Future<void> _loadUnreadCount() async {
+    try {
+      // NotificationApiService 임포트가 필요할 수 있습니다.
+      // 상단에 import '../services/notification_service.dart'; 가 없다면 추가해 주세요.
+      final count = await NotificationApiService.getUnreadNotificationCount();
+      if (!mounted) return;
+      setState(() {
+        _unreadCount = count;
+      });
+    } catch (e) {
+      print('❌ 설정 페이지 알림 개수 로드 실패: $e');
     }
   }
 
@@ -542,29 +560,34 @@ class _SettingPageState extends State<SettingPage> {
                             fontSize: 24, fontWeight: FontWeight.w800)),
                   ),
                   IconButton(
-                    onPressed: () =>
-                        Navigator.pushNamed(context, '/push_test'),
+                    onPressed: () {
+                        Navigator.pushNamed(context, '/alarm').then((_) {
+                          _loadUnreadCount();
+                        });
+                    },
                     icon: Stack(
                       clipBehavior: Clip.none,
                       children: [
                         const Icon(Icons.notifications_none,
                             size: 30, color: Colors.black),
-                        Positioned(
-                          right: -2,
-                          top: -2,
-                          child: Container(
-                            width: 16,
-                            height: 16,
-                            alignment: Alignment.center,
-                            decoration: const BoxDecoration(
-                                color: green, shape: BoxShape.circle),
-                            child: const Text('2',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.bold)),
+                        if (_unreadCount > 0)
+                          Positioned(
+                            right: -2,
+                            top: -2,
+                            child: Container(
+                              width: 16,
+                              height: 16,
+                              alignment: Alignment.center,
+                              decoration: const BoxDecoration(
+                                  color: green, shape: BoxShape.circle),
+                              child: Text(
+                                  _unreadCount > 99 ? '99+' : '$_unreadCount',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold)),
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ),
