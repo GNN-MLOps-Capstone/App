@@ -145,7 +145,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
         _unreadCount = count;
       });
     } catch (e) {
-      print('❌ 관심종목 페이지 알림 개수 로드 실패: $e');
+      debugPrint('❌ 관심종목 페이지 알림 개수 로드 실패: $e');
     }
   }
 

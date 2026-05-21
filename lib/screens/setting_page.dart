@@ -187,15 +187,13 @@ class _SettingPageState extends State<SettingPage> {
 
   Future<void> _loadUnreadCount() async {
     try {
-      // NotificationApiService 임포트가 필요할 수 있습니다.
-      // 상단에 import '../services/notification_service.dart'; 가 없다면 추가해 주세요.
       final count = await NotificationApiService.getUnreadNotificationCount();
       if (!mounted) return;
       setState(() {
         _unreadCount = count;
       });
     } catch (e) {
-      print('❌ 설정 페이지 알림 개수 로드 실패: $e');
+      debugPrint('❌ 설정 페이지 알림 개수 로드 실패: $e');
     }
   }
 

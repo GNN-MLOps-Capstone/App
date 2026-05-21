@@ -693,7 +693,7 @@ class _NewsScreenState extends State<NewsScreen> {
         _unreadCount = count;
       });
     } catch (e) {
-      print('❌ 뉴스 페이지 알림 개수 로드 실패: $e');
+      debugPrint('❌ 뉴스 페이지 알림 개수 로드 실패: $e');
     }
   }
 

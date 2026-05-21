@@ -46,14 +46,13 @@ class _StockHomeScreenState extends State<StockHomeScreen> {
   Future<void> _loadUnreadCount() async {
     try {
       final count = await NotificationApiService.getUnreadNotificationCount();
-      print('🔔 받아온 안읽은 알림 개수: $count'); // 디버깅 로그
       if (!mounted) return;
       setState(() {
         _unreadCount = count;
       });
     } catch (e, stackTrace) {
-      print('❌ 알림 개수 로드 실패: $e'); // 에러 내용 출력
-      print(stackTrace);
+      debugPrint('❌ 알림 개수 로드 실패: $e');
+      debugPrint(stackTrace.toString());
     }
   }
 

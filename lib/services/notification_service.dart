@@ -118,7 +118,6 @@ class NotificationApiService {
   /// 읽지 않은 알림 개수 가져오기
   static Future<int> getUnreadNotificationCount() async {
     try {
-      // 백엔드에서 설정한 엔드포인트에 맞춰 경로를 수정하세요 (예: /api/notifications/unread-count)
       final uri = Uri.parse('$_baseUrl/api/notifications/unread-count');
 
       final response = await http.get(
@@ -134,12 +133,12 @@ class NotificationApiService {
         return safeCount;
       } else {
         // 에러 발생 시 기본값 0 반환 또는 예외 처리
-        print('❌ 알림 API 서버 에러 응답 코드: ${response.statusCode}');
+        debugPrint('❌ 알림 API 서버 에러 응답 코드: ${response.statusCode}');
         return 0;
       }
     } catch (e) {
       // 로그를 남기거나 에러를 던집니다.
-      print('Error fetching unread count: $e');
+      debugPrint('Error fetching unread count: $e');
       return 0;
     }
   }
