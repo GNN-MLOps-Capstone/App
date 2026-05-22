@@ -1,4 +1,5 @@
 // lib/screens/news_page.dart
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -489,6 +490,36 @@ class _EventLogger {
   static String nowIso() => DateTime.now().toUtc().toIso8601String();
 }
 
+class _ServedNewsItem {
+  final NewsRecommendationItem item;
+  final String requestId;
+  final int page;
+  final int position;
+
+  const _ServedNewsItem({
+    required this.item,
+    required this.requestId,
+    required this.page,
+    required this.position,
+  });
+}
+
+class _OpenContentSession {
+  final String contentSessionId;
+  final String requestId;
+  final int newsId;
+  final int position;
+  final int page;
+
+  const _OpenContentSession({
+    required this.contentSessionId,
+    required this.requestId,
+    required this.newsId,
+    required this.position,
+    required this.page,
+  });
+}
+
 // ===================== 메인 화면 =====================
 
 class NewsScreen extends StatefulWidget {
@@ -502,11 +533,11 @@ class _NewsScreenState extends State<NewsScreen> {
   final String _appSessionId = _EventLogger.newId();
   final String _screenSessionId = _EventLogger.newId();
   final ScrollController _scrollController = ScrollController();
-  final List<NewsRecommendationItem> _items = [];
+  final List<_ServedNewsItem> _items = [];
 
   late String _requestId;
   String? _nextCursor;
-  String? _openContentSessionId;
+  _OpenContentSession? _openContentSession;
   int? _userId;
   int _page = 1;
   int _dummyPage = 0;
@@ -555,6 +586,7 @@ class _NewsScreenState extends State<NewsScreen> {
         'app_session_id': _appSessionId,
         'screen_session_id': _screenSessionId,
         'request_id': _requestId,
+        'event_ts_client': _EventLogger.nowIso(),
       },
       {
         'event_id': _EventLogger.newId(),
@@ -598,9 +630,22 @@ class _NewsScreenState extends State<NewsScreen> {
       );
 
       if (!mounted) return;
+      final servedRequestId = response.requestId.isNotEmpty
+          ? response.requestId
+          : requestId;
+      final startPosition = isMore ? _items.length : 0;
+      final servedItems = response.items.asMap().entries.map((entry) {
+        return _ServedNewsItem(
+          item: entry.value,
+          requestId: servedRequestId,
+          page: response.page,
+          position: startPosition + entry.key + 1,
+        );
+      }).toList();
+
       setState(() {
         _usingDummy = false;
-        _requestId = response.requestId;
+        _requestId = servedRequestId;
         _page = response.page;
         _nextCursor = response.nextCursor;
         _hasMore = response.nextCursor != null;
@@ -608,11 +653,11 @@ class _NewsScreenState extends State<NewsScreen> {
         _loadingMore = false;
         _errorMessage = null;
         if (isMore) {
-          _items.addAll(response.items);
+          _items.addAll(servedItems);
         } else {
           _items
             ..clear()
-            ..addAll(response.items);
+            ..addAll(servedItems);
         }
       });
 
@@ -622,7 +667,7 @@ class _NewsScreenState extends State<NewsScreen> {
           'event_type': 'recommendation_response',
           'app_session_id': _appSessionId,
           'screen_session_id': _screenSessionId,
-          'request_id': requestId,
+          'request_id': servedRequestId,
           'event_ts_client': _EventLogger.nowIso(),
           'page': response.page,
         },
@@ -662,6 +707,15 @@ class _NewsScreenState extends State<NewsScreen> {
           }),
         )
         .toList();
+    final fallbackStartPosition = isMore ? _items.length : 0;
+    final servedFallbackItems = fallbackItems.asMap().entries.map((entry) {
+      return _ServedNewsItem(
+        item: entry.value,
+        requestId: _requestId,
+        page: _dummyPage,
+        position: fallbackStartPosition + entry.key + 1,
+      );
+    }).toList();
 
     setState(() {
       _usingDummy = true;
@@ -672,11 +726,11 @@ class _NewsScreenState extends State<NewsScreen> {
       _loadingMore = false;
       _errorMessage = null;
       if (isMore) {
-        _items.addAll(fallbackItems);
+        _items.addAll(servedFallbackItems);
       } else {
         _items
           ..clear()
-          ..addAll(fallbackItems);
+          ..addAll(servedFallbackItems);
       }
     });
   }
@@ -731,9 +785,15 @@ class _NewsScreenState extends State<NewsScreen> {
     );
   }
 
-  Future<void> _onNewsTap(NewsRecommendationItem item, int index) async {
+  Future<void> _onNewsTap(_ServedNewsItem servedItem) async {
     final contentSessionId = _EventLogger.newId();
-    _openContentSessionId = contentSessionId;
+    _openContentSession = _OpenContentSession(
+      contentSessionId: contentSessionId,
+      requestId: servedItem.requestId,
+      newsId: servedItem.item.newsId,
+      position: servedItem.position,
+      page: servedItem.page,
+    );
 
     await _postEvents([
       {
@@ -742,36 +802,72 @@ class _NewsScreenState extends State<NewsScreen> {
         'app_session_id': _appSessionId,
         'screen_session_id': _screenSessionId,
         'content_session_id': contentSessionId,
-        'request_id': _requestId,
+        'request_id': servedItem.requestId,
         'event_ts_client': _EventLogger.nowIso(),
-        'news_id': item.newsId,
-        'position': index + 1,
-        'page': _page,
+        'news_id': servedItem.item.newsId,
+        'position': servedItem.position,
+        'page': servedItem.page,
       },
     ]);
 
     if (!mounted) return;
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => NewsDetailPage(newsId: item.newsId, initialItem: item),
-      ),
+    final heartbeatTimer = Timer.periodic(
+      const Duration(seconds: 15),
+      (_) => _sendContentHeartbeat(),
     );
-    await _onNewsLeave();
+    try {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => NewsDetailPage(
+            newsId: servedItem.item.newsId,
+            initialItem: servedItem.item,
+          ),
+        ),
+      );
+    } finally {
+      heartbeatTimer.cancel();
+      await _onNewsLeave();
+    }
+  }
+
+  Future<void> _sendContentHeartbeat() async {
+    final session = _openContentSession;
+    if (session == null) return;
+    await _postEvents([
+      {
+        'event_id': _EventLogger.newId(),
+        'event_type': 'content_heartbeat',
+        'app_session_id': _appSessionId,
+        'screen_session_id': _screenSessionId,
+        'content_session_id': session.contentSessionId,
+        'request_id': session.requestId,
+        'event_ts_client': _EventLogger.nowIso(),
+        'news_id': session.newsId,
+        'position': session.position,
+        'page': session.page,
+      },
+    ]);
   }
 
   Future<void> _onNewsLeave() async {
-    if (_openContentSessionId == null) return;
+    final session = _openContentSession;
+    if (session == null) return;
     await _postEvents([
       {
         'event_id': _EventLogger.newId(),
         'event_type': 'content_leave',
         'app_session_id': _appSessionId,
-        'content_session_id': _openContentSessionId,
+        'screen_session_id': _screenSessionId,
+        'content_session_id': session.contentSessionId,
+        'request_id': session.requestId,
         'event_ts_client': _EventLogger.nowIso(),
+        'news_id': session.newsId,
+        'position': session.position,
+        'page': session.page,
       },
     ]);
-    _openContentSessionId = null;
+    _openContentSession = null;
   }
 
   Future<void> _sendScreenLeave() async {
@@ -936,8 +1032,8 @@ class _NewsScreenState extends State<NewsScreen> {
                         }
 
                         return GestureDetector(
-                          onTap: () => _onNewsTap(_items[index], index),
-                          child: _NewsCard(item: _items[index]),
+                          onTap: () => _onNewsTap(_items[index]),
+                          child: _NewsCard(item: _items[index].item),
                         );
                       },
                     ),
