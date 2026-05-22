@@ -101,6 +101,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
     try {
       // 우리가 서비스에 만든 함수를 호출!
       final newsList = await StockApiService.getLatestStockNews(stockName: widget.stockName);
+      if (!mounted) return;
       setState(() {
         latestNewsList = newsList; // 서버 데이터를 변수에 저장하고 화면 갱신
       });
@@ -1019,7 +1020,7 @@ class _BreakingNewsCard extends StatelessWidget {
   const _BreakingNewsCard({required this.items, required this.expanded, required this.onToggle});
   @override
   Widget build(BuildContext context) {
-    final show = expanded ? items : (items.isEmpty ? <BreakingNewsItem>[] : [items.first]);
+    final show = expanded ? items : items.take(3).toList();
     return Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
       GestureDetector(onTap: onToggle,
           child: Text(expanded ? '접기' : '더보기', style: const TextStyle(fontSize: 12, color: Colors.grey))),
