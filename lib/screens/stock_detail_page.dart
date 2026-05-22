@@ -9,6 +9,7 @@ import 'stock_page.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'dart:convert';
 import 'stock_search_page.dart';
+import 'package:html_unescape/html_unescape.dart';
 import '../services/news_api_service.dart';
 
 import '../services/stock_api_service.dart';
@@ -31,6 +32,8 @@ const _kBg    = Color(0xFFF2F5F6);
 const _kTabBg = Color(0xFFE9ECF2);
 const _kGrid  = Color(0xFFD3D3D3);
 const _kTipBg = Color(0xFF83848B);
+
+final unescape = HtmlUnescape();
 
 Widget _sentimentIcon(Sentiment s, {double size = 52}) {
   const paths  = ['급등.svg', '상승.svg', '보합.svg', '하락.svg', '급락.svg'];
@@ -594,8 +597,8 @@ class _StockDetailPageState extends State<StockDetailPage> {
           items: (latestNewsList == null || latestNewsList!.isEmpty)
             ? [] 
             : latestNewsList!.map((news) => BreakingNewsItem(
-                isUp: news.isUp, 
-                title: news.title, 
+                isUp: news.isUp,
+                title: unescape.convert(news.title),
                 source: news.source,
               )).toList(),
           expanded: _newsExpanded,
