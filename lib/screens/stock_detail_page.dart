@@ -1023,7 +1023,7 @@ class _BreakingNewsCard extends StatelessWidget {
   const _BreakingNewsCard({required this.items, required this.expanded, required this.onToggle});
   @override
   Widget build(BuildContext context) {
-    final show = expanded ? items : items.take(3).toList();
+    final show = expanded ? items : (items.isEmpty ? <BreakingNewsItem>[] : [items.first]);
     return Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
       GestureDetector(onTap: onToggle,
           child: Text(expanded ? '접기' : '더보기', style: const TextStyle(fontSize: 12, color: Colors.grey))),
