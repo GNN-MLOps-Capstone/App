@@ -895,7 +895,7 @@ class _NewsScreenState extends State<NewsScreen> {
                       Navigator.pushNamed(context, '/settings');
                     },
                     icon: const Icon(
-                      Icons.settings_outlined,
+                      Icons.settings,
                       size: 26,
                       color: Colors.black87,
                     ),
