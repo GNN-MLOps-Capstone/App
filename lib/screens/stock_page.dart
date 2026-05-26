@@ -201,39 +201,52 @@ class _StockPageState extends State<StockPage> {
                   const SizedBox(width: 4),
                   const Text('주식', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                   const Spacer(),
-                  IconButton(
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/alarm').then((_) {
-                        _loadUnreadCount();
-                      });
-                    },
-                    icon: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        const Icon(Icons.notifications_none_outlined, size: 26),
-                        if (_unreadCount > 0)
-                          Positioned(
-                            right: -2, top: -2,
-                            child: Container(
-                              padding: const EdgeInsets.all(2),
-                              decoration: const BoxDecoration(color: Color(0xFF22C55E), shape: BoxShape.circle),
-                              child: Text(
-                                  _unreadCount > 99 ? '99+' : '$_unreadCount',
-                                  style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                  )),
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/alarm').then((_) {
+                            _loadUnreadCount(); // 알림 화면에서 돌아올 때 카운트 실시간 새로고침
+                          });
+                        },
+                        icon: const Icon(
+                          Icons.notifications_none_outlined,
+                          size: 26,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      if (_unreadCount > 0)
+                        Positioned(
+                          right: 6,
+                          top: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0EC272),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 14,
+                              minHeight: 14,
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              _unreadCount > 99 ? '99+' : '$_unreadCount',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.bold,
+                                height: 1.0,
+                              ),
                             ),
                           ),
-                      ],
-                    ),
+                        ),
+                    ],
                   ),
                   IconButton(
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/settings');
-                    },
-                    icon: const Icon(Icons.settings, size: 26),
+                    onPressed: () => Navigator.pushNamed(context, '/settings'),
+                    icon: const Icon(Icons.settings, size: 26, color: Colors.black87),
                   ),
                 ],
               ),

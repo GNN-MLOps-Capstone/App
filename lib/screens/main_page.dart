@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
-
 import '../models/news_models.dart';
 import '../models/watchlist_models.dart';
 import '../services/watchlist_service.dart';

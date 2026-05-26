@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'dart:convert';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../services/notification_service.dart';
 
 import '../services/watchlist_service.dart';
 
@@ -33,6 +34,7 @@ class _SearchPageState extends State<SearchPage> {
 
   int _selectedIndex = -1;
   bool _loading = true;
+  int _unreadCount = 0;
 
   final WatchlistService _watchlistService = WatchlistService();
   final Set<String> _favoriteCodes = {};
@@ -44,6 +46,7 @@ class _SearchPageState extends State<SearchPage> {
     super.initState();
     _loadCsv();
     _loadFavorites();
+    _loadUnreadCount();
 
     _controller.addListener(() {
       _applyFilter(_controller.text);
@@ -59,6 +62,19 @@ class _SearchPageState extends State<SearchPage> {
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadUnreadCount() async {
+    try {
+      final count = await NotificationApiService.getUnreadNotificationCount();
+      if (!mounted) return;
+      setState(() {
+        _unreadCount = count;
+      });
+    } catch (e, stackTrace) {
+      debugPrint('❌ 알림 개수 로드 실패: $e');
+      debugPrint(stackTrace.toString());
+    }
   }
 
   Future<void> _loadCsv() async {
@@ -212,31 +228,34 @@ class _SearchPageState extends State<SearchPage> {
                     style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                   ),
                   const Spacer(),
-                  IconButton(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('알림 화면은 아직 준비 중입니다.')),
-                      );
-                    },
-                    icon: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        const Icon(
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/alarm').then((_) {
+                            _loadUnreadCount(); // 알림 화면에서 복귀할 때 카운트 재갱신
+                          });
+                        },
+                        icon: const Icon(
                           Icons.notifications_none_outlined,
                           size: 26,
                           color: Colors.black87,
-                        ),
+                             ),
+                      ),
+                      if (_unreadCount > 0)
                         Positioned(
-                          right: -2,
-                          top: -2,
+                          right: 6,
+                          top: 8,
                           child: Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF22C55E),
-                              shape: BoxShape.circle,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0EC272),
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Text(
-                              '2',
+                            child: Text(
+                              _unreadCount > 99 ? '99+' : '$_unreadCount',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 10,
@@ -245,15 +264,10 @@ class _SearchPageState extends State<SearchPage> {
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                    ],
                   ),
                   IconButton(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('설정 화면은 아직 준비 중입니다.')),
-                      );
-                    },
+                    onPressed: () => Navigator.pushNamed(context, '/settings'),
                     icon: const Icon(
                       Icons.settings,
                       size: 26,

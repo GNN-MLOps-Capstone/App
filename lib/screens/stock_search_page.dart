@@ -9,6 +9,7 @@ import 'widgets/bottom_nav_bar.dart';
 import '../services/watchlist_service.dart';
 import '../services/news_api_service.dart';
 import '../services/stock_api_service.dart';
+import '../services/notification_service.dart';
 
 class StockSearchPage extends StatefulWidget {
   final List<StockItem> allStocks;
@@ -29,12 +30,14 @@ class _StockSearchPageState extends State<StockSearchPage> {
   final FocusNode _focusNode = FocusNode();
   static final RegExp _shortCodePattern = RegExp(r'^[0-9A-Z]{6}$');
   List<StockItem> _filtered = [];
+  int _unreadCount = 0;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _focusNode.requestFocus());
     _controller.addListener(() => _applyFilter(_controller.text));
+    _loadUnreadCount();
   }
 
   @override
@@ -42,6 +45,19 @@ class _StockSearchPageState extends State<StockSearchPage> {
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadUnreadCount() async {
+    try {
+      final count = await NotificationApiService.getUnreadNotificationCount();
+      if (!mounted) return;
+      setState(() {
+        _unreadCount = count;
+      });
+    } catch (e, stackTrace) {
+      debugPrint('❌ 알림 개수 로드 실패: $e');
+      debugPrint(stackTrace.toString());
+    }
   }
 
   void _applyFilter(String q) {
@@ -90,26 +106,52 @@ class _StockSearchPageState extends State<StockSearchPage> {
                   const Text('검색', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                   const Spacer(),
                   // 알림 버튼 - 이렇게 수정
-                  IconButton(
-                    onPressed: () => Navigator.pushNamed(context, '/alarm'),
-                    icon: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        const Icon(Icons.notifications_none_outlined, size: 26),
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/alarm').then((_) {
+                            _loadUnreadCount();
+                          });
+                        },
+                        icon: const Icon(
+                          Icons.notifications_none_outlined,
+                          size: 26,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      if (_unreadCount > 0)
                         Positioned(
-                          right: -2, top: -2,
+                          right: 6,
+                          top: 8,
                           child: Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: const BoxDecoration(color: Color(0xFF22C55E), shape: BoxShape.circle),
-                            child: const Text('2', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0EC272),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 14,
+                              minHeight: 14,
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              _unreadCount > 99 ? '99+' : '$_unreadCount',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.bold,
+                                height: 1.0,
+                              ),
+                            ),
                           ),
                         ),
-                      ],
-                    ),
+                    ],
                   ),
                   IconButton(
                     onPressed: () => Navigator.pushNamed(context, '/settings'),
-                    icon: const Icon(Icons.settings, size: 26),
+                    icon: const Icon(Icons.settings, size: 26, color: Colors.black87),
                   ),
                 ],
               ),
