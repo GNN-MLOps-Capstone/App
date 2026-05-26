@@ -27,13 +27,13 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
   @override
   void initState() {
     super.initState();
+    _loadUnreadCount();
     if (widget.initialItem?.isPlaceholder == true) {
       _detail = NewsDetailItem.fromRecommendationItem(widget.initialItem!);
       _loading = false;
       return;
     }
     _loadDetail();
-    _loadUnreadCount();
   }
 
   @override
