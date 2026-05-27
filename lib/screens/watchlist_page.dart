@@ -6,6 +6,7 @@ import '../models/watchlist_models.dart';
 import '../services/watchlist_service.dart';
 import '../services/stock_api_service.dart';
 import '../services/news_api_service.dart';
+import '../services/notification_service.dart';
 import 'widgets/bottom_nav_bar.dart';
 import 'stock_detail_page.dart';
 import 'stock_page.dart';
@@ -60,11 +61,14 @@ class _WatchlistPageState extends State<WatchlistPage> {
   static final RegExp _shortCodePattern = RegExp(r'^[0-9A-Z]{6}$');
   static final RegExp _isuCdPattern = RegExp(r'^KR[0-9A-Z]{10}$');
 
+  int _unreadCount = 0;
+
   @override
   void initState() {
     super.initState();
     _loadData();
     _loadCsv();
+    _loadUnreadCount();
   }
 
   Future<void> _loadCsv() async {
@@ -126,6 +130,18 @@ class _WatchlistPageState extends State<WatchlistPage> {
       if (!mounted) return;
       setState(() => _loading = false);
       debugPrint('관심종목 로드 실패: $e');
+    }
+  }
+
+  Future<void> _loadUnreadCount() async {
+    try {
+      final count = await NotificationApiService.getUnreadNotificationCount();
+      if (!mounted) return;
+      setState(() {
+        _unreadCount = count;
+      });
+    } catch (e) {
+      debugPrint('❌ 관심종목 페이지 알림 개수 로드 실패: $e');
     }
   }
 
@@ -265,7 +281,38 @@ class _WatchlistPageState extends State<WatchlistPage> {
         child: Row(children: [
           const Text('관심', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
           const Spacer(),
-          IconButton(onPressed: () {}, icon: const Icon(Icons.notifications_none_outlined, size: 26)),
+          IconButton(
+            onPressed: () {
+              Navigator.pushNamed(context, '/alarm').then((_) {
+                _loadUnreadCount();
+              });
+            },
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                const Icon(Icons.notifications_none_outlined, size: 26),
+                if (_unreadCount > 0)
+                  Positioned(
+                    right: -2,
+                    top: -2,
+                    child: Container(
+                      width: 14,
+                      height: 14,
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(
+                          color: Color(0xFF0EC272), shape: BoxShape.circle),
+                      child: Text(
+                        _unreadCount > 99 ? '99+' : '$_unreadCount',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 8,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
           IconButton(onPressed: () {}, icon: const Icon(Icons.settings, size: 24)),
         ]),
       ),
@@ -294,8 +341,37 @@ class _WatchlistPageState extends State<WatchlistPage> {
         const Spacer(),
         if (!_editMode) ...[
           IconButton(
-              onPressed: () {},
-              icon: const Icon(Icons.notifications_none_outlined, size: 26)),
+            onPressed: () {
+              Navigator.pushNamed(context, '/alarm').then((_) {
+                _loadUnreadCount();
+              });
+            },
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                const Icon(Icons.notifications_none_outlined, size: 26),
+                if (_unreadCount > 0)
+                  Positioned(
+                    right: -2,
+                    top: -2,
+                    child: Container(
+                      width: 14,
+                      height: 14,
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(
+                          color: Color(0xFF0EC272), shape: BoxShape.circle),
+                      child: Text(
+                        _unreadCount > 99 ? '99+' : '$_unreadCount',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 8,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
           IconButton(
               onPressed: () => setState(() => _editMode = true),
               icon: const Icon(Icons.edit_outlined, size: 24)),

@@ -10,6 +10,7 @@ import 'widgets/bottom_nav_bar.dart';
 import '../models/news_models.dart';
 import '../services/news_api_service.dart';
 import '../services/user_api_service.dart';
+import '../services/notification_service.dart';
 import '../config/api_config.dart';
 import 'news_detail_page.dart';
 
@@ -517,11 +518,14 @@ class _NewsScreenState extends State<NewsScreen> {
   bool _usingDummy = false;
   String? _errorMessage;
 
+  int _unreadCount = 0;
+
   @override
   void initState() {
     super.initState();
     _requestId = _EventLogger.newId();
     _init();
+    _loadUnreadCount();
   }
 
   @override
@@ -681,6 +685,18 @@ class _NewsScreenState extends State<NewsScreen> {
     });
   }
 
+  Future<void> _loadUnreadCount() async {
+    try {
+      final count = await NotificationApiService.getUnreadNotificationCount();
+      if (!mounted) return;
+      setState(() {
+        _unreadCount = count;
+      });
+    } catch (e) {
+      debugPrint('❌ 뉴스 페이지 알림 개수 로드 실패: $e');
+    }
+  }
+
   // ── 더보기 버튼 클릭 ──
   Future<void> _onLoadMore() async {
     if (_loadingMore || !_hasMore) return;
@@ -822,37 +838,56 @@ class _NewsScreenState extends State<NewsScreen> {
                   Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      const Icon(
-                        Icons.notifications_none,
-                        size: 28,
-                        color: Colors.black,
+                      IconButton(
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/alarm').then((_) {
+                            _loadUnreadCount();
+                          });
+                        },
+                        icon: const Icon(
+                          Icons.notifications_none_outlined,
+                          size: 26,
+                          color: Colors.black87,
+                        ),
                       ),
-                      Positioned(
-                        right: -2,
-                        top: -2,
-                        child: Container(
-                          width: 15,
-                          height: 15,
-                          alignment: Alignment.center,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF0EC272),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Text(
-                            '2',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
+                      if (_unreadCount > 0)
+                        Positioned(
+                          right: 6,
+                          top: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0EC272),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 14,
+                              minHeight: 14,
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              _unreadCount > 99 ? '99+' : '$_unreadCount',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.bold,
+                                height: 1.0,
+                              ),
                             ),
                           ),
                         ),
-                      ),
                     ],
                   ),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.settings, size: 26, color: Colors.black),
-                  const SizedBox(width: 4),
+                  IconButton(
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/settings');
+                    },
+                    icon: const Icon(
+                      Icons.settings,
+                      size: 26,
+                      color: Colors.black87,
+                    ),
+                  ),
                 ],
               ),
             ),
