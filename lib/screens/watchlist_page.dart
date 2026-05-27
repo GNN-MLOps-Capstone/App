@@ -16,8 +16,7 @@ enum SortOption {
   userDefined('사용자 설정순 (기본)'),
   issueIndexHigh('이슈지수 높은 순'),
   changeRateHigh('등락률 높은 순'),
-  priceHigh('가격 높은 순'),
-  volumeHigh('거래량 높은 순');
+  priceHigh('가격 높은 순');
 
   final String label;
   const SortOption(this.label);
@@ -197,8 +196,6 @@ class _WatchlistPageState extends State<WatchlistPage> {
         list.sort((a, b) => b.changeRate.compareTo(a.changeRate)); break;
       case SortOption.priceHigh:
         list.sort((a, b) => b.price.compareTo(a.price)); break;
-      case SortOption.volumeHigh:
-        list.sort((a, b) => b.volume.compareTo(a.volume)); break;
       default: break;
     }
     return list;
@@ -457,10 +454,13 @@ class _WatchlistPageState extends State<WatchlistPage> {
           },
           itemBuilder: (context, i) {
             final s = _stocks[i];
-            return Padding(
-              key: ValueKey(s.code),
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _EditModeCard(stock: s),
+            return ReorderableDragStartListener(   // 👈 추가
+              key: ValueKey(s.code),               // 👈 key 여기로 이동
+              index: i,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _EditModeCard(stock: s),
+              ),
             );
           },
         ),
