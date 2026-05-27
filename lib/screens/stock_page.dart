@@ -567,13 +567,18 @@ class StockLogo extends StatelessWidget {
   final String name;
   const StockLogo({super.key, required this.code, required this.name});
 
+  String get _assetCode {
+    if (code.startsWith('KR') && code.length >= 9) return code.substring(3, 9);
+    return code;
+  }
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: 36, height: 36,
       child: ClipOval(
         child: Image.asset(
-          'assets/images/stocks/$code.png',
+          'assets/images/stocks/$_assetCode.png',
           width: 36, height: 36,
           fit: BoxFit.cover,
           errorBuilder: (_, __, ___) => _fallback(),
