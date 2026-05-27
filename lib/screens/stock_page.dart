@@ -435,8 +435,8 @@ class _TrendCardState extends State<_TrendCard> {
   String _weatherToAsset(String weather) {
     const map = {
       'THUNDERSTORM': '급락',
-      'RAINY': '하락',
-      'CLOUDY': '보합',
+      'RAINY': '보합',
+      'CLOUDY': '하락',
       'PARTLY_CLOUDY': '상승',
       'SUNNY': '급등',
     };
