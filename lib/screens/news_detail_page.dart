@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../models/news_models.dart';
 import '../services/news_api_service.dart';
+import '../services/notification_service.dart';
 
 class NewsDetailPage extends StatefulWidget {
   final int newsId;
@@ -20,10 +21,12 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
   NewsDetailItem? _detail;
   bool _loading = true;
   String? _errorMessage;
+  int _unreadCount = 0;
 
   @override
   void initState() {
     super.initState();
+    _loadUnreadCount();
     if (widget.initialItem?.isPlaceholder == true) {
       _detail = NewsDetailItem.fromRecommendationItem(widget.initialItem!);
       _loading = false;
@@ -60,6 +63,19 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
         _loading = false;
         _errorMessage = _detail == null ? '뉴스 상세를 불러오지 못했습니다.' : null;
       });
+    }
+  }
+
+  Future<void> _loadUnreadCount() async {
+    try {
+      final count = await NotificationApiService.getUnreadNotificationCount();
+      if (!mounted) return;
+      setState(() {
+        _unreadCount = count;
+      });
+    } catch (e, stackTrace) {
+      debugPrint('❌ 알림 개수 로드 실패: $e');
+      debugPrint(stackTrace.toString());
     }
   }
 
@@ -122,44 +138,49 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
                     ),
                   ),
                   const Spacer(),
-                  GestureDetector(
-                    onTap: () => Navigator.pushNamed(context, '/alarm'),
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        const Icon(
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/alarm').then((_) {
+                            _loadUnreadCount();
+                          });
+                        },
+                        icon: const Icon(
                           Icons.notifications_none,
                           size: 28,
                           color: Colors.black,
                         ),
+                      ),
+                      if (_unreadCount > 0)
                         Positioned(
-                          right: -2,
-                          top: -2,
+                          right: 6,
+                          top: 8,
                           child: Container(
-                            width: 15,
-                            height: 15,
-                            alignment: Alignment.center,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF0EC272),
-                              shape: BoxShape.circle,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0EC272),
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Text(
-                              '2',
-                              style: TextStyle(
+                            child: Text(
+                              _unreadCount > 99 ? '99+' : '$_unreadCount',
+                              style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 9,
+                                fontSize: 10,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: () => Navigator.pushNamed(context, '/settings'),
-                    child: const Icon(Icons.settings, size: 26, color: Colors.black),
+                  IconButton(
+                    onPressed: () =>
+                        Navigator.pushNamed(context, '/settings'),
+                    icon: const Icon(
+                        Icons.settings, size: 26, color: Colors.black87),
                   ),
                 ],
               ),
@@ -263,7 +284,8 @@ class _NewsDetailContent extends StatelessWidget {
                   ? const Color(0xFF1E3CD6)
                   : Colors.grey;
               return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: const Color(0xFFE3E3E3),
                   borderRadius: BorderRadius.circular(6),
@@ -310,7 +332,8 @@ class _NewsDetailContent extends StatelessWidget {
         if (formattedDate.isNotEmpty)
           Text(
             formattedDate,
-            style: const TextStyle(fontSize: 12, color: Color(0xFF606060)),
+            style:
+            const TextStyle(fontSize: 12, color: Color(0xFF606060)),
           ),
         const SizedBox(height: 14),
 
@@ -320,7 +343,8 @@ class _NewsDetailContent extends StatelessWidget {
             children: [
               const Text(
                 'AI가 이 뉴스를 ',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                style:
+                TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
               ),
               Text(
                 sentimentLabel,
@@ -332,7 +356,8 @@ class _NewsDetailContent extends StatelessWidget {
               ),
               const Text(
                 '으로 판단했어요.',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                style:
+                TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
               ),
             ],
           ),
