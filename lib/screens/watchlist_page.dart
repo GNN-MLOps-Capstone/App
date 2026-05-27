@@ -817,15 +817,7 @@ class _WatchlistStockCardState extends State<_WatchlistStockCard> {
                   );
                 },
                 child: Row(children: [
-                  Container(
-                      width: 40, height: 40,
-                      decoration: const BoxDecoration(
-                          color: Color(0xFFEEEEEE), shape: BoxShape.circle),
-                      alignment: Alignment.center,
-                      child: Text(widget.stock.name[0],
-                          style: const TextStyle(
-                              color: Colors.grey,
-                              fontWeight: FontWeight.bold))),
+                  StockLogo(code: widget.stock.code, name: widget.stock.name),
                   const SizedBox(width: 12),
                   Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     // 종목명 + 키워드 태그 (최대 2개)

@@ -460,10 +460,15 @@ class _StockLogo extends StatelessWidget {
   final String name;
   const _StockLogo({required this.code, required this.name});
 
+  String get _assetCode {
+    if (code.startsWith('KR') && code.length >= 9) return code.substring(3, 9);
+    return code;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Image.asset(
-      'assets/images/stocks/$code.png',
+      'assets/images/stocks/$_assetCode.png',
       width: 40,
       height: 40,
       errorBuilder: (_, __, ___) => _fallback(),
