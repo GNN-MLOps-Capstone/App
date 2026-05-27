@@ -276,22 +276,7 @@ class StockApiService {
       throw StockApiException('Network error: $e', 0);
     }
   }
-}
 
-class OnboardingStock {
-  final String code;
-  final String name;
-  final int? marketCap;
-
-  OnboardingStock({required this.code, required this.name, this.marketCap});
-
-  factory OnboardingStock.fromJson(Map<String, dynamic> json) {
-    return OnboardingStock(
-      code: json['code'] as String,
-      name: json['name'] as String,
-      marketCap: (json['market_cap'] as num?)?.toInt(),
-    );
-  }
   /// 종목별 최신 뉴스 및 감성 분석 결과 조회
   static Future<List<LatestNews>> getLatestStockNews({String? stockId, String? stockName}) async {
     final normalizedStockId = stockId?.trim();
@@ -330,6 +315,22 @@ class OnboardingStock {
       }
       throw StockApiException('네트워크 에러: $e', 0);
     }
+  }
+}
+
+class OnboardingStock {
+  final String code;
+  final String name;
+  final int? marketCap;
+
+  OnboardingStock({required this.code, required this.name, this.marketCap});
+
+  factory OnboardingStock.fromJson(Map<String, dynamic> json) {
+    return OnboardingStock(
+      code: json['code'] as String,
+      name: json['name'] as String,
+      marketCap: (json['market_cap'] as num?)?.toInt(),
+    );
   }
 }
 
