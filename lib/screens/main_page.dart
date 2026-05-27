@@ -8,6 +8,8 @@ import '../services/watchlist_service.dart';
 import '../services/news_api_service.dart';
 import '../services/user_api_service.dart';
 import '../services/notification_service.dart';
+import 'news_detail_page.dart';
+import 'stock_detail_page.dart';
 import 'widgets/bottom_nav_bar.dart';
 
 // TODO: 팀원이 키워드 API 구현 시 교체
@@ -219,22 +221,39 @@ class _StockHomeScreenState extends State<StockHomeScreen> {
                 child: _watchlistLoading
                     ? const _LoadingIndicator()
                     : _watchlistError
-                    ? const _EmptyHint(message: '관심종목을 불러오지 못했어요')
-                    : _watchlist.isEmpty
-                    ? const _EmptyHint(message: '관심종목을 추가해보세요')
-                    : Column(
-                  children: _watchlist.asMap().entries.map((e) {
-                    return Column(
-                      children: [
-                        if (e.key > 0)
-                          const Divider(
-                              height: 1,
-                              color: Color(0xFFF0F0F0)),
-                        _StockRow(stock: e.value),
-                      ],
-                    );
-                  }).toList(),
-                ),
+                        ? const _EmptyHint(message: '관심종목을 불러오지 못했어요')
+                        : _watchlist.isEmpty
+                        ? const _EmptyHint(message: '관심종목을 추가해보세요')
+                        : Column(
+                            children: _watchlist.asMap().entries.map((e) {
+                              return Column(
+                                children: [
+                                  if (e.key > 0)
+                                    const Divider(
+                                        height: 1,
+                                        color: Color(0xFFF0F0F0)),
+                                  _StockRow(
+                    stock: e.value,
+                    onTap: () {
+                      final code = e.value.code;
+                      final shortCode = code.length >= 9 && code.startsWith('KR')
+                          ? code.substring(3, 9)
+                          : code;
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => StockDetailPage(
+                            stockName: e.value.name,
+                            stockCode: shortCode.toUpperCase(),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                                ],
+                              );
+                            }).toList(),
+                          ),
               ),
 
               const SizedBox(height: 24),
@@ -394,7 +413,8 @@ class _EmptyHint extends StatelessWidget {
 
 class _StockRow extends StatelessWidget {
   final WatchlistStock stock;
-  const _StockRow({required this.stock});
+  final VoidCallback? onTap;
+  const _StockRow({required this.stock, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -414,7 +434,9 @@ class _StockRow extends StatelessWidget {
     final priceStr =
         '${NumberFormat('#,###').format(stock.price)}원';
 
-    return Padding(
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
         children: [
@@ -447,6 +469,7 @@ class _StockRow extends StatelessWidget {
             ],
           ),
         ],
+      ),
       ),
     );
   }
@@ -494,7 +517,17 @@ class _NewsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return InkWell(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => NewsDetailPage(
+            newsId: news.newsId,
+            initialItem: news,
+          ),
+        ),
+      ),
+      child: Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -511,6 +544,7 @@ class _NewsRow extends StatelessWidget {
               style:
               const TextStyle(fontSize: 12, color: Colors.grey)),
         ],
+      ),
       ),
     );
   }
