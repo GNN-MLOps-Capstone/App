@@ -438,6 +438,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
       appBar: AppBar(
         backgroundColor: _kBg,
         elevation: 0,
+        scrolledUnderElevation: 0,
         titleSpacing: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
@@ -640,12 +641,12 @@ class _StockDetailPageState extends State<StockDetailPage> {
         // ),
         _BreakingNewsCard(
           items: (latestNewsList == null || latestNewsList!.isEmpty)
-            ? [] 
-            : latestNewsList!.map((news) => BreakingNewsItem(
-                isUp: news.isUp,
-                title: unescape.convert(news.title),
-                source: news.source,
-              )).toList(),
+              ? []
+              : latestNewsList!.map((news) => BreakingNewsItem(
+            isUp: news.isUp,
+            title: unescape.convert(news.title),
+            source: news.source,
+          )).toList(),
           expanded: _newsExpanded,
           onToggle: () => setState(() => _newsExpanded = !_newsExpanded),
         ),
