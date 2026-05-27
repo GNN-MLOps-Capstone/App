@@ -21,6 +21,7 @@ class _OnboardingKeywordPageState extends State<OnboardingKeywordPage> {
   bool _isLoading = true;
   bool _isSearching = false;
   bool _completing = false;
+  int _searchGeneration = 0;
 
   final Set<String> _selected = {}; // keyword word
 
@@ -38,16 +39,17 @@ class _OnboardingKeywordPageState extends State<OnboardingKeywordPage> {
   }
 
   Future<void> _loadKeywords({String? q}) async {
+    final generation = ++_searchGeneration;
     setState(() => _isLoading = true);
     try {
       final result = await OnboardingApiService.getTopKeywords(q: q);
-      if (!mounted) return;
+      if (!mounted || generation != _searchGeneration) return;
       setState(() {
         _keywords = result;
         _isLoading = false;
       });
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted || generation != _searchGeneration) return;
       setState(() {
         _keywords = [];
         _isLoading = false;
@@ -63,12 +65,17 @@ class _OnboardingKeywordPageState extends State<OnboardingKeywordPage> {
 
   Future<void> _onComplete() async {
     setState(() => _completing = true);
-    await _storage.write(key: 'onboarding_complete', value: 'true');
-    if (!mounted) return;
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => StockHomeScreen(userName: widget.userName)),
-    );
+    try {
+      await _storage.write(key: 'onboarding_complete', value: 'true');
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => StockHomeScreen(userName: widget.userName)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _completing = false);
+    }
   }
 
   @override

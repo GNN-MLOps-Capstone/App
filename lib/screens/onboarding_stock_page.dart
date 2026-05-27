@@ -154,6 +154,12 @@ class _OnboardingStockPageState extends State<OnboardingStockPage> {
       }
     } catch (e) {
       debugPrint('온보딩 종목 저장 오류: $e');
+      if (!mounted) return;
+      setState(() => _completing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('종목 저장에 실패했습니다. 다시 시도해 주세요.')),
+      );
+      return;
     }
     if (!mounted) return;
     setState(() => _completing = false);
