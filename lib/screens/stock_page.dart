@@ -194,11 +194,6 @@ class _StockPageState extends State<StockPage> {
             children: [
               Row(
                 children: [
-                  IconButton(
-                    onPressed: () => Navigator.maybePop(context),
-                    icon: const Icon(Icons.arrow_back, color: Colors.black87),
-                  ),
-                  const SizedBox(width: 4),
                   const Text('주식', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                   const Spacer(),
                   Stack(

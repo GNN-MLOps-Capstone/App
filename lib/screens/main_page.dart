@@ -271,27 +271,27 @@ class _StockHomeScreenState extends State<StockHomeScreen> {
                 child: _newsLoading
                     ? const _LoadingIndicator()
                     : _newsError
-                        ? const _EmptyHint(message: '뉴스를 불러오지 못했어요')
-                        : _news.isEmpty
-                        ? const _EmptyHint(message: '뉴스를 불러오지 못했어요')
-                        : Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: _news.asMap().entries.map((e) {
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  if (e.key > 0)
-                                    const Divider(
-                                        height: 1,
-                                        color: Color(0xFFF0F0F0)),
-                                  _NewsRow(
-                                    news: e.value,
-                                    timeAgo: _timeAgo(e.value.pubDate),
-                                  ),
-                                ],
-                              );
-                            }).toList(),
-                          ),
+                    ? const _EmptyHint(message: '뉴스를 불러오지 못했어요')  // 에러
+                    : _news.isEmpty
+                    ? const _EmptyHint(message: '표시할 뉴스가 없어요')      // 빈 상태
+                    : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: _news.asMap().entries.map((e) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (e.key > 0)
+                          const Divider(
+                              height: 1,
+                              color: Color(0xFFF0F0F0)),
+                        _NewsRow(
+                          news: e.value,
+                          timeAgo: _timeAgo(e.value.pubDate),
+                        ),
+                      ],
+                    );
+                  }).toList(),
+                ),
               ),
 
               const SizedBox(height: 24),
@@ -314,9 +314,9 @@ class _StockHomeScreenState extends State<StockHomeScreen> {
                     child: Row(
                       children: _dummyKeywords
                           .map((k) => Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: _KeywordChip(label: k),
-                              ))
+                        padding: const EdgeInsets.only(right: 8),
+                        child: _KeywordChip(label: k),
+                      ))
                           .toList(),
                     ),
                   ),
@@ -448,7 +448,7 @@ class _StockRow extends StatelessWidget {
               children: [
                 Text(stock.name,
                     style: const TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w600)),
+                        fontSize: 15, fontWeight: FontWeight.w500)),
                 Text(stock.code,
                     style: const TextStyle(
                         fontSize: 12, color: Colors.grey)),
@@ -542,7 +542,7 @@ class _NewsRow extends StatelessWidget {
           const SizedBox(height: 4),
           Text(timeAgo,
               style:
-                  const TextStyle(fontSize: 12, color: Colors.grey)),
+              const TextStyle(fontSize: 12, color: Colors.grey)),
         ],
       ),
       ),
@@ -560,7 +560,7 @@ class _KeywordChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding:
-          const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+      const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
       decoration: BoxDecoration(
         color: const Color(0xFF0EC272),
         borderRadius: BorderRadius.circular(20),
