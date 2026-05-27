@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'main_page.dart';
+import 'onboarding_keyword_page.dart';
 import '../services/stock_api_service.dart';
 import '../services/watchlist_service.dart';
 
@@ -40,7 +40,6 @@ class OnboardingStockPage extends StatefulWidget {
 }
 
 class _OnboardingStockPageState extends State<OnboardingStockPage> {
-  static const _storage = FlutterSecureStorage();
   final WatchlistService _watchlistService = WatchlistService();
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocus = FocusNode();
@@ -147,20 +146,20 @@ class _OnboardingStockPageState extends State<OnboardingStockPage> {
     });
   }
 
-  Future<void> _onComplete() async {
+  Future<void> _onNext() async {
     setState(() => _completing = true);
     try {
       for (final entry in _selectedStocks.entries) {
         await _watchlistService.addStock(entry.key, name: entry.value);
       }
-      await _storage.write(key: 'onboarding_complete', value: 'true');
     } catch (e) {
       debugPrint('온보딩 종목 저장 오류: $e');
     }
     if (!mounted) return;
-    Navigator.pushReplacement(
+    setState(() => _completing = false);
+    Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => StockHomeScreen(userName: widget.userName)),
+      MaterialPageRoute(builder: (_) => OnboardingKeywordPage(userName: widget.userName)),
     );
   }
 
@@ -290,14 +289,14 @@ class _OnboardingStockPageState extends State<OnboardingStockPage> {
               child: _isSearching ? _buildSearchResults() : _buildRecommended(),
             ),
 
-            // 완료 버튼
+            // 다음 버튼
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
               child: SizedBox(
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: _completing ? null : _onComplete,
+                  onPressed: _completing ? null : _onNext,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00C37A),
                     disabledBackgroundColor: const Color(0xFFBDBDBD),
@@ -308,7 +307,7 @@ class _OnboardingStockPageState extends State<OnboardingStockPage> {
                   child: _completing
                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                       : Text(
-                          _selectedStocks.isEmpty ? '건너뛰기' : '완료 (${_selectedStocks.length}개)',
+                          _selectedStocks.isEmpty ? '건너뛰기' : '다음 (${_selectedStocks.length}개 선택)',
                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                         ),
                 ),
