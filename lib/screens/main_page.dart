@@ -8,6 +8,8 @@ import '../services/watchlist_service.dart';
 import '../services/news_api_service.dart';
 import '../services/user_api_service.dart';
 import '../services/notification_service.dart';
+import 'news_detail_page.dart';
+import 'stock_detail_page.dart';
 import 'widgets/bottom_nav_bar.dart';
 
 // TODO: 팀원이 키워드 API 구현 시 교체
@@ -230,7 +232,24 @@ class _StockHomeScreenState extends State<StockHomeScreen> {
                                     const Divider(
                                         height: 1,
                                         color: Color(0xFFF0F0F0)),
-                                  _StockRow(stock: e.value),
+                                  _StockRow(
+                    stock: e.value,
+                    onTap: () {
+                      final code = e.value.code;
+                      final shortCode = code.length >= 9 && code.startsWith('KR')
+                          ? code.substring(3, 9)
+                          : code;
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => StockDetailPage(
+                            stockName: e.value.name,
+                            stockCode: shortCode.toUpperCase(),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                                 ],
                               );
                             }).toList(),
@@ -252,27 +271,27 @@ class _StockHomeScreenState extends State<StockHomeScreen> {
                 child: _newsLoading
                     ? const _LoadingIndicator()
                     : _newsError
-                        ? const _EmptyHint(message: '뉴스를 불러오지 못했어요')
-                        : _news.isEmpty
-                        ? const _EmptyHint(message: '뉴스를 불러오지 못했어요')
-                        : Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: _news.asMap().entries.map((e) {
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  if (e.key > 0)
-                                    const Divider(
-                                        height: 1,
-                                        color: Color(0xFFF0F0F0)),
-                                  _NewsRow(
-                                    news: e.value,
-                                    timeAgo: _timeAgo(e.value.pubDate),
-                                  ),
-                                ],
-                              );
-                            }).toList(),
-                          ),
+                    ? const _EmptyHint(message: '뉴스를 불러오지 못했어요')  // 에러
+                    : _news.isEmpty
+                    ? const _EmptyHint(message: '표시할 뉴스가 없어요')      // 빈 상태
+                    : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: _news.asMap().entries.map((e) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (e.key > 0)
+                          const Divider(
+                              height: 1,
+                              color: Color(0xFFF0F0F0)),
+                        _NewsRow(
+                          news: e.value,
+                          timeAgo: _timeAgo(e.value.pubDate),
+                        ),
+                      ],
+                    );
+                  }).toList(),
+                ),
               ),
 
               const SizedBox(height: 24),
@@ -295,9 +314,9 @@ class _StockHomeScreenState extends State<StockHomeScreen> {
                     child: Row(
                       children: _dummyKeywords
                           .map((k) => Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: _KeywordChip(label: k),
-                              ))
+                        padding: const EdgeInsets.only(right: 8),
+                        child: _KeywordChip(label: k),
+                      ))
                           .toList(),
                     ),
                   ),
@@ -394,7 +413,8 @@ class _EmptyHint extends StatelessWidget {
 
 class _StockRow extends StatelessWidget {
   final WatchlistStock stock;
-  const _StockRow({required this.stock});
+  final VoidCallback? onTap;
+  const _StockRow({required this.stock, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -414,7 +434,9 @@ class _StockRow extends StatelessWidget {
     final priceStr =
         '${NumberFormat('#,###').format(stock.price)}원';
 
-    return Padding(
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
         children: [
@@ -426,7 +448,7 @@ class _StockRow extends StatelessWidget {
               children: [
                 Text(stock.name,
                     style: const TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w600)),
+                        fontSize: 15, fontWeight: FontWeight.w500)),
                 Text(stock.code,
                     style: const TextStyle(
                         fontSize: 12, color: Colors.grey)),
@@ -447,6 +469,7 @@ class _StockRow extends StatelessWidget {
             ],
           ),
         ],
+      ),
       ),
     );
   }
@@ -499,7 +522,17 @@ class _NewsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return InkWell(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => NewsDetailPage(
+            newsId: news.newsId,
+            initialItem: news,
+          ),
+        ),
+      ),
+      child: Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -514,8 +547,9 @@ class _NewsRow extends StatelessWidget {
           const SizedBox(height: 4),
           Text(timeAgo,
               style:
-                  const TextStyle(fontSize: 12, color: Colors.grey)),
+              const TextStyle(fontSize: 12, color: Colors.grey)),
         ],
+      ),
       ),
     );
   }
@@ -531,7 +565,7 @@ class _KeywordChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding:
-          const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+      const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
       decoration: BoxDecoration(
         color: const Color(0xFF0EC272),
         borderRadius: BorderRadius.circular(20),
