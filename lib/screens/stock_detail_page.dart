@@ -11,7 +11,7 @@ import 'dart:convert';
 import 'stock_search_page.dart';
 import 'package:html_unescape/html_unescape.dart';
 import '../services/news_api_service.dart';
-
+import '../services/notification_service.dart';
 import '../services/stock_api_service.dart';
 
 Widget _svgIcon(String name, {double size = 28, IconData fallback = Icons.image_outlined}) {
@@ -66,6 +66,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
   List<String> _aiSummaryLines = ['최신 뉴스를 요약하고 있습니다...'];
   List<TagItem> _themeKeywords = [];
   List<RelatedStock> _relatedStocks = [];
+  int _unreadCount = 0;
   List<LatestNews>? latestNewsList;
 
   Future<void> _loadRelatedStocks() async {
@@ -176,6 +177,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
     _loadThemeKeywords();
     _loadRelatedStocks();
     _startSeriesAutoRefresh();
+    _loadUnreadCount();
     _fetchLatestNews();
   }
 
@@ -189,6 +191,19 @@ class _StockDetailPageState extends State<StockDetailPage> {
     if (index == 3) return;
     const routes = ['/home', '/watchlist', '/news'];
     Navigator.pushNamedAndRemoveUntil(context, routes[index], (route) => false);
+  }
+
+  Future<void> _loadUnreadCount() async {
+    try {
+      final count = await NotificationApiService.getUnreadNotificationCount();
+      if (!mounted) return;
+      setState(() {
+        _unreadCount = count;
+      });
+    } catch (e, stackTrace) {
+      debugPrint('❌ 알림 개수 로드 실패: $e');
+      debugPrint(stackTrace.toString());
+    }
   }
 
   Future<void> _loadData() async {
@@ -430,21 +445,54 @@ class _StockDetailPageState extends State<StockDetailPage> {
         ),
         title: const Text('검색', style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700)),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(left: 24),
-            child: IconButton(
-              icon: const Icon(Icons.notifications_outlined, color: Colors.black),
-              onPressed: () => Navigator.pushNamed(context, '/alarm'),
-            ),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              IconButton(
+                onPressed: () {
+                  Navigator.pushNamed(context, '/alarm').then((_) {
+                    _loadUnreadCount(); // 알림 화면에서 복귀할 때 카운트 실시간 동기화
+                  });
+                },
+                icon: const Icon(
+                  Icons.notifications_none_outlined,
+                  size: 26,
+                  color: Colors.black87,
+                ),
+              ),
+              if (_unreadCount > 0)
+                Positioned(
+                  right: 6, // 벨 아이콘의 우상단에 예쁘게 걸치도록 유도
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0EC272),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 14,
+                      minHeight: 14,
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      _unreadCount > 99 ? '99+' : '$_unreadCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.bold,
+                        height: 1.0,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
           Padding(
-            padding: const EdgeInsets.only(right: 24),
+            padding: const EdgeInsets.only(right: 14), // 마진 균형 패딩 가공
             child: IconButton(
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              icon: const Icon(Icons.settings, color: Colors.black),
-              // 이렇게 바꾸면 된다
               onPressed: () => Navigator.pushNamed(context, '/settings'),
+              icon: const Icon(Icons.settings, color: Colors.black87, size: 26),
             ),
           ),
         ],

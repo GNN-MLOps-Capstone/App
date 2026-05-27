@@ -2,12 +2,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
-
 import '../models/news_models.dart';
 import '../models/watchlist_models.dart';
 import '../services/watchlist_service.dart';
 import '../services/news_api_service.dart';
 import '../services/user_api_service.dart';
+import '../services/notification_service.dart';
 import 'widgets/bottom_nav_bar.dart';
 
 // TODO: 팀원이 키워드 API 구현 시 교체
@@ -25,6 +25,7 @@ class _StockHomeScreenState extends State<StockHomeScreen> {
   List<WatchlistStock> _watchlist = [];
   List<NewsRecommendationItem> _news = [];
   String _userName = '';
+  int _unreadCount = 0;
 
   bool _watchlistLoading = true;
   bool _newsLoading = true;
@@ -38,6 +39,20 @@ class _StockHomeScreenState extends State<StockHomeScreen> {
     _loadWatchlist();
     _loadNews();
     _loadProfile();
+    _loadUnreadCount();
+  }
+
+  Future<void> _loadUnreadCount() async {
+    try {
+      final count = await NotificationApiService.getUnreadNotificationCount();
+      if (!mounted) return;
+      setState(() {
+        _unreadCount = count;
+      });
+    } catch (e, stackTrace) {
+      debugPrint('❌ 알림 개수 로드 실패: $e');
+      debugPrint(stackTrace.toString());
+    }
   }
 
   Future<void> _loadWatchlist() async {
@@ -127,34 +142,38 @@ class _StockHomeScreenState extends State<StockHomeScreen> {
                     clipBehavior: Clip.none,
                     children: [
                       IconButton(
-                        onPressed: () =>
-                            Navigator.pushNamed(context, '/alarm'),
+                        onPressed: () {
+                            Navigator.pushNamed(context, '/alarm').then((_) {
+                              _loadUnreadCount();
+                            });
+                        },
                         icon: const Icon(
                           Icons.notifications_none_outlined,
                           size: 26,
                           color: Colors.black87,
                         ),
                       ),
-                      Positioned(
-                        right: 6,
-                        top: 8,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 5, vertical: 1),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF0EC272),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Text(
-                            '2',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
+                      if (_unreadCount > 0)
+                        Positioned(
+                          right: 6,
+                          top: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0EC272),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              _unreadCount > 99 ? '99+' : '$_unreadCount',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                   IconButton(

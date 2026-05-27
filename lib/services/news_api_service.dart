@@ -135,6 +135,41 @@ class NewsApiService {
     }
   }
 
+  /// 실시간 급상승 키워드 상위 3개 조회
+  static Future<List<TrendingKeywordItem>> getTrendingKeywords() async {
+    try {
+      // 백엔드 엔드포인트 매핑: /api/news/trending-keywords
+      final uri = Uri.parse('$_baseUrl/api/news/trending-keywords');
+
+      final response = await http.get(
+        uri,
+        headers: await getAuthHeaders(),
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> body = json.decode(utf8.decode(response.bodyBytes));
+        return body
+            .map((dynamic item) => TrendingKeywordItem.fromJson(item as Map<String, dynamic>))
+            .toList();
+      }
+
+      if (_isAuthFailure(response.statusCode)) {
+        throw NewsApiException(_authFailureMessage, response.statusCode);
+      }
+
+      throw NewsApiException(
+        'Failed to load trending keywords: ${response.statusCode}',
+        response.statusCode,
+      );
+    } catch (e) {
+      if (e is NewsApiException) rethrow;
+      if (e is AuthRequiredException) {
+        throw NewsApiException(e.message, 401);
+      }
+      throw NewsApiException('네트워크 오류가 발생했습니다: $e', 0);
+    }
+  }
+
   /// 서버 상태 확인
   static Future<bool> checkHealth() async {
     try {
@@ -184,6 +219,28 @@ class StockSummary {
       summary: json['summary'] as String,
       lastUpdated: DateTime.parse(json['last_updated'] as String),
       message: json['message'] as String,
+    );
+  }
+}
+
+class TrendingKeywordItem {
+  final String keyword;
+  final int newsCount;
+  final DateTime? latestPubDate;
+
+  TrendingKeywordItem({
+    required this.keyword,
+    required this.newsCount,
+    this.latestPubDate,
+  });
+
+  factory TrendingKeywordItem.fromJson(Map<String, dynamic> json) {
+    return TrendingKeywordItem(
+      keyword: json['keyword'] as String? ?? '',
+      newsCount: json['news_count'] as int? ?? 0,
+      latestPubDate: json['latest_pub_date'] != null
+          ? DateTime.parse(json['latest_pub_date'] as String)
+          : null,
     );
   }
 }
