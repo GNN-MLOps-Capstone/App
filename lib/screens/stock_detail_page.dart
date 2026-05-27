@@ -9,6 +9,7 @@ import 'stock_page.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'dart:convert';
 import 'stock_search_page.dart';
+import 'package:html_unescape/html_unescape.dart';
 import '../services/news_api_service.dart';
 
 import '../services/stock_api_service.dart';
@@ -31,6 +32,8 @@ const _kBg    = Color(0xFFF2F5F6);
 const _kTabBg = Color(0xFFE9ECF2);
 const _kGrid  = Color(0xFFD3D3D3);
 const _kTipBg = Color(0xFF83848B);
+
+final unescape = HtmlUnescape();
 
 Widget _sentimentIcon(Sentiment s, {double size = 52}) {
   const paths  = ['급등.svg', '상승.svg', '보합.svg', '하락.svg', '급락.svg'];
@@ -63,6 +66,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
   List<String> _aiSummaryLines = ['최신 뉴스를 요약하고 있습니다...'];
   List<TagItem> _themeKeywords = [];
   List<RelatedStock> _relatedStocks = [];
+  List<LatestNews>? latestNewsList;
 
   Future<void> _loadRelatedStocks() async {
     try {
@@ -93,6 +97,19 @@ class _StockDetailPageState extends State<StockDetailPage> {
       });
     } catch (e, st) {
       debugPrint('[상세] 테마 키워드 로드 실패: $e\n$st');
+    }
+  }
+
+  Future<void> _fetchLatestNews() async {
+    try {
+      // 우리가 서비스에 만든 함수를 호출!
+      final newsList = await StockApiService.getLatestStockNews(stockName: widget.stockName);
+      if (!mounted) return;
+      setState(() {
+        latestNewsList = newsList; // 서버 데이터를 변수에 저장하고 화면 갱신
+      });
+    } catch (e) {
+      print('뉴스 가져오기 실패: $e');
     }
   }
 
@@ -159,6 +176,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
     _loadThemeKeywords();
     _loadRelatedStocks();
     _startSeriesAutoRefresh();
+    _fetchLatestNews();
   }
 
   @override
@@ -416,7 +434,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
             padding: const EdgeInsets.only(left: 24),
             child: IconButton(
               icon: const Icon(Icons.notifications_outlined, color: Colors.black),
-              onPressed: () {},
+              onPressed: () => Navigator.pushNamed(context, '/alarm'),
             ),
           ),
           Padding(
@@ -425,18 +443,8 @@ class _StockDetailPageState extends State<StockDetailPage> {
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
               icon: const Icon(Icons.settings, color: Colors.black),
-              onPressed: () {
-                if (!_isStockCodeValid) {
-                  Navigator.maybePop(context);
-                  return;
-                }
-                _seriesCache.clear();
-                _seriesInFlight.clear();
-                _rangeChangeSeq++;
-                _loadData();
-                _loadSummary();
-                _startSeriesAutoRefresh();
-              },
+              // 이렇게 바꾸면 된다
+              onPressed: () => Navigator.pushNamed(context, '/settings'),
             ),
           ),
         ],
@@ -498,8 +506,15 @@ class _StockDetailPageState extends State<StockDetailPage> {
         const SizedBox(height: 12),
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(widget.stockName,
-                style: const TextStyle(fontSize: 25, fontWeight: FontWeight.w600)),
+            Row(children: [                          // ← 추가
+              StockLogo(                             // ← 추가
+                code: widget.stockCode,             // ← 추가
+                name: widget.stockName,             // ← 추가
+              ),                                    // ← 추가
+              const SizedBox(width: 10),            // ← 추가
+              Text(widget.stockName,
+                  style: const TextStyle(fontSize: 25, fontWeight: FontWeight.w600)),
+            ]),                                     // ← 추가
             const SizedBox(height: 2),
             if (_overview == null)
               const SizedBox(
@@ -565,13 +580,24 @@ class _StockDetailPageState extends State<StockDetailPage> {
         const SizedBox(height: 12),
         _AiSummaryCard(lines: _aiSummaryLines),
         const SizedBox(height: 12),
+        // _BreakingNewsCard(
+        //   items: const [
+        //     BreakingNewsItem(isUp: false, title: '미 연준의 금리 인상 우려로 인한 글로벌 기술주 약세',  source: '(2026.02.19, 경제뉴스)'),
+        //     BreakingNewsItem(isUp: false, title: '美 반도체 장비 수출 규제 강화 가능성 제기',         source: '(2026.02.19, 글로벌경제)'),
+        //     BreakingNewsItem(isUp: true,  title: 'AI 서버 투자 확대... HBM 수요 급증 전망',         source: '(2026.02.19, 산업뉴스)'),
+        //     BreakingNewsItem(isUp: true,  title: '삼성전자, 차세대 메모리 양산 계획 발표',           source: '(2026.02.19, 전자신문)'),
+        //   ],
+        //   expanded: _newsExpanded,
+        //   onToggle: () => setState(() => _newsExpanded = !_newsExpanded),
+        // ),
         _BreakingNewsCard(
-          items: const [
-            BreakingNewsItem(isUp: false, title: '미 연준의 금리 인상 우려로 인한 글로벌 기술주 약세',  source: '(2026.02.19, 경제뉴스)'),
-            BreakingNewsItem(isUp: false, title: '美 반도체 장비 수출 규제 강화 가능성 제기',         source: '(2026.02.19, 글로벌경제)'),
-            BreakingNewsItem(isUp: true,  title: 'AI 서버 투자 확대... HBM 수요 급증 전망',         source: '(2026.02.19, 산업뉴스)'),
-            BreakingNewsItem(isUp: true,  title: '삼성전자, 차세대 메모리 양산 계획 발표',           source: '(2026.02.19, 전자신문)'),
-          ],
+          items: (latestNewsList == null || latestNewsList!.isEmpty)
+            ? [] 
+            : latestNewsList!.map((news) => BreakingNewsItem(
+                isUp: news.isUp,
+                title: unescape.convert(news.title),
+                source: news.source,
+              )).toList(),
           expanded: _newsExpanded,
           onToggle: () => setState(() => _newsExpanded = !_newsExpanded),
         ),
@@ -1123,7 +1149,7 @@ class _RelatedSection extends StatelessWidget {
       decoration: BoxDecoration(color: _kBg, borderRadius: BorderRadius.circular(14),
           border: Border.all(color: const Color(0xFFE5E7EB))),
       child: Column(children: [
-        StockLogo(code: r.code, name: r.name),
+        StockLogo(code: r.code,name: r.name),
         const SizedBox(height: 6),
         Text(r.name, textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
