@@ -306,25 +306,25 @@ class _AlarmPageState extends State<AlarmPage> {
 
 // ===== API 연결 시 아래 주석 해제 =====
   // /*
-Future<void> _deleteItemWithApi(int id) async {
-  try {
-    final ok = await NotificationApiService.deleteNotification(id);
-    if (!mounted) return;
-    if (ok) {
-      _deleteItem(id);
-    } else {
+  Future<void> _deleteItemWithApi(int id) async {
+    try {
+      final ok = await NotificationApiService.deleteNotification(id);
+      if (!mounted) return;
+      if (ok) {
+        _deleteItem(id);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('알림 삭제에 실패했습니다.')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      debugPrint('deleteNotification failed: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('알림 삭제에 실패했습니다.')),
+        const SnackBar(content: Text('알림 삭제 중 오류가 발생했습니다.')),
       );
     }
-  } catch (e) {
-    if (!mounted) return;
-    debugPrint('deleteNotification failed: $e');
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('알림 삭제 중 오류가 발생했습니다.')),
-    );
   }
-}
   // */
 
 // ===== 더미 모드 사용 시 =====
@@ -341,22 +341,22 @@ Future<void> _deleteItemWithApi(int id) async {
 
 // ===== API 연결 시 아래 주석 해제 =====
   // /*
-Future<void> _toggleStarWithApi(int id) async {
-  try {
-    final newValue = await NotificationApiService.toggleImportant(id);
-    if (!mounted) return;
-    setState(() {
-      final idx = _items.indexWhere((e) => e.id == id);
-      if (idx >= 0) _items[idx].isStarred = newValue;
-    });
-  } catch (e) {
-    if (!mounted) return;
-    debugPrint('toggleImportant failed: $e');
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('중요 표시 변경에 실패했습니다.')),
-    );
+  Future<void> _toggleStarWithApi(int id) async {
+    try {
+      final newValue = await NotificationApiService.toggleImportant(id);
+      if (!mounted) return;
+      setState(() {
+        final idx = _items.indexWhere((e) => e.id == id);
+        if (idx >= 0) _items[idx].isStarred = newValue;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      debugPrint('toggleImportant failed: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('중요 표시 변경에 실패했습니다.')),
+      );
+    }
   }
-}
 // */
 
   int get _totalCount => _items.length;
@@ -393,7 +393,6 @@ Future<void> _toggleStarWithApi(int id) async {
     }
   } // */
 
-  // ✅ 1번 수정: 상세 페이지 다녀온 후 _items 리스트에서 id로 찾아 isRead 갱신
   Future<void> _openDetailAndMarkRead(AlarmItem item) async {
     await Navigator.push(
       context,
@@ -405,27 +404,18 @@ Future<void> _toggleStarWithApi(int id) async {
     final idx = _items.indexWhere((e) => e.id == item.id);
     if (idx < 0 || _items[idx].isRead) return;
 
-    // ===== 더미 모드 사용 시 =====
-    /*
-    setState(() {
-      _items[idx] = _items[idx].copyWith(isRead: true);
-    });
-     */
-
-    // ===== API 연결 시 아래 주석 해제 =====
-    // /*
     try {
       await NotificationApiService.markAsRead(id: item.id);
       if (!mounted) return;
       setState(() {
-         final freshIdx = _items.indexWhere((e) => e.id == item.id);
+        final freshIdx = _items.indexWhere((e) => e.id == item.id);
         if (freshIdx >= 0) {
           _items[freshIdx] = _items[freshIdx].copyWith(isRead: true);
         }
       });
     } catch (e) {
       debugPrint('Failed to mark as read: $e');
-    } // */
+    }
   }
 
 
@@ -741,10 +731,28 @@ class AlarmDetailPage extends StatelessWidget {
   final AlarmItem item;
   const AlarmDetailPage({super.key, required this.item});
 
+  Color get _tagColor {
+    switch (item.tag) {
+      case AlarmTag.highRisk: return const Color(0xFFFF4D4D);
+      case AlarmTag.risk:     return const Color(0xFFFF9500);
+      case AlarmTag.keyword:  return const Color(0xFF0EC272);
+    }
+  }
+
+  String get _tagLabel {
+    switch (item.tag) {
+      case AlarmTag.highRisk: return '긴급';
+      case AlarmTag.risk:     return '긴급';
+      case AlarmTag.keyword:  return '키워드';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final timeLabel = item.timeLabelNow(DateTime.now());
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F4F6),
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -754,24 +762,78 @@ class AlarmDetailPage extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          '알림',
+          '알림 상세',
           style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w800),
         ),
       ),
-      body: Center(
+      body: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '"추후 연결 예정"',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+            // 태그 + 시간
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: _tagColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    _tagLabel,
+                    style: TextStyle(
+                      color: _tagColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  timeLabel,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Colors.black45,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
+            // 제목
             Text(
               item.title,
-              textAlign: TextAlign.center,
               style: const TextStyle(
-                  color: Colors.black54, fontWeight: FontWeight.w600),
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                color: Colors.black87,
+                height: 1.35,
+              ),
+            ),
+            if (item.stockName.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                item.stockName,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.black45,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+            const SizedBox(height: 18),
+            const Divider(color: Color(0xFFE5E7EB), height: 1),
+            const SizedBox(height: 18),
+            // 본문
+            Text(
+              item.body,
+              style: const TextStyle(
+                fontSize: 15,
+                color: Colors.black87,
+                fontWeight: FontWeight.w500,
+                height: 1.7,
+              ),
             ),
           ],
         ),
