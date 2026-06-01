@@ -20,7 +20,6 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
 
   NewsDetailItem? _detail;
   bool _loading = true;
-  bool _summaryExpanded = false;
   String? _errorMessage;
   int _unreadCount = 0;
 
@@ -145,7 +144,7 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
                       IconButton(
                         onPressed: () {
                           Navigator.pushNamed(context, '/alarm').then((_) {
-                            _loadUnreadCount(); // 알림방 갔다 오면 갱신
+                            _loadUnreadCount();
                           });
                         },
                         icon: const Icon(
@@ -167,7 +166,7 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
                             ),
                             child: Text(
                               _unreadCount > 99 ? '99+' : '$_unreadCount',
-                              style: TextStyle(
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
@@ -178,12 +177,10 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
                     ],
                   ),
                   IconButton(
-                    onPressed: () => Navigator.pushNamed(context, '/settings'),
+                    onPressed: () =>
+                        Navigator.pushNamed(context, '/settings'),
                     icon: const Icon(
-                        Icons.settings,
-                        size: 26,
-                        color: Colors.black87
-                    ),
+                        Icons.settings, size: 26, color: Colors.black87),
                   ),
                 ],
               ),
@@ -195,41 +192,37 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
                   ? const Center(child: CircularProgressIndicator())
                   : _errorMessage != null
                   ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              _errorMessage!,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Color(0xFF606060),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            TextButton(
-                              onPressed: _loadDetail,
-                              child: const Text('다시 시도'),
-                            ),
-                          ],
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _errorMessage!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF606060),
                         ),
                       ),
-                    )
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: _loadDetail,
+                        child: const Text('다시 시도'),
+                      ),
+                    ],
+                  ),
+                ),
+              )
                   : detail == null
                   ? const SizedBox.shrink()
                   : _NewsDetailContent(
-                      detail: detail,
-                      summaryExpanded: _summaryExpanded,
-                      onToggleSummary: () {
-                        setState(() => _summaryExpanded = !_summaryExpanded);
-                      },
-                      keywordScrollController: _keywordScrollController,
-                      sentimentColor: _sentimentColor(detail.sentiment),
-                      sentimentLabel: _sentimentLabel(detail.sentiment),
-                      formattedDate: _formatPubDate(detail.pubDate),
-                    ),
+                detail: detail,
+                keywordScrollController: _keywordScrollController,
+                sentimentColor: _sentimentColor(detail.sentiment),
+                sentimentLabel: _sentimentLabel(detail.sentiment),
+                formattedDate: _formatPubDate(detail.pubDate),
+              ),
             ),
           ],
         ),
@@ -240,8 +233,6 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
 
 class _NewsDetailContent extends StatelessWidget {
   final NewsDetailItem detail;
-  final bool summaryExpanded;
-  final VoidCallback onToggleSummary;
   final ScrollController keywordScrollController;
   final Color sentimentColor;
   final String sentimentLabel;
@@ -249,8 +240,6 @@ class _NewsDetailContent extends StatelessWidget {
 
   const _NewsDetailContent({
     required this.detail,
-    required this.summaryExpanded,
-    required this.onToggleSummary,
     required this.keywordScrollController,
     required this.sentimentColor,
     required this.sentimentLabel,
@@ -268,17 +257,14 @@ class _NewsDetailContent extends StatelessWidget {
         ? detail.relatedStocks
         : trimmedStockName?.isNotEmpty == true
         ? [
-            NewsDetailStockItem(
-              stockId: '',
-              stockName: trimmedStockName!,
-              stockChange: detail.stockChange,
-              stockUp: detail.stockUp,
-            ),
-          ]
+      NewsDetailStockItem(
+        stockId: '',
+        stockName: trimmedStockName!,
+        stockChange: detail.stockChange,
+        stockUp: detail.stockUp,
+      ),
+    ]
         : const <NewsDetailStockItem>[];
-    final shortSummary = summaryText.length > 90
-        ? '${summaryText.substring(0, 90)}...'
-        : summaryText;
     final hasKeywords = detail.keywords.isNotEmpty;
     final hasSentiment = sentimentLabel.isNotEmpty;
 
@@ -298,7 +284,8 @@ class _NewsDetailContent extends StatelessWidget {
                   ? const Color(0xFF1E3CD6)
                   : Colors.grey;
               return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: const Color(0xFFE3E3E3),
                   borderRadius: BorderRadius.circular(6),
@@ -345,7 +332,8 @@ class _NewsDetailContent extends StatelessWidget {
         if (formattedDate.isNotEmpty)
           Text(
             formattedDate,
-            style: const TextStyle(fontSize: 12, color: Color(0xFF606060)),
+            style:
+            const TextStyle(fontSize: 12, color: Color(0xFF606060)),
           ),
         const SizedBox(height: 14),
 
@@ -355,7 +343,8 @@ class _NewsDetailContent extends StatelessWidget {
             children: [
               const Text(
                 'AI가 이 뉴스를 ',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                style:
+                TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
               ),
               Text(
                 sentimentLabel,
@@ -367,32 +356,12 @@ class _NewsDetailContent extends StatelessWidget {
               ),
               const Text(
                 '으로 판단했어요.',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                style:
+                TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
               ),
             ],
           ),
           const SizedBox(height: 10),
-        ],
-
-        // 더보기 버튼 - 카드 바로 위 오른쪽
-        if (summaryText.isNotEmpty) ...[
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              GestureDetector(
-                onTap: onToggleSummary,
-                child: Text(
-                  summaryExpanded ? '접기' : '더보기',
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: Color(0xFF83848B),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
         ],
 
         // 5. AI 요약 카드
@@ -405,30 +374,30 @@ class _NewsDetailContent extends StatelessWidget {
           ),
           child: summaryText.isEmpty
               ? const Text(
-                  'AI 요약이 아직 준비되지 않았습니다.',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF606060)),
-                )
+            'AI 요약이 아직 준비되지 않았습니다.',
+            style: TextStyle(fontSize: 13, color: Color(0xFF606060)),
+          )
               : Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SvgPicture.asset(
-                      'assets/images/AI요약.svg',
-                      width: 20,
-                      height: 20,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        summaryExpanded ? summaryText : shortSummary,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          height: 1.6,
-                          color: Colors.black87,
-                        ),
-                      ),
-                    ),
-                  ],
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SvgPicture.asset(
+                'assets/images/AI요약.svg',
+                width: 20,
+                height: 20,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  summaryText,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    height: 1.6,
+                    color: Colors.black87,
+                  ),
                 ),
+              ),
+            ],
+          ),
         ),
         if (hasKeywords) ...[
           const SizedBox(height: 20),
@@ -490,25 +459,25 @@ class _NewsDetailContent extends StatelessWidget {
                   children: detail.keywords
                       .map(
                         (keyword) => Container(
-                          margin: const EdgeInsets.only(right: 8),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE5E5E5),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            keyword,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Colors.black87,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE5E5E5),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        keyword,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.black87,
+                          fontWeight: FontWeight.w500,
                         ),
-                      )
+                      ),
+                    ),
+                  )
                       .toList(),
                 ),
               ),
@@ -535,10 +504,10 @@ class _NewsDetailContent extends StatelessWidget {
 class _CustomScrollBehavior extends ScrollBehavior {
   @override
   Widget buildScrollbar(
-    BuildContext context,
-    Widget child,
-    ScrollableDetails details,
-  ) {
+      BuildContext context,
+      Widget child,
+      ScrollableDetails details,
+      ) {
     return Theme(
       data: Theme.of(context).copyWith(
         scrollbarTheme: const ScrollbarThemeData(
