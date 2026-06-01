@@ -11,6 +11,7 @@ import '../services/notification_service.dart';
 import 'news_detail_page.dart';
 import 'stock_detail_page.dart';
 import 'widgets/bottom_nav_bar.dart';
+import 'news_detail_page.dart';
 
 // TODO: 팀원이 키워드 API 구현 시 교체
 const List<String> _dummyKeywords = ['HBM', 'AI반도체', '2차전지', '전고체', '반도체'];
@@ -145,9 +146,9 @@ class _StockHomeScreenState extends State<StockHomeScreen> {
                     children: [
                       IconButton(
                         onPressed: () {
-                            Navigator.pushNamed(context, '/alarm').then((_) {
-                              _loadUnreadCount();
-                            });
+                          Navigator.pushNamed(context, '/alarm').then((_) {
+                            _loadUnreadCount();
+                          });
                         },
                         icon: const Icon(
                           Icons.notifications_none_outlined,
@@ -284,9 +285,20 @@ class _StockHomeScreenState extends State<StockHomeScreen> {
                           const Divider(
                               height: 1,
                               color: Color(0xFFF0F0F0)),
-                        _NewsRow(
-                          news: e.value,
-                          timeAgo: _timeAgo(e.value.pubDate),
+                        GestureDetector(
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => NewsDetailPage(
+                                newsId: e.value.newsId,
+                                initialItem: e.value,
+                              ),
+                            ),
+                          ),
+                          child: _NewsRow(
+                            news: e.value,
+                            timeAgo: _timeAgo(e.value.pubDate),
+                          ),
                         ),
                       ],
                     );
