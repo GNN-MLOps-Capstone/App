@@ -344,10 +344,13 @@ class _AlarmPageState extends State<AlarmPage> {
   Future<void> _toggleStarWithApi(int id) async {
     try {
       final newValue = await NotificationApiService.toggleImportant(id);
+      // API가 성공 시 bool, 실패 시 throw한다고 가정
       if (!mounted) return;
       setState(() {
         final idx = _items.indexWhere((e) => e.id == id);
-        if (idx >= 0) _items[idx].isStarred = newValue;
+        if (idx >= 0) {
+          _items[idx] = _items[idx].copyWith(isStarred: newValue); // copyWith으로 불변 갱신
+        }
       });
     } catch (e) {
       if (!mounted) return;
@@ -355,6 +358,7 @@ class _AlarmPageState extends State<AlarmPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('중요 표시 변경에 실패했습니다.')),
       );
+      // 로컬 상태 변경 없음
     }
   }
 // */
