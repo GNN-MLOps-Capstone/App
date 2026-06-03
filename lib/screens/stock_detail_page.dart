@@ -233,11 +233,9 @@ class _StockDetailPageState extends State<StockDetailPage> {
 
   Future<void> _loadWeather() async {
     try {
-      debugPrint('[날씨] 요청 stockId=${widget.stockCode} stockName=${widget.stockName}');
       final weather = await StockApiService.getStockWeather(
         stockName: widget.stockName,
       );
-      debugPrint('[날씨] 응답값: $weather');
       if (!mounted) return;
       setState(() => _weather = weather);
     } catch (e) {
@@ -363,7 +361,6 @@ class _StockDetailPageState extends State<StockDetailPage> {
   }
 
   Widget _weatherSvgIcon(String weather) {
-    debugPrint('[날씨] 아이콘 렌더: $weather');
     const map = {
       'SUNNY':         '급등',
       'PARTLY_CLOUDY': '상승',
