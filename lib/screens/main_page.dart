@@ -27,10 +27,13 @@ class _StockHomeScreenState extends State<StockHomeScreen> {
   String _userName = '';
   int _unreadCount = 0;
 
+  List<TrendingKeywordItem> _keywords = [];
   bool _watchlistLoading = true;
   bool _newsLoading = true;
+  bool _keywordsLoading = true;
   bool _watchlistError = false;
   bool _newsError = false;
+  bool _keywordsError = false;
 
   @override
   void initState() {
@@ -38,6 +41,7 @@ class _StockHomeScreenState extends State<StockHomeScreen> {
     _userName = widget.userName ?? '';
     _loadWatchlist();
     _loadNews();
+    _loadKeywords();
     _loadProfile();
     _loadUnreadCount();
   }
@@ -68,6 +72,23 @@ class _StockHomeScreenState extends State<StockHomeScreen> {
       setState(() {
         _watchlistLoading = false;
         _watchlistError = true;
+      });
+    }
+  }
+
+  Future<void> _loadKeywords() async {
+    try {
+      final data = await NewsApiService.getTrendingKeywords(limit: 5);
+      if (!mounted) return;
+      setState(() {
+        _keywords = data;
+        _keywordsLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _keywordsLoading = false;
+        _keywordsError = true;
       });
     }
   }
@@ -290,14 +311,18 @@ class _StockHomeScreenState extends State<StockHomeScreen> {
               _Card(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: SingleChildScrollView(
+                  child: _keywordsLoading
+                      ? const _LoadingIndicator()
+                      : _keywordsError || _keywords.isEmpty
+                      ? const _EmptyHint(message: '키워드를 불러오지 못했어요')
+                      : SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
-                      children: _dummyKeywords
+                      children: _keywords
                           .map((k) => Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: _KeywordChip(label: k),
-                              ))
+                        padding: const EdgeInsets.only(right: 8),
+                        child: _KeywordChip(label: k.keyword),
+                      ))
                           .toList(),
                     ),
                   ),

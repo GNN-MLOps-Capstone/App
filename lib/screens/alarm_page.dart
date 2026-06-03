@@ -770,7 +770,7 @@ class AlarmDetailPage extends StatelessWidget {
           style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w800),
         ),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
