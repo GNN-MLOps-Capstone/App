@@ -66,19 +66,22 @@ class NotificationApiService {
 
   /// 중요 표시 토글
   static Future<bool> toggleImportant(int id) async {
-    final uri = Uri.parse('$_baseUrl/api/notifications/important');
-    final response = await http.patch(
-      uri,
-      headers: await _getHeaders(),
-      body: json.encode({'id': id}),
-    ).timeout(const Duration(seconds: 10));
+    try {
+      final uri = Uri.parse('$_baseUrl/api/notifications/important');
+      final response = await http.patch(
+        uri,
+        headers: await _getHeaders(),
+        body: json.encode({'id': id}),
+      );
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      return data['star'] as bool;
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['star'] as bool;
+      }
+      return false;
+    } catch (e) {
+      rethrow;
     }
-    // ✅ non-200이면 예외를 던져서 호출부 catch로 전달
-    throw Exception('toggleImportant failed: ${response.statusCode}');
   }
 
   /// 알림 삭제
