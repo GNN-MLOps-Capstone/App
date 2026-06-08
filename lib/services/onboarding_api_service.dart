@@ -79,4 +79,26 @@ class OnboardingApiService {
     }
     throw Exception('Failed to load keywords: ${res.statusCode}');
   }
+
+  static Future<void> saveSelectedKeywords(List<String> keywords) async {
+    if (keywords.isEmpty) return;
+    final uri = Uri.parse('$_baseUrl/api/onboarding/keywords');
+    final res = await http
+        .post(
+          uri,
+          headers: {
+            ...await getAuthHeaders(),
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'keywords': keywords
+                .map((w) => {'original_keyword': w})
+                .toList(),
+          }),
+        )
+        .timeout(const Duration(seconds: 10));
+    if (res.statusCode != 200) {
+      throw Exception('Failed to save keywords: ${res.statusCode}');
+    }
+  }
 }

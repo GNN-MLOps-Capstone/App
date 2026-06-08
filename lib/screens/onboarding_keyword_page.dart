@@ -66,6 +66,9 @@ class _OnboardingKeywordPageState extends State<OnboardingKeywordPage> {
   Future<void> _onComplete() async {
     setState(() => _completing = true);
     try {
+      if (_selected.isNotEmpty) {
+        await OnboardingApiService.saveSelectedKeywords(_selected.toList());
+      }
       await _storage.write(key: 'onboarding_complete', value: 'true');
       if (!mounted) return;
       Navigator.pushReplacement(
