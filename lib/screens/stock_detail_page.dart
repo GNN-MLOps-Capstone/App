@@ -68,7 +68,6 @@ class _StockDetailPageState extends State<StockDetailPage> {
   List<RelatedStock> _relatedStocks = [];
   int _unreadCount = 0;
   List<LatestNews>? latestNewsList;
-  String _weather = 'CLOUDY';
 
   Future<void> _loadRelatedStocks() async {
     try {
@@ -180,7 +179,6 @@ class _StockDetailPageState extends State<StockDetailPage> {
     _startSeriesAutoRefresh();
     _loadUnreadCount();
     _fetchLatestNews();
-    _loadWeather();
   }
 
   @override
@@ -228,18 +226,6 @@ class _StockDetailPageState extends State<StockDetailPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() { _error = '데이터를 불러올 수 없습니다.\n$e'; _loading = false; });
-    }
-  }
-
-  Future<void> _loadWeather() async {
-    try {
-      final weather = await StockApiService.getStockWeather(
-        stockName: widget.stockName,
-      );
-      if (!mounted) return;
-      setState(() => _weather = weather);
-    } catch (e) {
-      debugPrint('[상세] 날씨 로드 실패: $e');
     }
   }
 
@@ -358,22 +344,6 @@ class _StockDetailPageState extends State<StockDetailPage> {
     if (r == 0) return Sentiment.neutral;
     if (r > -3) return Sentiment.bad;
     return Sentiment.veryBad;
-  }
-
-  Widget _weatherSvgIcon(String weather) {
-    const map = {
-      'SUNNY':         '급등',
-      'PARTLY_CLOUDY': '상승',
-      'CLOUDY':        '하락',
-      'RAINY':         '보합',
-      'THUNDERSTORM':  '급락',
-    };
-    final asset = map[weather] ?? '보합';
-    return SvgPicture.asset(
-      'assets/images/$asset.svg',
-      width: 52, height: 52,
-      placeholderBuilder: (_) => const SizedBox(width: 52, height: 52),
-    );
   }
 
   _PreparedChartData _prepareChartData(StockSeries series) {
@@ -628,7 +598,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
                 ]),
             ],
           ])),
-          _weatherSvgIcon(_weather),
+          if (_overview != null) _sentimentIcon(_sentiment),
         ]),
         const SizedBox(height: 10),
         Align(alignment: Alignment.centerRight,

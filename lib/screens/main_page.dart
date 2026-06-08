@@ -11,6 +11,7 @@ import '../services/notification_service.dart';
 import 'news_detail_page.dart';
 import 'stock_detail_page.dart';
 import 'widgets/bottom_nav_bar.dart';
+import 'news_detail_page.dart';
 
 // TODO: 팀원이 키워드 API 구현 시 교체
 const List<String> _dummyKeywords = ['HBM', 'AI반도체', '2차전지', '전고체', '반도체'];
@@ -29,13 +30,10 @@ class _StockHomeScreenState extends State<StockHomeScreen> {
   String _userName = '';
   int _unreadCount = 0;
 
-  List<TrendingKeywordItem> _keywords = [];
   bool _watchlistLoading = true;
   bool _newsLoading = true;
-  bool _keywordsLoading = true;
   bool _watchlistError = false;
   bool _newsError = false;
-  bool _keywordsError = false;
 
   @override
   void initState() {
@@ -43,7 +41,6 @@ class _StockHomeScreenState extends State<StockHomeScreen> {
     _userName = widget.userName ?? '';
     _loadWatchlist();
     _loadNews();
-    _loadKeywords();
     _loadProfile();
     _loadUnreadCount();
   }
@@ -74,23 +71,6 @@ class _StockHomeScreenState extends State<StockHomeScreen> {
       setState(() {
         _watchlistLoading = false;
         _watchlistError = true;
-      });
-    }
-  }
-
-  Future<void> _loadKeywords() async {
-    try {
-      final data = await NewsApiService.getTrendingKeywords(limit: 5);
-      if (!mounted) return;
-      setState(() {
-        _keywords = data;
-        _keywordsLoading = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _keywordsLoading = false;
-        _keywordsError = true;
       });
     }
   }
@@ -341,19 +321,13 @@ class _StockHomeScreenState extends State<StockHomeScreen> {
               _Card(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: _keywordsLoading
-                      ? const _LoadingIndicator()
-                      : _keywordsError
-                      ? const _EmptyHint(message: '키워드를 불러오지 못했어요')
-                      : _keywords.isEmpty
-                      ? const _EmptyHint(message: '표시할 키워드가 없어요')
-                      : SingleChildScrollView(
+                  child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
-                      children: _keywords
+                      children: _dummyKeywords
                           .map((k) => Padding(
                         padding: const EdgeInsets.only(right: 8),
-                        child: _KeywordChip(label: k.keyword),
+                        child: _KeywordChip(label: k),
                       ))
                           .toList(),
                     ),
