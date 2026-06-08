@@ -135,11 +135,12 @@ class NewsApiService {
     }
   }
 
-  /// 실시간 급상승 키워드 상위 3개 조회
-  static Future<List<TrendingKeywordItem>> getTrendingKeywords() async {
+  static Future<List<TrendingKeywordItem>> getTrendingKeywords({int limit = 3}) async { // limit 매개변수 추가 (기본값 3)
     try {
-      // 백엔드 엔드포인트 매핑: /api/news/trending-keywords
-      final uri = Uri.parse('$_baseUrl/api/news/trending-keywords');
+      // 쿼리 파라미터(?limit=N)를 포함하여 URI 생성
+      final uri = Uri.parse('$_baseUrl/api/news/trending-keywords').replace(
+        queryParameters: {'limit': limit.toString()},
+      );
 
       final response = await http.get(
         uri,
