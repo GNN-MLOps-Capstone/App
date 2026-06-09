@@ -12,9 +12,6 @@ import 'news_detail_page.dart';
 import 'stock_detail_page.dart';
 import 'widgets/bottom_nav_bar.dart';
 
-// TODO: 팀원이 키워드 API 구현 시 교체
-const List<String> _dummyKeywords = ['HBM', 'AI반도체', '2차전지', '전고체', '반도체'];
-
 class StockHomeScreen extends StatefulWidget {
   final String? userName;
   const StockHomeScreen({super.key, this.userName});

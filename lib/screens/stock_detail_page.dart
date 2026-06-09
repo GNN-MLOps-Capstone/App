@@ -364,8 +364,8 @@ class _StockDetailPageState extends State<StockDetailPage> {
     const map = {
       'SUNNY':         '급등',
       'PARTLY_CLOUDY': '상승',
-      'CLOUDY':        '하락',
-      'RAINY':         '보합',
+      'CLOUDY':        '보합',
+      'RAINY':         '하락',
       'THUNDERSTORM':  '급락',
     };
     final asset = map[weather] ?? '보합';
