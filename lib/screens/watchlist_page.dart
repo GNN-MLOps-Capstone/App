@@ -773,8 +773,8 @@ class _WatchlistStockCardState extends State<_WatchlistStockCard> {
     final weatherAsset = rate >= 5.0 ? '급등.svg'
         : rate > 0    ? '상승.svg'
         : rate <= -5.0 ? '급락.svg'
-        : rate < 0    ? '하락.svg'
-        : '보합.svg';
+        : rate < 0    ? '보합.svg'
+        : '하락.svg';
 
     final rateText = '${rate > 0 ? '+' : ''}${rate.toStringAsFixed(1)}%';
 

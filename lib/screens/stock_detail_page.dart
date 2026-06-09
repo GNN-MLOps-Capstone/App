@@ -36,7 +36,7 @@ const _kTipBg = Color(0xFF83848B);
 final unescape = HtmlUnescape();
 
 Widget _sentimentIcon(Sentiment s, {double size = 52}) {
-  const paths  = ['급등.svg', '상승.svg', '보합.svg', '하락.svg', '급락.svg'];
+  const paths  = ['급등.svg', '상승.svg', '하락.svg', '보합.svg', '급락.svg'];
   const icons  = [Icons.wb_sunny, Icons.wb_sunny_outlined, Icons.remove_circle_outline, Icons.cloud, Icons.thunderstorm_outlined];
   const colors = [Color(0xFFF59E0B), _kGreen, Colors.grey, Color(0xFF94A3B8), Color(0xFF64748B)];
   return SvgPicture.asset(
