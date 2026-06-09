@@ -243,6 +243,46 @@ class StockApiService {
     }
   }
 
+  /// 종목별 최신 뉴스 및 감성 분석 결과 조회
+  static Future<List<LatestNews>> getLatestStockNews({String? stockId, String? stockName}) async {
+    final normalizedStockId = stockId?.trim();
+    final normalizedStockName = stockName?.trim();
+
+    if ((normalizedStockId == null || normalizedStockId.isEmpty) &&
+        (normalizedStockName == null || normalizedStockName.isEmpty)) {
+      throw StockApiException('stockId 또는 stockName 중 하나는 필수입니다.', 400);
+    }
+
+    try {
+      final params = <String, String>{};
+      if (normalizedStockId != null && normalizedStockId.isNotEmpty) {
+        params['stock_id'] = normalizedStockId;
+      }
+      if (normalizedStockName != null && normalizedStockName.isNotEmpty) {
+        params['stock_name'] = normalizedStockName;
+      }
+
+      final uri = Uri.parse('$_baseUrl/api/stocks/news/latest').replace(queryParameters: params);
+      final res = await http.get(
+        uri,
+        headers: await getAuthHeaders(),
+      ).timeout(const Duration(seconds: 10));
+
+      if (res.statusCode == 200) {
+        // 한글 깨짐 방지를 위해 utf8.decode 사용
+        final List<dynamic> jsonList = jsonDecode(utf8.decode(res.bodyBytes));
+        return jsonList.map((json) => LatestNews.fromJson(json as Map<String, dynamic>)).toList();
+      }
+      throw StockApiException('최신 뉴스를 불러오지 못했습니다: ${res.statusCode}', res.statusCode);
+    } catch (e) {
+      if (e is StockApiException) rethrow;
+      if (e is AuthRequiredException) {
+        throw StockApiException(e.message, 401);
+      }
+      throw StockApiException('네트워크 에러: $e', 0);
+    }
+  }
+
   /// 카테고리별 시가총액 상위 종목 조회
   /// GET /api/stocks/by-category?categories=...&limit=10
   static Future<List<OnboardingStock>> getStocksByCategories(
@@ -291,45 +331,6 @@ class OnboardingStock {
       name: json['name'] as String,
       marketCap: (json['market_cap'] as num?)?.toInt(),
     );
-  }
-  /// 종목별 최신 뉴스 및 감성 분석 결과 조회
-  static Future<List<LatestNews>> getLatestStockNews({String? stockId, String? stockName}) async {
-    final normalizedStockId = stockId?.trim();
-    final normalizedStockName = stockName?.trim();
-    
-    if ((normalizedStockId == null || normalizedStockId.isEmpty) &&
-        (normalizedStockName == null || normalizedStockName.isEmpty)) {
-      throw StockApiException('stockId 또는 stockName 중 하나는 필수입니다.', 400);
-    }
-    
-    try {
-      final params = <String, String>{};
-      if (normalizedStockId != null && normalizedStockId.isNotEmpty) {
-        params['stock_id'] = normalizedStockId;
-      }
-      if (normalizedStockName != null && normalizedStockName.isNotEmpty) {
-        params['stock_name'] = normalizedStockName;
-      }
-
-      final uri = Uri.parse('$_baseUrl/api/stocks/news/latest').replace(queryParameters: params);
-      final res = await http.get(
-        uri,
-        headers: await getAuthHeaders(),
-      ).timeout(const Duration(seconds: 10));
-
-      if (res.statusCode == 200) {
-        // 한글 깨짐 방지를 위해 utf8.decode 사용
-        final List<dynamic> jsonList = jsonDecode(utf8.decode(res.bodyBytes));
-        return jsonList.map((json) => LatestNews.fromJson(json as Map<String, dynamic>)).toList();
-      }
-      throw StockApiException('최신 뉴스를 불러오지 못했습니다: ${res.statusCode}', res.statusCode);
-    } catch (e) {
-      if (e is StockApiException) rethrow;
-      if (e is AuthRequiredException) {
-        throw StockApiException(e.message, 401);
-      }
-      throw StockApiException('네트워크 에러: $e', 0);
-    }
   }
 }
 
