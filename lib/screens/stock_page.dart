@@ -515,7 +515,12 @@ class _TrendCardState extends State<_TrendCard> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  SvgPicture.asset('assets/images/${_weatherSvg(widget.item.weather)}.svg', width: 34, height: 34),
+                  SvgPicture.asset(
+                    'assets/images/${_weatherToAsset(widget.item.weather)}.svg',
+                    width: 34,
+                    height: 34,
+                    placeholderBuilder: (_) => const SizedBox(width: 34, height: 34),
+                  ),
                   const SizedBox(width: 8),
                   GestureDetector(
                     onTap: _toggleWatchlist,

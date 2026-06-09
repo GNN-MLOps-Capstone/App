@@ -773,8 +773,8 @@ class _WatchlistStockCardState extends State<_WatchlistStockCard> {
     final weatherAsset = rate >= 5.0 ? '급등.svg'
         : rate > 0    ? '상승.svg'
         : rate <= -5.0 ? '급락.svg'
-        : rate < 0    ? '하락.svg'
-        : '보합.svg';
+        : rate < 0    ? '보합.svg'
+        : '하락.svg';
 
     final rateText = '${rate > 0 ? '+' : ''}${rate.toStringAsFixed(1)}%';
 
@@ -859,39 +859,6 @@ class _WatchlistStockCardState extends State<_WatchlistStockCard> {
                         ]),
                       ]),
                     ),
-                  );
-                },
-                child: Row(children: [
-                  StockLogo(code: widget.stock.code, name: widget.stock.name),
-                  const SizedBox(width: 12),
-                  Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    // 종목명 + 키워드 태그 (최대 2개)
-                    Row(children: [
-                      Text(widget.stock.name,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 15)),
-                      _buildKeywordTags(widget.stock.keyword),
-                    ]),
-                    const SizedBox(height: 4),
-                    Row(children: [
-                      Text('${_formatPrice(widget.stock.price)}원',
-                          style: const TextStyle(
-                              fontSize: 13, color: Colors.black87)),
-                      const SizedBox(width: 6),
-                      if (rate != 0) ...[
-                        Icon(
-                            rate > 0
-                                ? Icons.arrow_upward
-                                : Icons.arrow_downward,
-                            size: 10, color: color),
-                        const SizedBox(width: 2),
-                      ],
-                      Text(rateText,
-                          style: TextStyle(
-                              fontSize: 13,
-                              color: color,
-                              fontWeight: FontWeight.bold)),
-                    ]),
                   ]),
                 ),
               ),

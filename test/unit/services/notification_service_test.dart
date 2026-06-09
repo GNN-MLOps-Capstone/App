@@ -10,18 +10,21 @@ import 'package:stock/services/notification_service.dart';
 void _mockSecureStorage({String? token = 'test_token'}) {
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
       .setMockMethodCallHandler(
-    const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
-    (MethodCall call) async {
-      if (call.method == 'read') return token;
-      return null;
-    },
-  );
+        const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+        (MethodCall call) async {
+          if (call.method == 'read') return token;
+          return null;
+        },
+      );
 }
 
 http.Response _jsonResponse(Object body, int statusCode) {
   final bytes = utf8.encode(jsonEncode(body));
-  return http.Response.bytes(bytes, statusCode,
-      headers: {'content-type': 'application/json; charset=utf-8'});
+  return http.Response.bytes(
+    bytes,
+    statusCode,
+    headers: {'content-type': 'application/json; charset=utf-8'},
+  );
 }
 
 void main() {
@@ -179,8 +182,9 @@ void main() {
   group('NotificationApiService.markAsRead', () {
     test('단건 읽음 처리 후 unread_count 반환', () async {
       _mockSecureStorage();
-      final client = MockClient((_) async =>
-          _jsonResponse({'unread_count': 3}, 200));
+      final client = MockClient(
+        (_) async => _jsonResponse({'unread_count': 3}, 200),
+      );
 
       final count = await http.runWithClient(
         () => NotificationApiService.markAsRead(id: 1),
@@ -192,8 +196,9 @@ void main() {
 
     test('전체 읽음 처리 (id null) 후 unread_count 0 반환', () async {
       _mockSecureStorage();
-      final client = MockClient((_) async =>
-          _jsonResponse({'unread_count': 0}, 200));
+      final client = MockClient(
+        (_) async => _jsonResponse({'unread_count': 0}, 200),
+      );
 
       final count = await http.runWithClient(
         () => NotificationApiService.markAsRead(),
@@ -221,8 +226,9 @@ void main() {
   group('NotificationApiService.toggleImportant', () {
     test('200 응답 시 star 상태 반환 (true)', () async {
       _mockSecureStorage();
-      final client = MockClient((_) async =>
-          _jsonResponse({'star': true}, 200));
+      final client = MockClient(
+        (_) async => _jsonResponse({'star': true}, 200),
+      );
 
       final result = await http.runWithClient(
         () => NotificationApiService.toggleImportant(1),
@@ -234,8 +240,9 @@ void main() {
 
     test('200 응답 시 star 상태 반환 (false)', () async {
       _mockSecureStorage();
-      final client = MockClient((_) async =>
-          _jsonResponse({'star': false}, 200));
+      final client = MockClient(
+        (_) async => _jsonResponse({'star': false}, 200),
+      );
 
       final result = await http.runWithClient(
         () => NotificationApiService.toggleImportant(1),
@@ -245,16 +252,17 @@ void main() {
       expect(result, false);
     });
 
-    test('비정상 응답 시 false 반환', () async {
+    test('비정상 응답 시 예외 발생', () async {
       _mockSecureStorage();
       final client = MockClient((_) async => http.Response('error', 500));
 
-      final result = await http.runWithClient(
-        () => NotificationApiService.toggleImportant(1),
-        () => client,
+      expect(
+        () => http.runWithClient(
+          () => NotificationApiService.toggleImportant(1),
+          () => client,
+        ),
+        throwsA(isA<Exception>()),
       );
-
-      expect(result, false);
     });
   });
 
@@ -301,8 +309,7 @@ void main() {
   group('NotificationApiService.createNotification', () {
     test('201 응답 시 생성된 id 반환', () async {
       _mockSecureStorage();
-      final client = MockClient((_) async =>
-          _jsonResponse({'id': 42}, 201));
+      final client = MockClient((_) async => _jsonResponse({'id': 42}, 201));
 
       final req = NotificationCreateRequest(
         notificationId: 'noti-001',

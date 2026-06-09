@@ -36,7 +36,7 @@ const _kTipBg = Color(0xFF83848B);
 final unescape = HtmlUnescape();
 
 Widget _sentimentIcon(Sentiment s, {double size = 52}) {
-  const paths  = ['급등.svg', '상승.svg', '보합.svg', '하락.svg', '급락.svg'];
+  const paths  = ['급등.svg', '상승.svg', '하락.svg', '보합.svg', '급락.svg'];
   const icons  = [Icons.wb_sunny, Icons.wb_sunny_outlined, Icons.remove_circle_outline, Icons.cloud, Icons.thunderstorm_outlined];
   const colors = [Color(0xFFF59E0B), _kGreen, Colors.grey, Color(0xFF94A3B8), Color(0xFF64748B)];
   return SvgPicture.asset(
@@ -68,6 +68,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
   List<RelatedStock> _relatedStocks = [];
   int _unreadCount = 0;
   List<LatestNews>? latestNewsList;
+  String _weather = 'CLOUDY';
 
   Future<void> _loadRelatedStocks() async {
     try {
@@ -179,6 +180,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
     _startSeriesAutoRefresh();
     _loadUnreadCount();
     _fetchLatestNews();
+    _loadWeather();
   }
 
   @override
@@ -226,6 +228,18 @@ class _StockDetailPageState extends State<StockDetailPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() { _error = '데이터를 불러올 수 없습니다.\n$e'; _loading = false; });
+    }
+  }
+
+  Future<void> _loadWeather() async {
+    try {
+      final weather = await StockApiService.getStockWeather(
+        stockName: widget.stockName,
+      );
+      if (!mounted) return;
+      setState(() => _weather = weather);
+    } catch (e) {
+      debugPrint('[상세] 날씨 로드 실패: $e');
     }
   }
 
@@ -344,6 +358,22 @@ class _StockDetailPageState extends State<StockDetailPage> {
     if (r == 0) return Sentiment.neutral;
     if (r > -3) return Sentiment.bad;
     return Sentiment.veryBad;
+  }
+
+  Widget _weatherSvgIcon(String weather) {
+    const map = {
+      'SUNNY':         '급등',
+      'PARTLY_CLOUDY': '상승',
+      'CLOUDY':        '보합',
+      'RAINY':         '하락',
+      'THUNDERSTORM':  '급락',
+    };
+    final asset = map[weather] ?? '보합';
+    return SvgPicture.asset(
+      'assets/images/$asset.svg',
+      width: 52, height: 52,
+      placeholderBuilder: (_) => const SizedBox(width: 52, height: 52),
+    );
   }
 
   _PreparedChartData _prepareChartData(StockSeries series) {
@@ -598,7 +628,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
                 ]),
             ],
           ])),
-          if (_overview != null) _sentimentIcon(_sentiment),
+          _weatherSvgIcon(_weather),
         ]),
         const SizedBox(height: 10),
         Align(alignment: Alignment.centerRight,
